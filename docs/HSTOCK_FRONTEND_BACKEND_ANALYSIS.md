@@ -139,7 +139,6 @@ Layout: `AccountLayout` (Header + account sidebar + Footer)
 | `/payment-methods` | Saved crypto wallets |
 | `/settings` | Email preference toggles |
 | `/support` | Support tickets + FAQ |
-| `/profile` alias | Also used as profile entry |
 
 ### 2.3 Seller portal (guarded)
 
