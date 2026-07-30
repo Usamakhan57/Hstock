@@ -4,7 +4,8 @@ node_modules/
 .env.*.local
 logs/**/*.log
 !logs/**/.gitkeep
-uploads/**/*
+uploads/**
+!uploads/**/
 !uploads/**/.gitkeep
 coverage/
 .DS_Store
