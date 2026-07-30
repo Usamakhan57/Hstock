@@ -12,7 +12,8 @@
     "dev": "node --watch server.js",
     "start": "node server.js",
     "start:prod": "NODE_ENV=production node server.js",
-    "lint": "node --check server.js && node --check src/server.js && node --check src/app.js",
+    "lint": "node scripts/syntax-check.js",
+    "build": "node scripts/syntax-check.js",
     "test": "node --test tests/**/*.test.js",
     "pm2:start": "pm2 start ecosystem.config.js --env production",
     "pm2:stop": "pm2 stop hstock-api",
@@ -29,7 +30,7 @@
     "mongoose": "^8.14.0",
     "morgan": "^1.10.0",
     "multer": "^2.2.0",
-    "node-cron": "^3.0.3",
+    "node-cron": "^4.6.0",
     "winston": "^3.17.0",
     "zod": "^3.24.4"
   },

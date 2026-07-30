@@ -29,7 +29,8 @@ const consoleFormat = winston.format.combine(
 );
 
 export const logger = winston.createLogger({
-  level: env.LOG_LEVEL,
+  level: env.isTest ? 'error' : env.LOG_LEVEL,
+  silent: env.isTest,
   defaultMeta: { service: env.APP_NAME },
   transports: [
     new winston.transports.File({
@@ -48,13 +49,13 @@ export const logger = winston.createLogger({
   ],
 });
 
-if (!env.isProduction) {
+if (!env.isProduction && !env.isTest) {
   logger.add(
     new winston.transports.Console({
       format: consoleFormat,
     }),
   );
-} else {
+} else if (env.isProduction) {
   logger.add(
     new winston.transports.Console({
       level: 'info',
@@ -65,6 +66,7 @@ if (!env.isProduction) {
 
 export const httpLogger = winston.createLogger({
   level: 'http',
+  silent: env.isTest,
   format: fileFormat,
   defaultMeta: { service: `${env.APP_NAME}-http` },
   transports: [

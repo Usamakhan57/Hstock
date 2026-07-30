@@ -70,12 +70,20 @@ These land in Phase 2+.
 ## Scripts
 
 ```bash
+npm install          # install dependencies (never commit node_modules)
 npm run dev          # watch mode
 npm start            # start once
 npm run start:prod   # NODE_ENV=production
+npm run lint         # syntax-check all source files
+npm run build        # same verification (no transpile step for this API)
 npm test             # node:test suite
-pm2 start ecosystem.config.cjs --env production
+pm2 start ecosystem.config.js --env production
 ```
+
+## Secrets & dependencies
+
+- Copy `.env.example` → `.env` locally. **Never commit `.env`.**
+- `node_modules/` is gitignored. **Never commit `node_modules`.**
 
 ## Documentation
 
