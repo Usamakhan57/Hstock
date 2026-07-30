@@ -1,0 +1,15 @@
+node_modules/
+.env
+.env.local
+.env.*.local
+logs/**/*.log
+!logs/**/.gitkeep
+uploads/**/*
+!uploads/**/.gitkeep
+coverage/
+.DS_Store
+*.pem
+dist/
+tmp/
+.npm
+.cache/

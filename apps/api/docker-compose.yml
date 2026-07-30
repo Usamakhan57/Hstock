@@ -1,0 +1,53 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: hstock-api
+    restart: unless-stopped
+    ports:
+      - "4000:4000"
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: 4000
+      MONGODB_URI: mongodb://mongo:27017/hstock
+      MONGODB_DB_NAME: hstock
+    volumes:
+      - api_uploads:/app/uploads
+      - api_logs:/app/logs
+    depends_on:
+      mongo:
+        condition: service_healthy
+    networks:
+      - hstock
+
+  mongo:
+    image: mongo:7
+    container_name: hstock-mongo
+    restart: unless-stopped
+    command: ['mongod', '--bind_ip_all']
+    environment:
+      MONGO_INITDB_DATABASE: hstock
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ['CMD', 'mongosh', '--eval', "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - hstock
+    # Production on Hostinger VPS should prefer host-installed MongoDB
+    # bound to 127.0.0.1. Keep this service for local/dev compose use.
+
+volumes:
+  mongo_data:
+  api_uploads:
+  api_logs:
+
+networks:
+  hstock:
+    driver: bridge
