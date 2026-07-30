@@ -5,14 +5,12 @@ import { jwtConfig } from '../config/jwt.js';
 export function signAccessToken(payload) {
   return jwt.sign(payload, jwtConfig.accessSecret, {
     expiresIn: jwtConfig.accessExpiresIn,
-    subject: String(payload.sub),
   });
 }
 
 export function signRefreshToken(payload) {
   return jwt.sign(payload, jwtConfig.refreshSecret, {
     expiresIn: jwtConfig.refreshExpiresIn,
-    subject: String(payload.sub),
   });
 }
 

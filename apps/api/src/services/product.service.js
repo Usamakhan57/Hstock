@@ -1,4 +1,3 @@
-import mongoose from 'mongoose';
 import {
   Product,
   ProductImage,
@@ -9,6 +8,7 @@ import {
 import { AppError } from '../utils/AppError.js';
 import { toSlug } from '../utils/slug.js';
 import { parsePagination, buildPaginationMeta } from '../utils/pagination.js';
+import { withTransaction } from '../utils/transaction.js';
 import { objectIdSchema } from '../validators/common.validator.js';
 import {
   PRODUCT_STATUS,
@@ -34,7 +34,7 @@ async function ensureUniqueProductSlug(base, excludeId = null) {
 }
 
 function isObjectId(value) {
-  return objectIdSchema.safeParse(value).success;
+  return objectIdSchema.safeParse(String(value ?? '')).success;
 }
 
 async function resolveSellerForUser(user) {
@@ -94,131 +94,153 @@ export async function listProducts(query = {}, actor = null) {
   return { items, meta: buildPaginationMeta({ page, limit, total }) };
 }
 
-export async function getProduct(idOrSlug, actor = null) {
-  const filter = isObjectId(idOrSlug)
-    ? { $or: [{ _id: idOrSlug }, { slug: idOrSlug }], deletedAt: null }
-    : { slug: idOrSlug, deletedAt: null };
+async function loadProductDocument(idOrSlug) {
+  const key = String(idOrSlug);
+  const filter = isObjectId(key)
+    ? { $or: [{ _id: key }, { slug: key }], deletedAt: null }
+    : { slug: key, deletedAt: null };
 
-  const product = await Product.findOne(filter)
+  return Product.findOne(filter)
     .populate('category', 'name slug')
     .populate('brand', 'name slug')
     .populate('collection', 'name slug')
     .populate('tags', 'name slug')
     .populate('seller', 'storeName slug status verified user')
     .lean();
+}
+
+async function attachProductMedia(product) {
+  const [images, digital] = await Promise.all([
+    ProductImage.find({ product: product._id }).sort({ sortOrder: 1 }).lean(),
+    DigitalProduct.findOne({ product: product._id }).lean(),
+  ]);
+  return { ...product, images, digital };
+}
+
+export async function getProduct(idOrSlug, actor = null, options = {}) {
+  const product = await loadProductDocument(idOrSlug);
 
   if (!product) {
     throw new AppError('Product not found', 404, { code: 'PRODUCT_NOT_FOUND' });
   }
 
-  const isStaff = actor?.roles?.some((role) =>
-    [USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN, USER_ROLES.EDITOR].includes(role),
-  );
-  const isOwner = actor && product.seller?.user
-    ? String(product.seller.user) === String(actor.id)
-    : false;
+  if (!options.skipAccessCheck) {
+    const isStaff = actor?.roles?.some((role) =>
+      [USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN, USER_ROLES.EDITOR].includes(role),
+    );
 
-  if (
-    !isStaff
-    && !isOwner
-    && (
-      product.status !== PRODUCT_STATUS.LIVE
-      || product.visibility !== PRODUCT_VISIBILITY.PUBLIC
-      || product.approvalStatus !== APPROVAL_STATUS.APPROVED
-    )
-  ) {
-    throw new AppError('Product not found', 404, { code: 'PRODUCT_NOT_FOUND' });
+    let isOwner = false;
+    if (actor?.roles?.includes(USER_ROLES.SELLER)) {
+      const sellerProfile = await resolveSellerForUser(actor);
+      const sellerId = product.seller?._id || product.seller;
+      isOwner = Boolean(
+        sellerProfile && sellerId && String(sellerId) === String(sellerProfile._id),
+      );
+    }
+
+    if (
+      !isStaff
+      && !isOwner
+      && (
+        product.status !== PRODUCT_STATUS.LIVE
+        || product.visibility !== PRODUCT_VISIBILITY.PUBLIC
+        || product.approvalStatus !== APPROVAL_STATUS.APPROVED
+      )
+    ) {
+      throw new AppError('Product not found', 404, { code: 'PRODUCT_NOT_FOUND' });
+    }
   }
 
-  const [images, digital] = await Promise.all([
-    ProductImage.find({ product: product._id }).sort({ sortOrder: 1 }).lean(),
-    DigitalProduct.findOne({ product: product._id }).lean(),
-  ]);
-
-  return { ...product, images, digital };
+  return attachProductMedia(product);
 }
 
 export async function createProduct(payload, actor) {
-  const session = await mongoose.startSession();
-  session.startTransaction();
+  let sellerId = payload.seller || null;
 
-  try {
-    let sellerId = payload.seller || null;
-
-    if (actor.roles.includes(USER_ROLES.SELLER) && !actor.roles.includes(USER_ROLES.ADMIN)) {
-      const seller = await resolveSellerForUser(actor);
-      if (!seller) {
-        throw new AppError('Seller profile required', 403, { code: 'SELLER_REQUIRED' });
-      }
-      sellerId = seller._id;
+  if (
+    actor.roles.includes(USER_ROLES.SELLER)
+    && !actor.roles.includes(USER_ROLES.ADMIN)
+    && !actor.roles.includes(USER_ROLES.SUPER_ADMIN)
+  ) {
+    const seller = await resolveSellerForUser(actor);
+    if (!seller) {
+      throw new AppError('Seller profile required', 403, { code: 'SELLER_REQUIRED' });
     }
+    sellerId = seller._id;
+  }
 
-    const slug = await ensureUniqueProductSlug(payload.slug || payload.title);
+  const slug = await ensureUniqueProductSlug(payload.slug || payload.title);
 
-    const [product] = await Product.create(
-      [
-        {
-          ...payload,
-          slug,
-          seller: sellerId,
-          status: payload.status || PRODUCT_STATUS.DRAFT,
-          approvalStatus: payload.approvalStatus || APPROVAL_STATUS.PENDING,
-          createdBy: actor.id,
-          updatedBy: actor.id,
-        },
-      ],
-      { session },
-    );
+  const product = await withTransaction(async (session) => {
+    const createOpts = session ? { session } : undefined;
+    const productDoc = session
+      ? (await Product.create([{
+        ...payload,
+        slug,
+        seller: sellerId,
+        status: payload.status || PRODUCT_STATUS.DRAFT,
+        approvalStatus: payload.approvalStatus || APPROVAL_STATUS.PENDING,
+        createdBy: actor.id,
+        updatedBy: actor.id,
+      }], createOpts))[0]
+      : await Product.create({
+        ...payload,
+        slug,
+        seller: sellerId,
+        status: payload.status || PRODUCT_STATUS.DRAFT,
+        approvalStatus: payload.approvalStatus || APPROVAL_STATUS.PENDING,
+        createdBy: actor.id,
+        updatedBy: actor.id,
+      });
 
     if (payload.gallery?.length) {
       const images = payload.gallery.map((url, index) => ({
-        product: product._id,
+        product: productDoc._id,
         url,
         sortOrder: index,
         isPrimary: index === 0,
         createdBy: actor.id,
       }));
-      await ProductImage.create(images, { session });
+      if (session) {
+        await ProductImage.create(images, { session });
+      } else {
+        await ProductImage.insertMany(images);
+      }
     }
 
     if (payload.digital) {
       const digital = payload.digital;
-      await DigitalProduct.create(
-        [
-          {
-            product: product._id,
-            downloadType: digital.downloadType || DOWNLOAD_TYPES.MANUAL,
-            manual: digital.manual ?? digital.downloadType !== DOWNLOAD_TYPES.AUTOMATIC,
-            automatic: digital.automatic ?? digital.downloadType === DOWNLOAD_TYPES.AUTOMATIC,
-            licenseKey: digital.licenseKey || null,
-            downloadUrl: digital.downloadUrl || null,
-            externalUrl: digital.externalUrl || null,
-            deliveryInstructions: digital.deliveryInstructions || '',
-            fileSize: digital.fileSize ?? null,
-            fileType: digital.fileType || null,
-          },
-        ],
-        { session },
-      );
+      const digitalDoc = {
+        product: productDoc._id,
+        downloadType: digital.downloadType || DOWNLOAD_TYPES.MANUAL,
+        manual: digital.manual ?? digital.downloadType !== DOWNLOAD_TYPES.AUTOMATIC,
+        automatic: digital.automatic ?? digital.downloadType === DOWNLOAD_TYPES.AUTOMATIC,
+        licenseKey: digital.licenseKey || null,
+        downloadUrl: digital.downloadUrl || null,
+        externalUrl: digital.externalUrl || null,
+        deliveryInstructions: digital.deliveryInstructions || '',
+        fileSize: digital.fileSize ?? null,
+        fileType: digital.fileType || null,
+      };
+      if (session) {
+        await DigitalProduct.create([digitalDoc], { session });
+      } else {
+        await DigitalProduct.create(digitalDoc);
+      }
     }
 
     if (payload.tags?.length) {
       await Tag.updateMany(
         { _id: { $in: payload.tags } },
         { $inc: { productCount: 1 } },
-        { session },
+        session ? { session } : undefined,
       );
     }
 
-    await session.commitTransaction();
+    return productDoc;
+  });
 
-    return getProduct(product._id, actor);
-  } catch (error) {
-    await session.abortTransaction();
-    throw error;
-  } finally {
-    session.endSession();
-  }
+  return getProduct(product._id, actor, { skipAccessCheck: true });
 }
 
 export async function updateProduct(id, payload, actor) {
@@ -288,7 +310,7 @@ export async function updateProduct(id, payload, actor) {
     );
   }
 
-  return getProduct(product._id, actor);
+  return getProduct(product._id, actor, { skipAccessCheck: true });
 }
 
 export async function deleteProduct(id, actor) {
@@ -336,7 +358,7 @@ export async function submitProduct(id, actor) {
   product.updatedBy = actor.id;
   await product.save();
 
-  return getProduct(product._id, actor);
+  return getProduct(product._id, actor, { skipAccessCheck: true });
 }
 
 export async function moderateProduct(id, payload, actor) {
@@ -360,7 +382,7 @@ export async function moderateProduct(id, payload, actor) {
   product.updatedBy = actor.id;
   await product.save();
 
-  return getProduct(product._id, actor);
+  return getProduct(product._id, actor, { skipAccessCheck: true });
 }
 
 export default {

@@ -20,7 +20,7 @@ async function ensureUniqueSlug(Model, base, excludeId = null) {
 }
 
 function isObjectId(value) {
-  return objectIdSchema.safeParse(value).success;
+  return objectIdSchema.safeParse(String(value ?? '')).success;
 }
 
 async function getByIdOrSlug(Model, idOrSlug, notFoundMessage) {

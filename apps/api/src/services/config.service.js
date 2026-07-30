@@ -1,7 +1,7 @@
-import mongoose from 'mongoose';
 import { SystemConfig, PlatformConfig, CommissionConfig } from '../models/index.js';
 import { LEDGER_CURRENCY } from '../constants/currencies.js';
 import { AppError } from '../utils/AppError.js';
+import { withTransaction } from '../utils/transaction.js';
 
 /** Seed defaults — values live in MongoDB after first ensure. */
 const SYSTEM_DEFAULTS = Object.freeze({
@@ -148,18 +148,7 @@ export async function getSellerRegistrationFee() {
 }
 
 export async function seedConfigsWithTransaction() {
-  const session = await mongoose.startSession();
-  try {
-    session.startTransaction();
-    const result = await ensureDefaultConfigs(session);
-    await session.commitTransaction();
-    return result;
-  } catch (error) {
-    await session.abortTransaction();
-    throw error;
-  } finally {
-    session.endSession();
-  }
+  return withTransaction((session) => ensureDefaultConfigs(session));
 }
 
 export default {

@@ -171,7 +171,7 @@ const productSchema = new mongoose.Schema(
       index: true,
     },
   },
-  { timestamps: true },
+  { timestamps: true, suppressReservedKeysWarning: true },
 );
 
 productSchema.index({ title: 'text', shortDescription: 'text', description: 'text' });

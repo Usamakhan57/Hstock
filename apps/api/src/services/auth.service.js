@@ -1,4 +1,3 @@
-import mongoose from 'mongoose';
 import {
   User,
   BuyerProfile,
@@ -18,6 +17,7 @@ import {
   hashToken,
 } from '../utils/token.js';
 import { toSlug } from '../utils/slug.js';
+import { withTransaction } from '../utils/transaction.js';
 import { resolvePermissions } from '../constants/permissions.js';
 import { USER_ROLES, ADMIN_LOGIN_ROLES } from '../constants/roles.js';
 import { UserStatusEnum, VerificationStatusEnum } from '../constants/enums.js';
@@ -70,7 +70,10 @@ function buildAccessPayload(user) {
 
 async function issueTokenPair(user, meta = {}) {
   const accessToken = signAccessToken(buildAccessPayload(user));
-  const refreshToken = signRefreshToken({ sub: String(user._id) });
+  const refreshToken = signRefreshToken({
+    sub: String(user._id),
+    jti: generateOpaqueToken(16),
+  });
   const tokenHash = hashToken(refreshToken);
   const expiresAt = new Date(Date.now() + parseDurationToMs(jwtConfig.refreshExpiresIn));
 
@@ -113,79 +116,77 @@ async function createEmailVerification(user, session = null) {
   return { token: raw, expiresAt, verifyUrl };
 }
 
+async function createWithSession(Model, doc, session) {
+  if (session) {
+    const [created] = await Model.create([doc], { session });
+    return created;
+  }
+  return Model.create(doc);
+}
+
 export async function registerBuyer(payload, meta = {}) {
   const existing = await User.findOne({ email: payload.email.toLowerCase() });
   if (existing) {
     throw new AppError('Email already registered', 409, { code: 'EMAIL_EXISTS' });
   }
 
-  const session = await mongoose.startSession();
-  session.startTransaction();
+  const passwordHash = await hashPassword(payload.password);
 
-  try {
-    const passwordHash = await hashPassword(payload.password);
-    const [user] = await User.create(
-      [
-        {
-          email: payload.email.toLowerCase(),
-          passwordHash,
-          name: payload.name,
-          roles: [USER_ROLES.BUYER],
-          phone: payload.phone || null,
-          country: payload.country || null,
-          timezone: payload.timezone || 'UTC',
-          status: UserStatusEnum.Active,
-          verificationStatus: VerificationStatusEnum.Unverified,
-          emailVerified: false,
-        },
-      ],
-      { session },
+  const user = await withTransaction(async (session) => {
+    const createdUser = await createWithSession(
+      User,
+      {
+        email: payload.email.toLowerCase(),
+        passwordHash,
+        name: payload.name,
+        roles: [USER_ROLES.BUYER],
+        phone: payload.phone || null,
+        country: payload.country || null,
+        timezone: payload.timezone || 'UTC',
+        status: UserStatusEnum.Active,
+        verificationStatus: VerificationStatusEnum.Unverified,
+        emailVerified: false,
+      },
+      session,
     );
 
-    await BuyerProfile.create(
-      [
-        {
-          user: user._id,
-          username: payload.username || null,
-          phone: payload.phone || null,
-          country: payload.country || null,
-          avatar: payload.avatar || null,
-        },
-      ],
-      { session },
+    await createWithSession(
+      BuyerProfile,
+      {
+        user: createdUser._id,
+        username: payload.username || null,
+        phone: payload.phone || null,
+        country: payload.country || null,
+        avatar: payload.avatar || null,
+      },
+      session,
     );
 
     await logActivity({
-      userId: user._id,
+      userId: createdUser._id,
       action: 'auth.buyer.register',
       resource: 'User',
-      resourceId: user._id,
+      resourceId: createdUser._id,
       ip: meta.ip,
       userAgent: meta.userAgent,
       session,
     });
 
-    await session.commitTransaction();
+    return createdUser;
+  });
 
-    const verification = await createEmailVerification(user);
-    const tokens = await issueTokenPair(user, meta);
+  const verification = await createEmailVerification(user);
+  const tokens = await issueTokenPair(user, meta);
 
-    return {
-      user: publicUser(user),
-      ...tokens,
-      emailVerification: {
-        sent: true,
-        expiresAt: verification.expiresAt,
-        // Exposed in non-production to support local testing without SMTP
-        ...(env.isProduction ? {} : { token: verification.token, verifyUrl: verification.verifyUrl }),
-      },
-    };
-  } catch (error) {
-    await session.abortTransaction();
-    throw error;
-  } finally {
-    session.endSession();
-  }
+  return {
+    user: publicUser(user),
+    ...tokens,
+    emailVerification: {
+      sent: true,
+      expiresAt: verification.expiresAt,
+      ...(env.isProduction ? {} : { token: verification.token, verifyUrl: verification.verifyUrl }),
+    },
+  };
 }
 
 export async function registerSeller(payload, meta = {}) {
@@ -198,59 +199,58 @@ export async function registerSeller(payload, meta = {}) {
 
   // Fee is configurable in MongoDB. Payment is NOT implemented — free when fee is 0.
   const registrationFee = feeInfo.sellerRegistrationFee;
-
   const email = payload.email.toLowerCase();
-  let user = await User.findOne({ email }).select('+passwordHash');
+  const existingUser = await User.findOne({ email }).select('+passwordHash');
 
-  const session = await mongoose.startSession();
-  session.startTransaction();
+  if (existingUser) {
+    const valid = await comparePassword(payload.password, existingUser.passwordHash);
+    if (!valid) {
+      throw new AppError('Invalid credentials for existing account', 401, {
+        code: 'INVALID_CREDENTIALS',
+      });
+    }
+  }
 
-  try {
-    if (!user) {
+  const { user, seller } = await withTransaction(async (session) => {
+    let userDoc = existingUser;
+
+    if (!userDoc) {
       const passwordHash = await hashPassword(payload.password);
-      [user] = await User.create(
-        [
-          {
-            email,
-            passwordHash,
-            name: payload.name || payload.storeName,
-            roles: [USER_ROLES.BUYER, USER_ROLES.SELLER],
-            phone: payload.phone || null,
-            country: payload.country || null,
-            timezone: payload.timezone || 'UTC',
-            status: UserStatusEnum.Active,
-            verificationStatus: VerificationStatusEnum.Unverified,
-          },
-        ],
-        { session },
+      userDoc = await createWithSession(
+        User,
+        {
+          email,
+          passwordHash,
+          name: payload.name || payload.storeName,
+          roles: [USER_ROLES.BUYER, USER_ROLES.SELLER],
+          phone: payload.phone || null,
+          country: payload.country || null,
+          timezone: payload.timezone || 'UTC',
+          status: UserStatusEnum.Active,
+          verificationStatus: VerificationStatusEnum.Unverified,
+        },
+        session,
       );
 
-      await BuyerProfile.create(
-        [
-          {
-            user: user._id,
-            phone: payload.phone || null,
-            country: payload.country || null,
-          },
-        ],
-        { session },
+      await createWithSession(
+        BuyerProfile,
+        {
+          user: userDoc._id,
+          phone: payload.phone || null,
+          country: payload.country || null,
+        },
+        session,
       );
     } else {
-      const valid = await comparePassword(payload.password, user.passwordHash);
-      if (!valid && payload.requirePassword !== false) {
-        // Allow upgrade path when registering as seller with matching credentials
-        // If password provided and wrong, reject; if user exists without password check flag, still require password
-        throw new AppError('Invalid credentials for existing account', 401, {
-          code: 'INVALID_CREDENTIALS',
-        });
+      if (!userDoc.roles.includes(USER_ROLES.SELLER)) {
+        userDoc.roles = [...new Set([...userDoc.roles, USER_ROLES.SELLER])];
+        await userDoc.save(session ? { session } : undefined);
       }
 
-      if (!user.roles.includes(USER_ROLES.SELLER)) {
-        user.roles = [...new Set([...user.roles, USER_ROLES.SELLER])];
-        await user.save({ session });
-      }
-
-      const existingSeller = await SellerProfile.findOne({ user: user._id }).session(session);
+      const existingSellerQuery = SellerProfile.findOne({ user: userDoc._id });
+      const existingSeller = session
+        ? await existingSellerQuery.session(session)
+        : await existingSellerQuery;
       if (existingSeller) {
         throw new AppError('Seller profile already exists', 409, {
           code: 'SELLER_EXISTS',
@@ -261,35 +261,38 @@ export async function registerSeller(payload, meta = {}) {
     const baseSlug = toSlug(payload.storeSlug || payload.storeName);
     let slug = baseSlug;
     let attempt = 0;
-    while (await SellerProfile.findOne({ slug }).session(session)) {
+    while (true) {
+      const slugQuery = SellerProfile.findOne({ slug });
+      // eslint-disable-next-line no-await-in-loop
+      const clash = session ? await slugQuery.session(session) : await slugQuery;
+      if (!clash) break;
       attempt += 1;
       slug = `${baseSlug}-${attempt}`;
     }
 
-    const [seller] = await SellerProfile.create(
-      [
-        {
-          user: user._id,
-          storeName: payload.storeName,
-          slug,
-          ownerName: payload.name || payload.ownerName || '',
-          email,
-          phone: payload.phone || null,
-          country: payload.country || null,
-          timezone: payload.timezone || 'UTC',
-          bio: payload.bio || '',
-          specialty: payload.specialty || null,
-          withdrawalWallets: payload.withdrawalWallets || [],
-        },
-      ],
-      { session },
+    const sellerDoc = await createWithSession(
+      SellerProfile,
+      {
+        user: userDoc._id,
+        storeName: payload.storeName,
+        slug,
+        ownerName: payload.name || payload.ownerName || '',
+        email,
+        phone: payload.phone || null,
+        country: payload.country || null,
+        timezone: payload.timezone || 'UTC',
+        bio: payload.bio || '',
+        specialty: payload.specialty || null,
+        withdrawalWallets: payload.withdrawalWallets || [],
+      },
+      session,
     );
 
     await logActivity({
-      userId: user._id,
+      userId: userDoc._id,
       action: 'auth.seller.register',
       resource: 'SellerProfile',
-      resourceId: seller._id,
+      resourceId: sellerDoc._id,
       ip: meta.ip,
       userAgent: meta.userAgent,
       meta: {
@@ -299,36 +302,31 @@ export async function registerSeller(payload, meta = {}) {
       session,
     });
 
-    await session.commitTransaction();
+    return { user: userDoc, seller: sellerDoc };
+  });
 
-    const fresh = await User.findById(user._id);
-    const verification = await createEmailVerification(fresh);
-    const tokens = await issueTokenPair(fresh, meta);
+  const fresh = await User.findById(user._id);
+  const verification = await createEmailVerification(fresh);
+  const tokens = await issueTokenPair(fresh, meta);
 
-    return {
-      user: publicUser(fresh),
-      seller,
-      registration: {
-        fee: registrationFee,
-        currency: feeInfo.currency,
-        paymentRequired: registrationFee > 0,
-        note: registrationFee > 0
-          ? 'Seller registration fee is configured but payment is not implemented in this phase.'
-          : 'Seller registration is free.',
-      },
-      ...tokens,
-      emailVerification: {
-        sent: true,
-        expiresAt: verification.expiresAt,
-        ...(env.isProduction ? {} : { token: verification.token, verifyUrl: verification.verifyUrl }),
-      },
-    };
-  } catch (error) {
-    await session.abortTransaction();
-    throw error;
-  } finally {
-    session.endSession();
-  }
+  return {
+    user: publicUser(fresh),
+    seller,
+    registration: {
+      fee: registrationFee,
+      currency: feeInfo.currency,
+      paymentRequired: registrationFee > 0,
+      note: registrationFee > 0
+        ? 'Seller registration fee is configured but payment is not implemented in this phase.'
+        : 'Seller registration is free.',
+    },
+    ...tokens,
+    emailVerification: {
+      sent: true,
+      expiresAt: verification.expiresAt,
+      ...(env.isProduction ? {} : { token: verification.token, verifyUrl: verification.verifyUrl }),
+    },
+  };
 }
 
 async function loginWithRoleCheck(email, password, rolePredicate, meta, failureCode) {

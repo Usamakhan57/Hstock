@@ -15,7 +15,7 @@
     "seed": "node src/scripts/seed.js",
     "lint": "node scripts/syntax-check.js",
     "build": "node scripts/syntax-check.js",
-    "test": "node --test tests/unit/*.test.js tests/integration/*.test.js",
+    "test": "node --test --test-concurrency=1 tests/unit/*.test.js tests/integration/*.test.js",
     "pm2:start": "pm2 start ecosystem.config.js --env production",
     "pm2:stop": "pm2 stop hstock-api",
     "pm2:restart": "pm2 restart hstock-api"

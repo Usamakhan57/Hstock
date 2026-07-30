@@ -13,3 +13,4 @@ export {
   hashToken,
 } from './token.js';
 export { toSlug, uniqueSlug } from './slug.js';
+export { withTransaction } from './transaction.js';
