@@ -1,0 +1,43 @@
+# Dependencies — never commit
+node_modules/
+
+# Secrets — never commit real env files
+.env
+.env.local
+.env.*.local
+.env.development
+.env.production
+.env.test
+
+# Keep the template only
+!.env.example
+
+# Logs (keep folder placeholders)
+logs/**/*.log
+!logs/**/.gitkeep
+
+# Uploads (keep folder placeholders)
+uploads/*
+!uploads/.gitkeep
+!uploads/products/
+!uploads/avatars/
+!uploads/documents/
+!uploads/temp/
+uploads/products/*
+!uploads/products/.gitkeep
+uploads/avatars/*
+!uploads/avatars/.gitkeep
+uploads/documents/*
+!uploads/documents/.gitkeep
+uploads/temp/*
+!uploads/temp/.gitkeep
+
+# Tooling / build artifacts
+coverage/
+.DS_Store
+*.pem
+dist/
+tmp/
+.npm
+.cache/
+*.tsbuildinfo

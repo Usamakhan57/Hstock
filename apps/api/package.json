@@ -1,0 +1,40 @@
+{
+  "name": "@hstock/api",
+  "version": "1.0.0",
+  "description": "HStock Marketplace API — Node.js / Express / MongoDB foundation",
+  "private": true,
+  "type": "module",
+  "main": "server.js",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "dev": "node --watch server.js",
+    "start": "node server.js",
+    "start:prod": "NODE_ENV=production node server.js",
+    "lint": "node scripts/syntax-check.js",
+    "build": "node scripts/syntax-check.js",
+    "test": "node --test tests/**/*.test.js",
+    "pm2:start": "pm2 start ecosystem.config.js --env production",
+    "pm2:stop": "pm2 stop hstock-api",
+    "pm2:restart": "pm2 restart hstock-api"
+  },
+  "dependencies": {
+    "compression": "^1.8.0",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "dotenv": "^16.5.0",
+    "express": "^4.21.2",
+    "express-rate-limit": "^7.5.0",
+    "helmet": "^8.1.0",
+    "mongoose": "^8.14.0",
+    "morgan": "^1.10.0",
+    "multer": "^2.2.0",
+    "node-cron": "^4.6.0",
+    "winston": "^3.17.0",
+    "zod": "^3.24.4"
+  },
+  "devDependencies": {
+    "supertest": "^7.1.0"
+  }
+}
