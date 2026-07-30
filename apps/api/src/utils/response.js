@@ -1,20 +1,22 @@
+/**
+ * Standard API response envelope:
+ * { success, message, data, errors, meta }
+ */
+
 export function sendSuccess(res, {
   statusCode = 200,
   message = 'Success',
   data = null,
-  meta = undefined,
+  meta = null,
+  errors = null,
 } = {}) {
-  const payload = {
+  return res.status(statusCode).json({
     success: true,
     message,
     data,
-  };
-
-  if (meta !== undefined) {
-    payload.meta = meta;
-  }
-
-  return res.status(statusCode).json(payload);
+    errors,
+    meta,
+  });
 }
 
 export function sendError(res, {
@@ -22,18 +24,24 @@ export function sendError(res, {
   message = 'Internal server error',
   code = 'INTERNAL_ERROR',
   details = undefined,
+  errors = undefined,
+  meta = null,
+  data = null,
 } = {}) {
-  const payload = {
+  const normalizedErrors = errors !== undefined
+    ? errors
+    : details !== undefined
+      ? details
+      : null;
+
+  return res.status(statusCode).json({
     success: false,
     message,
+    data,
+    errors: normalizedErrors,
+    meta,
     code,
-  };
-
-  if (details !== undefined) {
-    payload.details = details;
-  }
-
-  return res.status(statusCode).json(payload);
+  });
 }
 
 export default {

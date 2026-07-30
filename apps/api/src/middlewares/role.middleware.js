@@ -2,8 +2,7 @@ import { AppError } from '../utils/AppError.js';
 import { USER_ROLE_VALUES } from '../constants/roles.js';
 
 /**
- * Role authorization middleware placeholder.
- * Phase 2 will enforce roles from req.user after authentication.
+ * Role authorization middleware.
  * @param {...string} allowedRoles
  */
 export function authorize(...allowedRoles) {
@@ -35,5 +34,8 @@ export function authorize(...allowedRoles) {
     next();
   };
 }
+
+/** Alias matching the Phase 2 API naming. */
+export const requireRole = authorize;
 
 export default authorize;

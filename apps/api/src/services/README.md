@@ -1,11 +1,12 @@
-# Services
+# Services (Phase 2)
 
-Domain services are intentionally empty in Phase 1.
+Domain services for Authentication, Users, Configuration, Catalog, and Products.
 
-Future modules (do not implement yet):
+- `auth.service.js` — register/login/logout/refresh/password/email verification
+- `user.service.js` — profile & admin user management
+- `config.service.js` — SystemConfig / PlatformConfig / CommissionConfig (DB-backed defaults)
+- `catalog.service.js` — categories, brands, collections, tags
+- `product.service.js` — product foundation + digital metadata
+- `activity.service.js` — activity logs
 
-- `cryptomus.service.js`
-- `escrow.service.js`
-- `commission.service.js`
-- `ledger.service.js` (Seller Internal Wallet)
-- `email.service.js` (real SMTP sending)
+No payment, escrow, wallet, order, or Cryptomus business logic.

@@ -2,10 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import request from 'supertest';
 
-// Env must be valid before importing the app (env.js validates on load).
 process.env.NODE_ENV = 'test';
-process.env.MONGODB_URI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/hstock_test';
-process.env.MONGODB_DB_NAME = 'hstock_test';
+process.env.MONGODB_URI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/hstock_phase2_test';
+process.env.MONGODB_DB_NAME = 'hstock_phase2_test';
 process.env.JWT_ACCESS_SECRET = 'test-access-secret-32-characters-min';
 process.env.JWT_REFRESH_SECRET = 'test-refresh-secret-32-characters-min';
 process.env.CORS_ORIGINS = 'http://localhost:3000';
@@ -28,10 +27,11 @@ test('GET /health returns service metadata', async () => {
   assert.ok(res.body.data.database);
 });
 
-test('GET /api/v1 returns phase 1 stub', async () => {
+test('GET /api/v1 returns phase 2 root', async () => {
   const res = await request(app).get('/api/v1');
   assert.equal(res.status, 200);
-  assert.equal(res.body.data.phase, 1);
+  assert.equal(res.body.data.phase, 2);
+  assert.ok(Array.isArray(res.body.data.modules));
 });
 
 test('GET /unknown returns 404', async () => {
@@ -39,4 +39,5 @@ test('GET /unknown returns 404', async () => {
   assert.equal(res.status, 404);
   assert.equal(res.body.success, false);
   assert.equal(res.body.code, 'NOT_FOUND');
+  assert.equal(res.body.errors, null);
 });

@@ -1,5 +1,5 @@
 # Repositories
 
-Data-access layer reserved for Phase 2+.
+Phase 2 services currently use Mongoose models directly with transactional boundaries where needed.
 
-Controllers should call services; services should call repositories; repositories talk to Mongoose models.
+A deeper repository split can be introduced later without changing route/controller contracts.

@@ -1,11 +1,11 @@
-# HStock API (Phase 1 — Foundation)
+# HStock API (Phase 2 — Auth, Users, Catalog, Product Foundation)
 
-Production-ready **Node.js + Express + MongoDB** backend foundation for the HStock multi-vendor digital marketplace.
+Production-ready **Node.js + Express + MongoDB** backend for the HStock multi-vendor digital marketplace.
 
-> **Phase 1 scope:** architecture, configuration, security, logging, health routes, and scaffolds only.  
-> **Not in this phase:** auth business logic, Cryptomus payments, escrow, seller wallet, withdrawals, or domain APIs.
+> **Phase 1 foundation** (bootstrap, security stack, logging, health, job scaffolds) remains intact.  
+> **Phase 2 adds** Authentication, Authorization/RBAC, User Management, System/Platform/Commission configuration, Categories, Brands, Collections, Tags, and Product/DigitalProduct models + REST APIs.
 
-Frontend (`apps/web`) is untouched and remains the UI source of truth.
+Frontend (`apps/web`) is untouched.
 
 ## Stack
 
@@ -15,6 +15,7 @@ Frontend (`apps/web`) is untouched and remains the UI source of truth.
 | Framework | Express.js |
 | ODM | Mongoose |
 | Validation | Zod |
+| Auth | JWT access + refresh, bcrypt password hashing, httpOnly cookies |
 | Logging | Winston + Morgan |
 | Process manager | PM2 |
 | Reverse proxy | Nginx |
@@ -28,69 +29,65 @@ cd apps/api
 cp .env.example .env
 # set MONGODB_URI, JWT_ACCESS_SECRET, JWT_REFRESH_SECRET
 npm install
+npm run seed          # SystemConfig / PlatformConfig / CommissionConfig (+ local admin)
 npm run dev
 ```
 
-## Health endpoints (only public API surface in Phase 1)
+## Business rules encoded in Phase 2
 
-| Method | Path | Purpose |
-|--------|------|---------|
-| GET | `/health` | Service + DB status summary |
-| GET | `/health/live` | Liveness probe |
-| GET | `/health/ready` | Readiness probe (requires MongoDB) |
-| GET | `/api/v1` | Version stub (no business routes) |
+1. Seller registration is **FREE** by default (`SystemConfig.sellerRegistrationFee = 0`)
+2. Default product commission is **10%** (`CommissionConfig.defaultPercent`) — stored in MongoDB, never hardcoded
+3. `PlatformConfig.maintenanceMode` defaults to `false`
+4. No Cryptomus / escrow / order / wallet / withdrawal business logic
 
-## Architecture highlights
+## API surface (`/api/v1`)
 
-- Clean layered folders: config → routes → controllers → (future services/repositories/models)
-- Centralized env validation (fail fast on boot)
-- Helmet, CORS, compression, cookies, rate limit, Morgan
-- Global `AppError`, async handler, 404 + error middleware
-- Separate log directories: `logs/app`, `logs/error`, `logs/http`
-- Local uploads directories prepared
-- Job scaffolds: escrow, notification, cleanup, withdrawal (**no business logic**)
-- Email / queue / event bus scaffolds
-- API versioning prefix: `/api/v1`
-- Docker + PM2 + Nginx templates for Hostinger deployment
+| Area | Prefix |
+|------|--------|
+| Auth | `/api/v1/auth` |
+| Users | `/api/v1/users` |
+| Config | `/api/v1/config` |
+| Categories | `/api/v1/categories` |
+| Brands | `/api/v1/brands` |
+| Collections | `/api/v1/collections` |
+| Tags | `/api/v1/tags` |
+| Products | `/api/v1/products` |
 
-## Business rules (prepared, not implemented)
+Health probes from Phase 1 remain at `/health`, `/health/live`, `/health/ready`.
 
-Documented in the approved architecture analysis:
+Full endpoint list: [`docs/API.md`](docs/API.md)
 
-1. Cryptomus-only payments  
-2. No buyer USD deposit wallet  
-3. Direct crypto checkout → Escrow  
-4. Escrow auto-release after 24h if no dispute  
-5. Release → Seller Internal Wallet  
-6. Withdrawals: Pending → Admin manual payout → Paid  
-7. DB-configurable commission (Admin Panel)
+## Response format
 
-These land in Phase 2+.
+```json
+{
+  "success": true,
+  "message": "Success",
+  "data": {},
+  "errors": null,
+  "meta": null
+}
+```
 
 ## Scripts
 
 ```bash
-npm install          # install dependencies (never commit node_modules)
-npm run dev          # watch mode
-npm start            # start once
-npm run start:prod   # NODE_ENV=production
-npm run lint         # syntax-check all source files
-npm run build        # same verification (no transpile step for this API)
-npm test             # node:test suite
-pm2 start ecosystem.config.js --env production
+npm install
+npm run dev
+npm start
+npm run seed
+npm run lint
+npm run build
+npm test
 ```
-
-## Secrets & dependencies
-
-- Copy `.env.example` → `.env` locally. **Never commit `.env`.**
-- `node_modules/` is gitignored. **Never commit `node_modules`.**
 
 ## Documentation
 
+- [`docs/API.md`](docs/API.md)
 - [`docs/FOLDER_STRUCTURE.md`](docs/FOLDER_STRUCTURE.md)
 - [`docs/ENVIRONMENT.md`](docs/ENVIRONMENT.md)
-- [`deploy/nginx/hstock.conf`](deploy/nginx/hstock.conf)
+- [`docs/PHASE2_DELIVERABLES.md`](docs/PHASE2_DELIVERABLES.md)
 
 ## Phase gate
 
-Do not start Phase 2 until this foundation is reviewed and approved.
+Do not start Phase 3 (payments / escrow / wallets / orders) until this phase is reviewed and approved.
