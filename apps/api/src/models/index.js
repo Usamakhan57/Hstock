@@ -16,3 +16,4 @@ export { default as Tag } from './Tag.model.js';
 export { default as Product } from './Product.model.js';
 export { default as ProductImage } from './ProductImage.model.js';
 export { default as DigitalProduct } from './DigitalProduct.model.js';
+export { default as DigitalAssetClaim } from './DigitalAssetClaim.model.js';

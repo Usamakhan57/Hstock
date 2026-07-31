@@ -95,6 +95,34 @@ Public list + get. Write endpoints require corresponding `*:write` permission (A
 | POST | `/products/:id/submit` | Owner/Admin | Submit for approval |
 | POST | `/products/:id/moderate` | `products:moderate` | Approve/reject/feature |
 
+### Global digital asset uniqueness
+
+Optional create/update fields (backward compatible):
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `assetIdentifier` | string \| null | Raw email / username / domain / URL / repo key |
+| `assetPlatform` | string \| null | Hint: `email`, `instagram`, `tiktok`, `telegram`, `domain`, `website`, … |
+
+The API stores `assetIdentifierNormalized` (canonical form). Duplicate blocking listings return:
+
+- **HTTP 409**
+- `code`: `ASSET_ALREADY_LISTED`
+- `message`: `This digital asset is already listed on HStock.`
+
+Applies to sellers **and** admins. Soft-deleted / rejected / archived listings release the identifier.
+
+List/search query params:
+
+| Param | Description |
+|-------|-------------|
+| `assetIdentifier` | Normalized before exact match on `assetIdentifierNormalized` |
+| `assetIdentifierNormalized` | Exact match on stored canonical identity |
+| `assetPlatform` | Filter by platform |
+| `search` | Text search, or normalized asset match when query looks like an identifier |
+
+See `docs/ASSET_UNIQUENESS.md` for architecture details.
+
 ## Roles & permissions
 
 Roles: `super_admin`, `admin`, `seller`, `buyer`, `editor`, `support`
