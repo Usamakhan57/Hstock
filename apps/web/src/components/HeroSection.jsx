@@ -117,7 +117,8 @@ const HeroSearchBar = ({ className = '', size = 'lg' }) => {
 };
 
 const CategoryPills = ({ className = '', scrollable = false }) => {
-  const pills = useMemo(() => getHomepageCategories().slice(0, 7), []); // catalog cache hydrated in StoreProvider
+  const { catalogVersion } = useStore();
+  const pills = useMemo(() => getHomepageCategories().slice(0, 7), [catalogVersion]);
   return (
     <div className={`flex items-center gap-2 ${scrollable ? 'overflow-x-auto no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0' : 'flex-wrap'} ${className}`}>
       <span className="text-xs font-semibold text-muted-foreground/80 shrink-0">Popular:</span>
