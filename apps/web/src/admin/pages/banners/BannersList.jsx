@@ -15,7 +15,7 @@ const EMPTY = { title: '', image: '', mobileImage: '', link: '', buttonText: '',
 const POSITIONS = [
   { value: 'homepage', label: 'Homepage Banner' },
   { value: 'category', label: 'Category Banner' },
-  { value: 'collection', label: 'Collection Banner' },
+  { value: 'shop', label: 'Shop Banner' },
   { value: 'sidebar', label: 'Sidebar Banner' },
   { value: 'popup', label: 'Popup Banner' },
   { value: 'sale', label: 'Sale Banner' },

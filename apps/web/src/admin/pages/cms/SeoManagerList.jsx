@@ -87,7 +87,7 @@ const SeoCard = ({ entry, isOpen, onToggleOpen, onChange }) => {
             <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Schema</h4>
             <div>
               <label className="block text-sm font-medium mb-1.5">Schema Type (Placeholder)</label>
-              <input value={entry.schemaType} onChange={set('schemaType')} className={inputClass} placeholder="e.g. WebSite, CollectionPage" />
+              <input value={entry.schemaType} onChange={set('schemaType')} className={inputClass} placeholder="e.g. WebSite, WebPage" />
               <p className="text-xs text-muted-foreground mt-1">Structured data (JSON-LD) generates from this once the backend is connected.</p>
             </div>
           </div>

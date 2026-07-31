@@ -82,8 +82,6 @@ Public list + get. Write endpoints require corresponding `*:write` permission (A
 | Brands | `GET /brands` | `GET /brands/:idOrSlug` | `POST /brands` | `PATCH /brands/:id` | `DELETE /brands/:id` |
 | Tags | `GET /tags` | `GET /tags/:idOrSlug` | `POST /tags` | `PATCH /tags/:id` | `DELETE /tags/:id` |
 
-> Collections are not part of the ApnaStore product surface. Storefront and admin UI no longer expose collection browsing or management.
-
 ## Products
 
 | Method | Endpoint | Auth | Description |

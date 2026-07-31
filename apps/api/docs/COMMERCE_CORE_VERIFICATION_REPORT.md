@@ -847,7 +847,7 @@ Documented in `.env.example`.
 - SMTP email transport not wired
 - Domain `eventBus` emitters not hooked
 - Digital product file/key fulfillment delivery after purchase (model exists; delivery fulfillment is a later phase)
-- Seller registration fee collection when fee > 0 (fee readable; payment not charged — fee default 0)
+- Seller registration fee charging when fee > 0 (fee readable; payment not charged — fee default 0)
 
 ### Stale comments (logic is implemented)
 
@@ -900,7 +900,7 @@ All tests:
 5. forgot + reset password flow — PASS  
 6. email verification infrastructure — PASS  
 7. config defaults are loaded from MongoDB — PASS  
-8. category brand collection tag CRUD — PASS  
+8. category brand tag CRUD — PASS  
 9. product foundation create + moderate — PASS  
 10. RBAC blocks buyer from creating categories — PASS  
 11. validation errors use standard envelope — PASS  

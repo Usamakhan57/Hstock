@@ -73,7 +73,7 @@ test('config defaults are loaded from MongoDB', async () => {
   assert.equal(update.body.data.defaultPercent, 12);
 });
 
-test('category brand collection tag CRUD', async () => {
+test('category brand tag CRUD', async () => {
   const adminToken = await createAdminToken();
 
   const category = await request(app)
@@ -90,13 +90,6 @@ test('category brand collection tag CRUD', async () => {
     .send({ name: 'ApnaStore Brand' });
 
   assert.equal(brand.status, 201);
-
-  const collection = await request(app)
-    .post('/api/v1/collections')
-    .set('Authorization', `Bearer ${adminToken}`)
-    .send({ name: 'Featured Digitals' });
-
-  assert.equal(collection.status, 201);
 
   const tag = await request(app)
     .post('/api/v1/tags')

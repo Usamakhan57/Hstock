@@ -11,7 +11,6 @@ export { default as PlatformConfig } from './PlatformConfig.model.js';
 export { default as CommissionConfig } from './CommissionConfig.model.js';
 export { default as Category } from './Category.model.js';
 export { default as Brand } from './Brand.model.js';
-export { default as Collection } from './Collection.model.js';
 export { default as Tag } from './Tag.model.js';
 export { default as Product } from './Product.model.js';
 export { default as ProductImage } from './ProductImage.model.js';

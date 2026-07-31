@@ -1,4 +1,4 @@
-import { Category, Brand, Collection, Tag } from '../models/index.js';
+import { Category, Brand, Tag } from '../models/index.js';
 import { AppError } from '../utils/AppError.js';
 import { toSlug } from '../utils/slug.js';
 import { parsePagination, buildPaginationMeta } from '../utils/pagination.js';
@@ -162,69 +162,6 @@ export async function deleteBrand(id, userId) {
   return brand;
 }
 
-// ─── Collections ────────────────────────────────────────────────────────────
-
-export async function listCollections(query = {}) {
-  const { page, limit, skip } = parsePagination(query);
-  const filter = { deletedAt: null };
-  if (query.status) filter.status = query.status;
-  if (query.featured !== undefined) filter.featured = query.featured === 'true';
-
-  const [items, total] = await Promise.all([
-    Collection.find(filter).sort({ displayOrder: 1, name: 1 }).skip(skip).limit(limit).lean(),
-    Collection.countDocuments(filter),
-  ]);
-
-  return { items, meta: buildPaginationMeta({ page, limit, total }) };
-}
-
-export async function getCollection(idOrSlug) {
-  return getByIdOrSlug(Collection, idOrSlug, 'Collection not found');
-}
-
-export async function createCollection(payload, userId) {
-  const slug = await ensureUniqueSlug(Collection, payload.slug || payload.name);
-  const collection = await Collection.create({
-    ...payload,
-    slug,
-    createdBy: userId,
-    updatedBy: userId,
-  });
-  return collection.toObject();
-}
-
-export async function updateCollection(id, payload, userId) {
-  const collection = await Collection.findOne({ _id: id, deletedAt: null });
-  if (!collection) {
-    throw new AppError('Collection not found', 404, { code: 'NOT_FOUND' });
-  }
-
-  if (payload.name || payload.slug) {
-    payload.slug = await ensureUniqueSlug(
-      Collection,
-      payload.slug || payload.name || collection.name,
-      collection._id,
-    );
-  }
-
-  Object.assign(collection, payload, { updatedBy: userId });
-  await collection.save();
-  return collection.toObject();
-}
-
-export async function deleteCollection(id, userId) {
-  const collection = await Collection.findOneAndUpdate(
-    { _id: id, deletedAt: null },
-    { $set: { deletedAt: new Date(), updatedBy: userId, status: 'inactive' } },
-    { new: true },
-  ).lean();
-
-  if (!collection) {
-    throw new AppError('Collection not found', 404, { code: 'NOT_FOUND' });
-  }
-  return collection;
-}
-
 // ─── Tags ───────────────────────────────────────────────────────────────────
 
 export async function listTags(query = {}) {
@@ -301,11 +238,6 @@ export default {
   createBrand,
   updateBrand,
   deleteBrand,
-  listCollections,
-  getCollection,
-  createCollection,
-  updateCollection,
-  deleteCollection,
   listTags,
   getTag,
   createTag,

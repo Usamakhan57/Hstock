@@ -5,7 +5,6 @@ import usersRoutes from './users.routes.js';
 import configRoutes from './config.routes.js';
 import categoriesRoutes from './categories.routes.js';
 import brandsRoutes from './brands.routes.js';
-import collectionsRoutes from './collections.routes.js';
 import tagsRoutes from './tags.routes.js';
 import productsRoutes from './products.routes.js';
 import ordersRoutes from './orders.routes.js';
@@ -35,7 +34,6 @@ router.get('/', (_req, res) => {
         'config',
         'categories',
         'brands',
-        'collections',
         'tags',
         'products',
         'orders',
@@ -60,7 +58,6 @@ router.use('/users', usersRoutes);
 router.use('/config', configRoutes);
 router.use('/categories', categoriesRoutes);
 router.use('/brands', brandsRoutes);
-router.use('/collections', collectionsRoutes);
 router.use('/tags', tagsRoutes);
 router.use('/products', productsRoutes);
 router.use('/orders', ordersRoutes);

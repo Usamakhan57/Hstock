@@ -40,7 +40,7 @@ Middleware: `requireAuth`, `requireRole`, `requirePermission`
 
 ### Catalog & products
 
-- Category, Brand, Collection, Tag
+- Category, Brand, Tag
 - Product, ProductImage, DigitalProduct, DigitalAssetClaim
 - Product types: social accounts, email accounts, Instagram/Facebook/TikTok/Twitter/Telegram/Discord/YouTube, domains, websites, SaaS, apps, source code, AI tools, templates, courses, eBooks, scripts, license keys, digital files
 - Global digital asset uniqueness (`assetIdentifier` / `assetIdentifierNormalized`) with normalization, unique indexes, HTTP 409 on duplicates — see `docs/ASSET_UNIQUENESS.md`

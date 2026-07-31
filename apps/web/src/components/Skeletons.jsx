@@ -32,13 +32,6 @@ export const CategoryCardSkeleton = () => (
   </div>
 );
 
-export const CollectionCardSkeleton = () => (
-  <div className="bg-white rounded-3xl overflow-hidden border border-border" aria-hidden="true">
-    <Bone className="h-56 rounded-none" />
-    <div className="p-6 space-y-2.5"><Bone className="h-5 w-1/2" /><Bone className="h-3 w-4/5" /></div>
-  </div>
-);
-
 export const ProductDetailSkeleton = () => (
   <div className="grid lg:grid-cols-2 gap-10" role="status" aria-label="Loading product">
     <div className="space-y-3">
