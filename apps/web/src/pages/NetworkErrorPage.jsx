@@ -7,7 +7,7 @@ import Seo from '../components/Seo';
 
 const NetworkErrorPage = () => (
   <div className="min-h-screen flex flex-col">
-    <Seo title="Connection Lost" description="We couldn't reach HStock. Check your connection and try again." noIndex />
+    <Seo title="Connection Lost" description="We couldn't reach ApnaStore. Check your connection and try again." noIndex />
     <Header />
     <div className="flex-1 grid place-items-center px-5 py-24 text-center">
       <div className="max-w-md">
@@ -16,7 +16,7 @@ const NetworkErrorPage = () => (
         </span>
         <h1 className="text-3xl md:text-4xl font-black tracking-tight">Connection lost</h1>
         <p className="text-muted-foreground mt-2 leading-relaxed">
-          We couldn't reach HStock. Check your internet connection and try again — your wallet and orders are safe.
+          We couldn't reach ApnaStore. Check your internet connection and try again — your wallet and orders are safe.
         </p>
         <div className="flex flex-wrap items-center justify-center gap-3 mt-8">
           <button

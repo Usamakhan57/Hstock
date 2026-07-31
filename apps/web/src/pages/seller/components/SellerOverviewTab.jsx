@@ -17,7 +17,7 @@ const SellerOverviewTab = ({ products, orders, reviews, salesChart, bestSelling,
   const lifetimeEarnings = orders.filter((o) => o.status === 'completed').reduce((s, o) => s + o.amount, 0);
   const recentOrders = orders.slice(0, 5);
   const latestReviews = reviews.slice(0, 3);
-  const promotedListings = products.filter((p) => p.promoted).length;
+  const liveListings = products.filter((p) => p.status === 'live' || p.status === 'active').length;
 
   return (
     <div>
@@ -55,16 +55,16 @@ const SellerOverviewTab = ({ products, orders, reviews, salesChart, bestSelling,
 
         <div className="rounded-[1.5rem] border border-border bg-white p-6 shadow-sm">
           <div className="mb-4 flex items-center justify-between">
-            <h3 className="font-bold">Promotion highlights</h3>
+            <h3 className="font-bold">Listing highlights</h3>
             <Sparkles className="h-4 w-4 text-primary" />
           </div>
           <div className="rounded-2xl bg-primary/[0.06] p-4">
-            <p className="text-sm font-semibold">{promotedListings} listings are currently promoted</p>
-            <p className="mt-1 text-sm text-muted-foreground">Pin your best performers and use daily deals to lift conversion without changing your catalog.</p>
+            <p className="text-sm font-semibold">{liveListings} listings are currently live</p>
+            <p className="mt-1 text-sm text-muted-foreground">Keep titles clear, stock accurate, and delivery options up to date to improve conversion.</p>
           </div>
           <div className="mt-4 space-y-2 text-sm text-muted-foreground">
-            <div className="rounded-2xl border border-border p-3">Verified handover and instant delivery options now appear in the storefront cards.</div>
-            <div className="rounded-2xl border border-border p-3">Your seller profile now reflects real stock, delivery windows, and promotion state.</div>
+            <div className="rounded-2xl border border-border p-3">Verified handover and instant delivery options appear on storefront cards.</div>
+            <div className="rounded-2xl border border-border p-3">Your seller profile reflects real stock and delivery windows for buyers.</div>
           </div>
         </div>
       </div>

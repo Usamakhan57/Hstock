@@ -102,7 +102,7 @@ const SupportPage = () => {
 
   return (
     <>
-      <Seo title="Support Center" description="Get help with orders, licenses, and your HStock account." noIndex />
+      <Seo title="Support Center" description="Get help with orders, licenses, and your ApnaStore account." noIndex />
       <AccountLayout title="Support" subtitle="Get help with orders, downloads, and licensing.">
         <div className="grid lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2">
@@ -127,7 +127,7 @@ const SupportPage = () => {
             <div className="bg-white rounded-3xl border border-border soft-shadow p-6">
               <h3 className="font-bold text-sm mb-1">Contact Support</h3>
               <p className="text-xs text-muted-foreground mb-3">Prefer email? Reach us directly and we'll follow up.</p>
-              <a href="mailto:support@hstock.store" className="text-sm font-semibold text-primary hover:underline">support@hstock.store</a>
+              <a href="mailto:support@apnastore.org" className="text-sm font-semibold text-primary hover:underline">support@apnastore.org</a>
             </div>
           </div>
         </div>

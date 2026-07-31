@@ -52,7 +52,7 @@ function normaliseProduct(p) {
   if (images.length === 0) images = [''];
 
   // Artist / seller
-  const artistName = p.artist || p.brandName || p.brand || 'HStock Marketplace';
+  const artistName = p.artist || p.brandName || p.brand || 'ApnaStore Marketplace';
   const knownArtist = getStorefrontSellers().find((a) => a.name === artistName || a.slug === p.sellerSlug);
   const artistSlug = p.sellerSlug || p.artistSlug || knownArtist?.slug || slugify(artistName);
   const features = Array.isArray(p.features) && p.features.length

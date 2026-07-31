@@ -13,15 +13,15 @@ export const slugify = (name) =>
 // pm_admin_categories), which is the only place any page/component
 // should read categories from.
 //
-// The same used to be true of products, sellers/artists, collections,
-// blog posts, FAQs, and testimonials — each had its own hardcoded array
-// here, disconnected from its Admin CMS. Those have all been closed the
-// same way: products -> services/productRepository.js, sellers/artists ->
-// services/sellerRepository.js, collections -> services/collectionRepository.js,
-// blog posts -> services/blog/blogService.js, FAQs -> services/faqRepository.js,
+// The same used to be true of products, sellers/artists, blog posts, FAQs,
+// and testimonials — each had its own hardcoded array here, disconnected
+// from its Admin CMS. Those have all been closed the same way: products ->
+// services/productRepository.js, sellers/artists -> services/sellerRepository.js,
+// categories -> services/categoryRepository.js, blog posts ->
+// services/blog/blogService.js, FAQs -> services/faqRepository.js,
 // testimonials -> services/testimonialRepository.js. Nothing product-,
-// seller-, collection-, blog-, FAQ-, or testimonial-related should be
-// hardcoded here again — add it to the relevant Admin seed data instead.
+// seller-, blog-, FAQ-, or testimonial-related should be hardcoded here
+// again — add it to the relevant Admin seed data instead.
 
 // Shared license tiers — most products offer both; a few (bundles, fonts)
 // are Commercial-only or Personal-only, set per-product via `licenseIds`.

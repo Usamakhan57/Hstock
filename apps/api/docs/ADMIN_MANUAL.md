@@ -1,4 +1,4 @@
-# Admin Manual — HStock v1.0
+# Admin Manual — ApnaStore v1.0
 
 ## Access
 
@@ -29,7 +29,7 @@
 
 ## CMS / blog
 
-CMS, blog, coupons, media, and reviews UIs remain available for content operations. Commerce-critical catalog (products/categories/brands/collections) is API-backed.
+CMS, blog, coupons, media, and reviews UIs remain available for content operations. Commerce-critical catalog (products/categories/brands) is API-backed.
 
 ## Security notes
 

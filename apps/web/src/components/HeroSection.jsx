@@ -35,7 +35,7 @@ const STATS = [
 
 // Cross-section of what buyers find on the marketplace — powers the
 // floating preview cards on desktop and the scroll showcase on mobile.
-// These mirror real HStock catalog products (see admin/api/seedData.js)
+// These mirror real ApnaStore catalog products (see admin/api/seedData.js)
 // rather than fictional placeholder items.
 const FLOATING_ICONS = [
   { id: 'instagram', label: 'Instagram', icon: SiInstagram, size: 96, wrap: 'top-6 right-16', rotate: -8, delay: 0.1, duration: 6.2, z: 40, opacity: 1, scale: 1.02 },
@@ -293,7 +293,7 @@ const MobileMarketplaceShowcase = ({ className = '' }) => {
  * desktop layout.
  */
 const HeroSection = () => (
-  <section className="mx-auto max-w-[90rem] px-3 sm:px-5 lg:px-8 pt-4 lg:pt-6" aria-label="Welcome to HStock.store — the marketplace for premium digital products">
+  <section className="mx-auto max-w-[90rem] px-3 sm:px-5 lg:px-8 pt-4 lg:pt-6" aria-label="Welcome to ApnaStore — the marketplace for premium digital products">
     <div className="relative overflow-hidden rounded-[2rem] lg:rounded-[2.5rem] bg-gradient-to-br from-[#F3EEFF] via-[#FBF7FF] to-[#FFEFFA] border border-white/70 soft-shadow">
       {/* ambient mesh blobs */}
       <div className="absolute -top-40 -right-32 w-[42rem] h-[42rem] rounded-full brand-gradient opacity-20 blur-3xl animate-hero-blob" aria-hidden="true" />
@@ -314,8 +314,7 @@ const HeroSection = () => (
   variants={fadeUp}
   className="mt-6 text-5xl xl:text-[3.75rem] font-black tracking-tight leading-[1.05]"
 >
-  The Smartest Way to
-  <span className="brand-text">Trade Digital</span>
+  <span className="brand-text">ApnaStore</span> — Trade Digital Assets Securely
 </motion.h1>
 
 <motion.p
@@ -325,7 +324,7 @@ const HeroSection = () => (
   variants={fadeUp}
   className="mt-5 text-lg text-muted-foreground max-w-lg leading-relaxed"
 >
-  Buy & sell Instagram, Gmail, Facebook, TikTok accounts and more — Fast, secure, verified sellers.
+  Buy and sell social accounts, domains, SaaS, source code, and tools with escrow protection and verified sellers.
 </motion.p>
 
 <motion.div
@@ -389,7 +388,7 @@ const HeroSection = () => (
           variants={fadeUp}
           className="mt-4 text-3xl sm:text-4xl font-black tracking-tight leading-[1.08]"
         >
-          The Smartest Way to <span className="brand-text">Trade Digital</span>
+          <span className="brand-text">ApnaStore</span> — Trade Digital Assets Securely
         </motion.h1>
 
         <motion.p
@@ -399,7 +398,7 @@ const HeroSection = () => (
           variants={fadeUp}
           className="mt-3 text-sm sm:text-[15px] text-muted-foreground leading-relaxed max-w-md"
         >
-          Buy & sell Instagram, Gmail, Facebook, TikTok accounts and more — Fast, secure, verified sellers.
+          Buy and sell social accounts, domains, SaaS, source code, and tools with escrow protection and verified sellers.
         </motion.p>
 
         <motion.div initial="hidden" animate="show" custom={3} variants={fadeUp} className="mt-5">
@@ -415,7 +414,7 @@ const HeroSection = () => (
         </motion.div>
 
         <motion.div className="hidden" initial="hidden" animate="show" custom={6} variants={fadeUp}>
-          <p className="text-xs font-semibold text-muted-foreground mb-3">Trending on HStock.store</p>
+          <p className="text-xs font-semibold text-muted-foreground mb-3">Trending on ApnaStore</p>
           <MobileMarketplaceShowcase />
         </motion.div>
 

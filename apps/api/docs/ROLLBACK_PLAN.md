@@ -1,4 +1,4 @@
-# Rollback Plan — HStock v1.0
+# Rollback Plan — ApnaStore v1.0
 
 ## When to rollback
 
@@ -12,13 +12,13 @@
 2. On VPS:
 
 ```bash
-cd /var/www/hstock
+cd /var/www/apnastore
 git fetch --all
 git checkout <known-good-sha>
 cd apps/api && npm ci --omit=dev
 cd ../web && npm ci && npm run build
-rsync -a --delete apps/web/dist/ /var/www/hstock/web/
-cd ../api && pm2 restart hstock-api --env production
+rsync -a --delete apps/web/dist/ /var/www/apnastore/web/
+cd ../api && pm2 restart apnastore-api --env production
 ```
 
 3. Verify `/health/ready` and a smoke Buy Now in Cryptomus sandbox/prod
@@ -29,21 +29,21 @@ Only if a deploy corrupted data:
 
 ```bash
 # Stop API writes
-pm2 stop hstock-api
+pm2 stop apnastore-api
 
 # Restore last good backup (DESTROYS current DB)
 FORCE_RESTORE=1 MONGODB_URI="mongodb://127.0.0.1:27017" \
-  ./apps/api/deploy/scripts/restore.sh /var/backups/hstock/<archive>.tar.gz
+  ./apps/api/deploy/scripts/restore.sh /var/backups/apnastore/<archive>.tar.gz
 
-pm2 start hstock-api --env production
+pm2 start apnastore-api --env production
 ```
 
 ## Nginx / SSL rollback
 
-Keep previous site config at `/etc/nginx/sites-available/hstock.bak` before edits.
+Keep previous site config at `/etc/nginx/sites-available/apnastore.bak` before edits.
 
 ```bash
-sudo cp /etc/nginx/sites-available/hstock.bak /etc/nginx/sites-available/hstock
+sudo cp /etc/nginx/sites-available/apnastore.bak /etc/nginx/sites-available/apnastore
 sudo nginx -t && sudo systemctl reload nginx
 ```
 

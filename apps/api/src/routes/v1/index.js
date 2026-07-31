@@ -25,7 +25,7 @@ const router = Router();
  */
 router.get('/', (_req, res) => {
   return sendSuccess(res, {
-    message: 'HStock API v1',
+    message: 'ApnaStore API v1',
     data: {
       version: 'v1',
       phase: 'production',

@@ -87,7 +87,7 @@ test('category brand collection tag CRUD', async () => {
   const brand = await request(app)
     .post('/api/v1/brands')
     .set('Authorization', `Bearer ${adminToken}`)
-    .send({ name: 'HStock Brand' });
+    .send({ name: 'ApnaStore Brand' });
 
   assert.equal(brand.status, 201);
 

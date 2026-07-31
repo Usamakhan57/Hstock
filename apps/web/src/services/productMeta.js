@@ -2,7 +2,7 @@
  * productMeta.js — small derived-display helpers shared by any place that
  * renders a product summary (ProductCard, QuickViewDialog, ProductDetailPage).
  *
- * Delivery time isn't a field in the product schema — HStock-style listings
+ * Delivery time isn't a field in the product schema — ApnaStore-style listings
  * infer it from category: account/domain/website listings need a manual
  * verified handover, everything else (SaaS, source code, templates, courses,
  * ebooks, scripts, AI tools, mobile apps) unlocks the instant the order is

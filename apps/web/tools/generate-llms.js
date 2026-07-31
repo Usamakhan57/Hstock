@@ -4,7 +4,7 @@ import { dirname, resolve } from 'node:path';
 const artifactPath = resolve(process.cwd(), 'dist/apps/web/.llm-manifest.json');
 const manifest = {
   generatedAt: new Date().toISOString(),
-  app: 'HStock Next',
+  app: 'ApnaStore',
   status: 'generated',
   entries: [
     { name: 'frontend', type: 'vite-react' },

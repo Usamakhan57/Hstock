@@ -5,7 +5,7 @@ function mergeSettings({ systemConfig, platformConfig, commissionConfig } = {}) 
   const platform = platformConfig || {};
   const commission = commissionConfig || {};
   return {
-    storeName: platform.storeName || 'HStock',
+    storeName: platform.storeName || 'ApnaStore',
     storeEmail: platform.storeEmail || platform.supportEmail || '',
     storePhone: platform.storePhone || '',
     address: platform.address || '',

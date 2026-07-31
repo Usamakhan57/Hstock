@@ -23,7 +23,7 @@ Implemented marketplace-wide digital asset uniqueness in `apps/api` so the same 
 
 ```
 HTTP 409
-message: "This digital asset is already listed on HStock."
+message: "This digital asset is already listed on ApnaStore."
 code: ASSET_ALREADY_LISTED
 ```
 

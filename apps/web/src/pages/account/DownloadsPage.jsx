@@ -49,7 +49,7 @@ const DownloadsPage = () => {
 
   return (
     <>
-      <Seo title="My Downloads" description="Re-download every file you've purchased on HStock." noIndex />
+      <Seo title="My Downloads" description="Re-download every file you've purchased on ApnaStore." noIndex />
       <AccountLayout title="Downloads" subtitle="Every file you've purchased, ready to re-download any time.">
         <div className="flex items-center gap-2 bg-white rounded-full px-4 py-2.5 border border-border mb-6 max-w-md">
           <Search className="w-4 h-4 text-muted-foreground shrink-0" />

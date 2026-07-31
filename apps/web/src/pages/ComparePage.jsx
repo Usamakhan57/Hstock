@@ -40,7 +40,7 @@ const ComparePage = () => {
 
   return (
     <div className="min-h-screen">
-      <Seo title="Compare Products" description="Compare digital products side by side on HStock." noIndex />
+      <Seo title="Compare Products" description="Compare digital products side by side on ApnaStore." noIndex />
       <Header />
       <div className="mx-auto max-w-[90rem] px-5 lg:px-8 pt-10 pb-24">
         <Breadcrumbs items={[{ name: 'Compare' }]} />

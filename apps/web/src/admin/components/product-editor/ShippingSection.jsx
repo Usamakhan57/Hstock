@@ -14,7 +14,7 @@ const EMPTY_SHIPPING = {
 /**
  * `value` matches EMPTY_SHIPPING's shape; onChange receives the updated
  * object. When productType is 'digital' every physical-only field is
- * hidden automatically — HStock is digital-only today, but the model
+ * hidden automatically — ApnaStore is digital-only today, but the model
  * is ready for physical products without any component changes.
  */
 const ShippingSection = ({ value = EMPTY_SHIPPING, onChange }) => {

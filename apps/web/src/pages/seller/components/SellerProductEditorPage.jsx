@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
-import { ArrowLeft, ImagePlus, Plus, Trash2, Sparkles, PackageCheck } from 'lucide-react';
+import { ArrowLeft, ImagePlus, Sparkles, PackageCheck } from 'lucide-react';
 import { useToast } from '../../../hooks/use-toast';
 import { createSellerProduct, getSellerProduct, updateSellerProduct } from '../api/sellerProducts';
 
@@ -22,10 +22,6 @@ const defaultDraft = {
   marketplaceType: 'account',
   listingType: 'social-account',
   status: 'draft',
-  promoted: false,
-  featured: false,
-  promotion: null,
-  bulkDiscounts: [],
   thumbnail: '',
   gallery: [],
 };
@@ -46,8 +42,6 @@ const SellerProductEditorPage = () => {
       setForm({
         ...defaultDraft,
         ...product,
-        bulkDiscounts: Array.isArray(product.bulkDiscounts) ? product.bulkDiscounts : [],
-        promotion: product.promotion || null,
       });
       setImageFileName(product.thumbnail ? 'Current image set' : '');
     });
@@ -70,21 +64,6 @@ const SellerProductEditorPage = () => {
 
   const updateField = (field, value) => setForm((prev) => ({ ...prev, [field]: value }));
 
-  const addDiscount = () => {
-    setForm((prev) => ({ ...prev, bulkDiscounts: [...prev.bulkDiscounts, { minQuantity: 5, percentage: 10, label: 'Bundle deal' }] }));
-  };
-
-  const updateDiscount = (index, field, value) => {
-    setForm((prev) => ({
-      ...prev,
-      bulkDiscounts: prev.bulkDiscounts.map((item, itemIndex) => itemIndex === index ? { ...item, [field]: value } : item),
-    }));
-  };
-
-  const removeDiscount = (index) => {
-    setForm((prev) => ({ ...prev, bulkDiscounts: prev.bulkDiscounts.filter((_, itemIndex) => itemIndex !== index) }));
-  };
-
   const handleSubmit = async (publish = false) => {
     if (!form.title.trim()) {
       toast({ title: 'Title required', description: 'Add a clear product title before saving.', variant: 'destructive' });
@@ -94,18 +73,28 @@ const SellerProductEditorPage = () => {
     setSaving(true);
     try {
       const payload = {
-        ...form,
         title: form.title.trim(),
         shortDescription: form.shortDescription.trim(),
         description: form.description.trim(),
-        status: publish ? 'pending' : 'draft',
-        promoted: Boolean(form.promoted),
-        featured: Boolean(form.featured),
-        promotion: form.promoted ? form.promotion || { label: 'Featured Launch', discount: 10 } : null,
-        bulkDiscounts: form.bulkDiscounts.filter(Boolean),
-        stock: Number(form.stock || 0),
+        category: form.category,
+        categoryId: form.categoryId,
         price: Number(form.price || 0),
         salePrice: Number(form.salePrice || 0),
+        stock: Number(form.stock || 0),
+        lowStockThreshold: Number(form.lowStockThreshold || 0),
+        deliveryType: form.deliveryType,
+        marketplaceType: form.marketplaceType,
+        listingType: form.listingType,
+        productType: form.productType,
+        thumbnail: form.thumbnail,
+        gallery: form.gallery,
+        status: publish ? 'pending' : 'draft',
+        whatsIncluded: form.whatsIncluded,
+        seoTitle: form.seoTitle,
+        seoDescription: form.seoDescription,
+        seoKeywords: form.seoKeywords,
+        inventoryType: form.inventoryType,
+        stockType: form.stockType,
       };
 
       const saved = isEditing
@@ -142,11 +131,11 @@ const SellerProductEditorPage = () => {
               <Link to="/seller/products" className="inline-flex items-center gap-1 text-primary hover:opacity-80"><ArrowLeft className="h-3.5 w-3.5" /> Back</Link>
             </div>
             <h2 className="mt-2 text-2xl font-black">{isEditing ? 'Edit product' : 'Upload product'}</h2>
-            <p className="mt-1 text-sm text-muted-foreground">Create a polished listing with delivery options, promotional pricing, and instant account import.</p>
+            <p className="mt-1 text-sm text-muted-foreground">Create a clear listing with pricing, delivery options, and media — then publish into the ApnaStore workflow.</p>
           </div>
           <div className="rounded-2xl border border-primary/10 bg-primary/[0.05] px-4 py-3 text-sm text-muted-foreground">
-            <div className="flex items-center gap-2 font-semibold text-foreground"><Sparkles className="h-4 w-4 text-primary" /> HStock-ready listing</div>
-            <p className="mt-1">Publish into the new seller workflow in one pass.</p>
+            <div className="flex items-center gap-2 font-semibold text-foreground"><Sparkles className="h-4 w-4 text-primary" /> ApnaStore-ready listing</div>
+            <p className="mt-1">Publish into the seller workflow in one pass.</p>
           </div>
         </div>
       </div>
@@ -205,51 +194,6 @@ const SellerProductEditorPage = () => {
                 <span>Low stock threshold</span>
                 <input type="number" value={form.lowStockThreshold} onChange={(e) => updateField('lowStockThreshold', Number(e.target.value))} className="w-full rounded-2xl border border-border bg-secondary/60 px-3 py-2.5 outline-none" />
               </label>
-            </div>
-
-            <div className="mt-5 flex flex-wrap items-center gap-3">
-              <label className="inline-flex items-center gap-2 rounded-full border border-border px-3 py-2 text-sm font-medium text-foreground">
-                <input type="checkbox" checked={Boolean(form.promoted)} onChange={(e) => updateField('promoted', e.target.checked)} className="h-4 w-4 rounded border-border" />
-                Promote listing
-              </label>
-              <label className="inline-flex items-center gap-2 rounded-full border border-border px-3 py-2 text-sm font-medium text-foreground">
-                <input type="checkbox" checked={Boolean(form.featured)} onChange={(e) => updateField('featured', e.target.checked)} className="h-4 w-4 rounded border-border" />
-                Feature on store
-              </label>
-            </div>
-            {form.promoted && <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">A promotion badge will be shown on cards and in seller analytics.</div>}
-          </section>
-
-          <section className="rounded-[1.5rem] border border-border bg-white p-6 shadow-sm">
-            <div className="flex items-center justify-between gap-3">
-              <h3 className="text-lg font-black">Bulk discounts</h3>
-              <button type="button" onClick={addDiscount} className="inline-flex items-center gap-2 rounded-full border border-border px-3 py-2 text-sm font-semibold text-foreground hover:bg-secondary">
-                <Plus className="h-4 w-4" /> Add tier
-              </button>
-            </div>
-            <div className="mt-4 space-y-3">
-              {form.bulkDiscounts.length === 0 ? <p className="rounded-2xl border border-dashed border-border p-4 text-sm text-muted-foreground">No bulk discounts yet. Add tiers for quantity-based offers.</p> : form.bulkDiscounts.map((discount, index) => (
-                <div key={`${discount.label}-${index}`} className="rounded-2xl border border-border p-4">
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="text-sm font-semibold">Tier {index + 1}</p>
-                    <button type="button" onClick={() => removeDiscount(index)} className="rounded-full p-2 text-red-600 transition hover:bg-red-50"><Trash2 className="h-4 w-4" /></button>
-                  </div>
-                  <div className="mt-3 grid gap-3 md:grid-cols-3">
-                    <label className="space-y-2 text-sm font-medium text-foreground">
-                      <span>Minimum quantity</span>
-                      <input type="number" value={discount.minQuantity || 0} onChange={(e) => updateDiscount(index, 'minQuantity', Number(e.target.value))} className="w-full rounded-2xl border border-border bg-secondary/60 px-3 py-2.5 outline-none" />
-                    </label>
-                    <label className="space-y-2 text-sm font-medium text-foreground">
-                      <span>Percentage off</span>
-                      <input type="number" value={discount.percentage || 0} onChange={(e) => updateDiscount(index, 'percentage', Number(e.target.value))} className="w-full rounded-2xl border border-border bg-secondary/60 px-3 py-2.5 outline-none" />
-                    </label>
-                    <label className="space-y-2 text-sm font-medium text-foreground">
-                      <span>Label</span>
-                      <input value={discount.label || ''} onChange={(e) => updateDiscount(index, 'label', e.target.value)} className="w-full rounded-2xl border border-border bg-secondary/60 px-3 py-2.5 outline-none" />
-                    </label>
-                  </div>
-                </div>
-              ))}
             </div>
           </section>
         </div>

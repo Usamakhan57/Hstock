@@ -4,7 +4,7 @@
  * Reads from `pm_admin_faq_categories` and `pm_admin_faqs` (written by the
  * Admin FAQ CMS) and joins them into the grouped shape FAQPage needs.
  * Mirrors categoryRepository.js / productRepository.js / sellerRepository.js
- * / collectionRepository.js — closing the same gap (FAQPage previously read
+ * — closing the same gap (FAQPage previously read
  * a hardcoded `faqCategories` array from data.js, disconnected from the
  * FAQ CMS built in the Admin panel).
  */

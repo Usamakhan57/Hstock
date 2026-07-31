@@ -1,4 +1,4 @@
-# HStock API Documentation (Phase 2)
+# ApnaStore API Documentation (Phase 2)
 
 Base URL: `/api/v1`
 
@@ -72,7 +72,7 @@ Defaults are stored in MongoDB (never hardcoded in business logic):
 | PUT | `/config/platform` | `config:write` | Update PlatformConfig |
 | PUT | `/config/commission` | `config:write` | Update CommissionConfig |
 
-## Categories / Brands / Collections / Tags
+## Categories / Brands / Tags
 
 Public list + get. Write endpoints require corresponding `*:write` permission (Admin/Editor/Super Admin).
 
@@ -80,8 +80,9 @@ Public list + get. Write endpoints require corresponding `*:write` permission (A
 |----------|------|-----|--------|--------|--------|
 | Categories | `GET /categories` | `GET /categories/:idOrSlug` | `POST /categories` | `PATCH /categories/:id` | `DELETE /categories/:id` |
 | Brands | `GET /brands` | `GET /brands/:idOrSlug` | `POST /brands` | `PATCH /brands/:id` | `DELETE /brands/:id` |
-| Collections | `GET /collections` | `GET /collections/:idOrSlug` | `POST /collections` | `PATCH /collections/:id` | `DELETE /collections/:id` |
 | Tags | `GET /tags` | `GET /tags/:idOrSlug` | `POST /tags` | `PATCH /tags/:id` | `DELETE /tags/:id` |
+
+> Collections are not part of the ApnaStore product surface. Storefront and admin UI no longer expose collection browsing or management.
 
 ## Products
 
@@ -108,7 +109,7 @@ The API stores `assetIdentifierNormalized` (canonical form). Duplicate blocking 
 
 - **HTTP 409**
 - `code`: `ASSET_ALREADY_LISTED`
-- `message`: `This digital asset is already listed on HStock.`
+- `message`: `This digital asset is already listed on ApnaStore.`
 
 Applies to sellers **and** admins. Soft-deleted / rejected / archived listings release the identifier.
 

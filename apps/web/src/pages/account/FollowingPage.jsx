@@ -18,7 +18,7 @@ const FollowingPage = () => {
 
   return (
     <>
-      <Seo title="Followed Sellers" description="Sellers you follow on HStock." noIndex />
+      <Seo title="Followed Sellers" description="Sellers you follow on ApnaStore." noIndex />
       <AccountLayout title="Following" subtitle="Sellers you follow — get notified when they publish something new.">
         {following.length === 0 ? (
           <EmptyState title="You're not following anyone yet" message="Follow a seller from their store page to see their new products here." actionLabel="Browse the Shop" actionTo="/shop" />

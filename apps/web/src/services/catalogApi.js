@@ -2,7 +2,6 @@ import { get } from '../lib/apiClient';
 import { cacheKey, cachedRequest } from '../lib/requestCache';
 import {
   mapBackendCategory,
-  mapBackendCollection,
   mapBackendProduct,
   mapBackendSeller,
 } from '../lib/mappers/catalogMappers';
@@ -28,7 +27,6 @@ function applyClientFilters(list, filters = DEFAULT_FILTERS) {
     if (filters.deliveryTime === 'instant' && isManualHandover(p)) return false;
     if (filters.deliveryTime === 'manual' && !isManualHandover(p)) return false;
     if (filters.verifiedOnly && !p.verifiedSeller) return false;
-    if (filters.promotedOnly && !p.promoted) return false;
     if (filters.availability === 'in_stock') {
       if (!p.unlimitedStock && p.stock != null && p.stock <= 0) return false;
     }
@@ -65,7 +63,6 @@ function buildProductQuery({
   search = '',
   category,
   featured,
-  collection,
   seller,
   productType,
   tag,
@@ -73,7 +70,6 @@ function buildProductQuery({
   const params = { page, limit };
   if (search?.trim()) params.search = search.trim();
   if (category) params.category = category;
-  if (collection) params.collection = collection;
   if (seller) params.seller = seller;
   if (productType) params.productType = productType;
   if (tag) params.tag = tag;
@@ -117,30 +113,12 @@ export async function fetchCategory(idOrSlug) {
   }, 60_000);
 }
 
-export async function fetchCollections(params = { limit: 100 }) {
-  const key = cacheKey('collections', params);
-  return cachedRequest(key, async () => {
-    const { data, meta } = await get('/collections', { params });
-    const items = Array.isArray(data) ? data.map(mapBackendCollection) : [];
-    return { items, meta };
-  }, 60_000);
-}
-
-export async function fetchCollection(idOrSlug) {
-  const key = cacheKey('collection', { idOrSlug });
-  return cachedRequest(key, async () => {
-    const { data } = await get(`/collections/${idOrSlug}`);
-    return mapBackendCollection(data);
-  }, 60_000);
-}
-
 function resolveListParams({ filters = DEFAULT_FILTERS, query = '', page = 1, limit = 100 } = {}) {
   return {
     page,
     limit,
     search: query,
     category: filters.categoryId || undefined,
-    collection: filters.collectionId || undefined,
     seller: filters.sellerId || undefined,
     featured: filters.featured,
   };
@@ -266,31 +244,6 @@ export const categoriesApi = {
   },
 };
 
-export const collectionsApi = {
-  async list() {
-    const { items } = await fetchCollections({ limit: 100, status: 'active' });
-    return items;
-  },
-  async bySlug(slug) {
-    try {
-      return await fetchCollection(slug);
-    } catch (error) {
-      if (error?.status === 404) return null;
-      throw error;
-    }
-  },
-  async products(collectionIdOrSlug, { sort = 'Most Popular', query = '', filters = DEFAULT_FILTERS } = {}) {
-    const collection = await collectionsApi.bySlug(collectionIdOrSlug);
-    if (!collection) return [];
-    return productsApi.list({
-      filters: { ...filters, collectionId: collection.id },
-      sort,
-      query,
-      limit: 100,
-    });
-  },
-};
-
 export {
   applyClientFilters,
   applySort,
@@ -301,9 +254,7 @@ export {
 export default {
   productsApi,
   categoriesApi,
-  collectionsApi,
   fetchProducts,
   fetchProduct,
   fetchCategories,
-  fetchCollections,
 };

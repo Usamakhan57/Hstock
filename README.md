@@ -1,4 +1,4 @@
-# HStock Marketplace
+# ApnaStore Marketplace
 
 Multi-vendor digital marketplace for accounts, licenses, and digital assets.
 
@@ -73,4 +73,4 @@ See [`apps/api/docs/PRODUCTION_DEPLOYMENT.md`](apps/api/docs/PRODUCTION_DEPLOYME
 
 ## License
 
-Proprietary — HStock.
+Proprietary — ApnaStore.

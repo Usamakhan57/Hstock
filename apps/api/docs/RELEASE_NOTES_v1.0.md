@@ -1,4 +1,4 @@
-# HStock v1.0 — Release Candidate Notes
+# ApnaStore v1.0 — Release Candidate Notes
 
 **Release:** v1.0-rc.1  
 **Date:** 2026-07-31  

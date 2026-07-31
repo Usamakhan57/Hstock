@@ -1,7 +1,7 @@
-# HStock Commerce Core — Complete Implementation Verification Report
+# ApnaStore Commerce Core — Complete Implementation Verification Report
 
 **Branch:** `cursor/commerce-core-8c83`  
-**PR:** https://github.com/Usamakhan57/Hstock/pull/4  
+**PR:** https://github.com/Usamakhan57/ApnaStore/pull/4  
 **Scope:** `apps/api` only (no frontend modifications)  
 **Date of verification run:** 2026-07-31  
 

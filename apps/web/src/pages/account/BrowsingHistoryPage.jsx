@@ -30,7 +30,7 @@ const BrowsingHistoryPage = () => {
 
   return (
     <>
-      <Seo title="Browsing History" description="Products you've recently viewed and downloaded on HStock." noIndex />
+      <Seo title="Browsing History" description="Products you've recently viewed and downloaded on ApnaStore." noIndex />
       <AccountLayout title="Browsing History" subtitle="Products you've recently viewed and downloaded.">
         <div className="flex items-center gap-1.5 mb-6 overflow-x-auto pb-1">
           {TABS.map((t) => (

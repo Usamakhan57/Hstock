@@ -1,0 +1,11 @@
+/var/www/apnastore/apps/api/logs/app/*.log
+/var/www/apnastore/apps/api/logs/error/*.log
+/var/www/apnastore/apps/api/logs/http/*.log {
+    daily
+    rotate 14
+    compress
+    delaycompress
+    missingok
+    notifempty
+    copytruncate
+}

@@ -130,7 +130,7 @@ const AdminHeader = () => {
 
         <div className="pva-logo">
           <NavLink to="/admin" end>
-            <img src={logo} alt="HStock" />
+            <img src={logo} alt="ApnaStore" />
           </NavLink>
         </div>
 

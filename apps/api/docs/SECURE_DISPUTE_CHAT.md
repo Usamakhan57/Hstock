@@ -1,6 +1,6 @@
 # Secure Dispute Chat System
 
-When a buyer opens a dispute, HStock automatically creates a **private dispute chat**.
+When a buyer opens a dispute, ApnaStore automatically creates a **private dispute chat**.
 
 ## Access control
 
@@ -44,7 +44,7 @@ Admins may suspend accounts via existing user management APIs.
 Allowed: images (`jpg/jpeg/png/gif/webp`), `pdf`, `zip`, `txt`  
 Rejected (file type only): executables and dangerous extensions (`exe`, `js`, `sh`, …)
 
-**Screenshots are never auto-blocked.** HStock sells digital accounts, so dispute evidence often contains account UI text such as:
+**Screenshots are never auto-blocked.** ApnaStore sells digital accounts, so dispute evidence often contains account UI text such as:
 
 - Login failed / wrong password
 - Recovery email screens

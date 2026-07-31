@@ -32,7 +32,7 @@ const InvoicesPage = () => {
 
   return (
     <>
-      <Seo title="Invoices" description="Download invoices for your HStock orders." noIndex />
+      <Seo title="Invoices" description="Download invoices for your ApnaStore orders." noIndex />
       <AccountLayout title="Invoices" subtitle="An invoice is generated automatically for every completed order.">
         {loading ? (
           <ProductGridSkeleton count={3} className="grid grid-cols-1 gap-3" />

@@ -5,12 +5,12 @@
  */
 
 export const SITE = {
-  name: 'HStock',
-  tagline: 'The Digital Marketplace for Modern Businesses',
-  url: 'https://hstock.store',
+  name: 'ApnaStore',
+  tagline: 'Secure Digital Marketplace for Accounts, Assets & Tools',
+  url: 'https://apnastore.org',
   description:
-    'Buy and sell social media accounts, domains, websites, SaaS, source code, mobile apps, AI tools, templates, courses, eBooks, and scripts — all with secure handover and verified sellers on HStock.',
-  twitter: '@hstock',
+    'ApnaStore is a secure marketplace to buy and sell social accounts, domains, websites, SaaS, source code, apps, AI tools, templates, courses, and digital assets — with escrow protection and verified sellers.',
+  twitter: '@apnastore',
 };
 
 /** Backend API base (`/api/v1`). Override with VITE_API_URL. */
@@ -21,7 +21,6 @@ export const ENDPOINTS = {
   product: (id) => `/products/${id}`,
   categories: '/categories',
   categoryProducts: (slug) => `/categories/${slug}/products`,
-  collections: '/collections',
   artists: '/artists',
   artist: (slug) => `/artists/${slug}`,
   blog: '/blog',
@@ -81,7 +80,6 @@ export const AVAILABILITY_FILTERS = [
 export const DEFAULT_FILTERS = {
   category: 'All',
   categoryId: null,
-  collectionId: null,
   sellerId: null,
   price: 'any',
   rating: 0,
@@ -90,7 +88,6 @@ export const DEFAULT_FILTERS = {
   deliveryTime: 'any',
   availability: 'any',
   verifiedOnly: false,
-  promotedOnly: false,
 };
 
 export const DELIVERY_TIME_FILTERS = [

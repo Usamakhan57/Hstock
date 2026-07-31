@@ -1,7 +1,7 @@
 {
-  "name": "@hstock/api",
+  "name": "@apnastore/api",
   "version": "1.0.0",
-  "description": "HStock Marketplace API — Auth, Catalog, Commerce, Notifications, Admin Ops",
+  "description": "ApnaStore Marketplace API — Auth, Catalog, Commerce, Notifications, Admin Ops",
   "private": true,
   "type": "module",
   "main": "server.js",
@@ -17,8 +17,8 @@
     "build": "node scripts/syntax-check.js",
     "test": "node --test --test-concurrency=1 tests/unit/*.test.js tests/integration/*.test.js",
     "pm2:start": "pm2 start ecosystem.config.js --env production",
-    "pm2:stop": "pm2 stop hstock-api",
-    "pm2:restart": "pm2 restart hstock-api"
+    "pm2:stop": "pm2 stop apnastore-api",
+    "pm2:restart": "pm2 restart apnastore-api"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

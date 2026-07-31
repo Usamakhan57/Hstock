@@ -8,7 +8,7 @@ export const getHealth = asyncHandler(async (_req, res) => {
   const db = getDatabaseStatus();
 
   return sendSuccess(res, {
-    message: 'HStock API health check',
+    message: 'ApnaStore API health check',
     data: {
       status: 'ok',
       service: env.APP_NAME,

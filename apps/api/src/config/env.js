@@ -12,7 +12,7 @@ dotenv.config({ path: path.join(API_ROOT, '.env') });
 
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
-  APP_NAME: z.string().min(1).default('HStock API'),
+  APP_NAME: z.string().min(1).default('ApnaStore API'),
   APP_URL: z.string().url().default('http://localhost:4000'),
   API_PREFIX: z.string().default('/api/v1'),
 
@@ -20,7 +20,7 @@ const envSchema = z.object({
   HOST: z.string().default('0.0.0.0'),
 
   MONGODB_URI: z.string().min(1, 'MONGODB_URI is required'),
-  MONGODB_DB_NAME: z.string().min(1).default('hstock'),
+  MONGODB_DB_NAME: z.string().min(1).default('apnastore'),
 
   JWT_ACCESS_SECRET: z.string().min(32, 'JWT_ACCESS_SECRET must be at least 32 characters'),
   JWT_REFRESH_SECRET: z.string().min(32, 'JWT_REFRESH_SECRET must be at least 32 characters'),
@@ -79,7 +79,7 @@ const envSchema = z.object({
   SMTP_PORT: z.coerce.number().int().positive().default(587),
   SMTP_USER: z.string().optional().default(''),
   SMTP_PASS: z.string().optional().default(''),
-  EMAIL_FROM: z.string().optional().default('noreply@hstock.store'),
+  EMAIL_FROM: z.string().optional().default('noreply@apnastore.org'),
 
   /** Optional Redis URL for multi-instance Socket.io / queue backends */
   REDIS_URL: z.string().optional().default(''),

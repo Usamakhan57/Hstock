@@ -8,9 +8,9 @@ import Breadcrumbs from '../components/Breadcrumbs';
 import { useToast } from '../hooks/use-toast';
 
 const info = [
-  { icon: Mail, title: 'Email', text: 'support@hstock.store' },
+  { icon: Mail, title: 'Email', text: 'support@apnastore.org' },
   { icon: Phone, title: 'Phone', text: '+1 (555) 012-3456' },
-  { icon: MapPin, title: 'Studio', text: 'Austin, Texas, USA' },
+  { icon: MapPin, title: 'Office', text: 'Remote-first · apnastore.org' },
 ];
 
 const ContactPage = () => {
@@ -33,12 +33,12 @@ const ContactPage = () => {
 
   return (
     <div className="min-h-screen">
-      <Seo title="Contact Us" description="Get in touch with the HStock support team — we usually reply within one business day." />
+      <Seo title="Contact Us" description="Contact ApnaStore support for orders, seller questions, disputes, and partnership inquiries at support@apnastore.org." />
     <Header />
       <div className="mx-auto max-w-[90rem] px-5 lg:px-8 pt-10 pb-24">
         <Breadcrumbs items={[{ name: 'Contact' }]} />
-        <h1 className="text-4xl md:text-5xl font-black tracking-tight">Get in <span className="brand-text">touch</span></h1>
-        <p className="text-muted-foreground mt-3 max-w-lg">Questions about an order, a license, or becoming a seller? We'd love to hear from you.</p>
+        <h1 className="text-4xl md:text-5xl font-black tracking-tight">Contact <span className="brand-text">ApnaStore</span></h1>
+        <p className="text-muted-foreground mt-3 max-w-lg">Questions about an order, dispute, payout, or becoming a seller? Our team is here to help.</p>
 
         <div className="mt-10 grid lg:grid-cols-[1fr_1.4fr] gap-8">
           <div className="space-y-4">

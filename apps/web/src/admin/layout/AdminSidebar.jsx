@@ -69,7 +69,7 @@ const NavItems = ({ onNavigate }) => (
 export const AdminSidebarContent = ({ onNavigate }) => (
   <div className="flex flex-col h-full bg-white">
     <div className="flex items-center gap-2 px-5 h-16 border-b border-border shrink-0">
-      <img src={LOGO} alt="HStock" className="h-8 w-auto" />
+      <img src={LOGO} alt="ApnaStore" className="h-8 w-auto" />
       <span className="text-xs font-semibold text-muted-foreground">Admin</span>
     </div>
     <NavItems onNavigate={onNavigate} />

@@ -5,8 +5,6 @@ import ShopPage from '../../pages/ShopPage';
 import ProductDetailPage from '../../pages/ProductDetailPage';
 import CategoriesPage from '../../pages/CategoriesPage';
 import CategoryPage from '../../pages/CategoryPage';
-import CollectionsPage from '../../pages/CollectionsPage';
-import CollectionPage from '../../pages/CollectionPage';
 import BlogPage from '../../pages/BlogPage';
 import BlogPostPage from '../../pages/BlogPostPage';
 import AboutPage from '../../pages/AboutPage';
@@ -37,6 +35,8 @@ import PrivacyPolicyPage from '../../pages/PrivacyPolicyPage';
 import TermsPage from '../../pages/TermsPage';
 import FAQPage from '../../pages/FAQPage';
 import RefundPolicyPage from '../../pages/RefundPolicyPage';
+import BuyerGuidePage from '../../pages/BuyerGuidePage';
+import SellerGuidePage from '../../pages/SellerGuidePage';
 import ProfilePage from '../../pages/account/ProfilePage';
 import AccountOrdersPage from '../../pages/account/OrdersPage';
 import AccountOrderDetailPage from '../../pages/account/OrderDetailPage';
@@ -76,8 +76,6 @@ export function storefrontRoutes() {
       <Route path="/product/:id" element={<ProductDetailPage />} />
       <Route path="/categories" element={<CategoriesPage />} />
       <Route path="/category/:slug" element={<CategoryPage />} />
-      <Route path="/collections" element={<CollectionsPage />} />
-      <Route path="/collection/:slug" element={<CollectionPage />} />
       <Route path="/blog" element={<BlogPage />} />
       <Route path="/blog/:slug" element={<BlogPostPage />} />
       <Route path="/about" element={<AboutPage />} />
@@ -148,6 +146,8 @@ export function storefrontRoutes() {
       <Route path="/terms" element={<TermsPage />} />
       <Route path="/faq" element={<FAQPage />} />
       <Route path="/refund-policy" element={<RefundPolicyPage />} />
+      <Route path="/buyer-guide" element={<BuyerGuidePage />} />
+      <Route path="/seller-guide" element={<SellerGuidePage />} />
     </>
   );
 }

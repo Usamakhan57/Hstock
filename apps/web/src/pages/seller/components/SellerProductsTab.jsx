@@ -93,7 +93,7 @@ const SellerProductsTab = () => {
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.3em] text-primary">Listings</p>
-            <h3 className="mt-1 text-xl font-black">Manage your HStock inventory</h3>
+            <h3 className="mt-1 text-xl font-black">Manage your ApnaStore inventory</h3>
             <p className="mt-1 text-sm text-muted-foreground">Launch new products, track stock, and feature your best sellers from one streamlined control center.</p>
           </div>
           <Link to="/seller/products/new" className="inline-flex items-center justify-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-white transition hover:opacity-95">
@@ -135,7 +135,7 @@ const SellerProductsTab = () => {
         <p className="py-12 text-center text-sm text-muted-foreground">Loading your listings…</p>
       ) : filtered.length === 0 ? (
         <div className="rounded-[1.5rem] border border-border bg-white">
-          <EmptyState icon={Package} title={products.length === 0 ? 'No listings yet' : 'No listings match your filters'} description={products.length === 0 ? 'Publish your first listing to start selling on HStock.' : 'Try another search or status filter.'} action={products.length === 0 ? <Link to="/seller/products/new" className="rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-white">Create Listing</Link> : null} />
+          <EmptyState icon={Package} title={products.length === 0 ? 'No listings yet' : 'No listings match your filters'} description={products.length === 0 ? 'Publish your first listing to start selling on ApnaStore.' : 'Try another search or status filter.'} action={products.length === 0 ? <Link to="/seller/products/new" className="rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-white">Create Listing</Link> : null} />
         </div>
       ) : view === 'grid' ? (
         <>
@@ -146,7 +146,6 @@ const SellerProductsTab = () => {
                   {p.thumbnail ? <img src={p.thumbnail} alt={p.title} className="h-full w-full object-cover" /> : <div className="grid h-full place-items-center text-xs text-muted-foreground">No preview</div>}
                   <div className="absolute left-3 top-3 flex gap-2">
                     <StatusBadge status={p.status} />
-                    {p.promoted ? <span className="rounded-full bg-amber-500/90 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-white">Promoted</span> : null}
                   </div>
                 </div>
                 <div className="p-4">
@@ -163,7 +162,7 @@ const SellerProductsTab = () => {
                   </div>
                   <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground">
                     <span className="inline-flex items-center gap-1 rounded-full bg-secondary px-2.5 py-1"><TrendingUp className="h-3 w-3" /> {p.metrics?.views || 0} views</span>
-                    <span className="inline-flex items-center gap-1 rounded-full bg-secondary px-2.5 py-1"><Sparkles className="h-3 w-3" /> {p.promoted ? 'Featured' : 'Standard'}</span>
+                    <span className="inline-flex items-center gap-1 rounded-full bg-secondary px-2.5 py-1"><Sparkles className="h-3 w-3" /> {p.deliveryType === 'manual' ? 'Manual' : 'Instant'}</span>
                   </div>
                   <div className="mt-4 flex items-center gap-2">
                     <Link to={`/seller/products/${p.id}/edit`} className="flex-1 rounded-full border border-border px-3 py-2 text-center text-xs font-semibold transition hover:bg-secondary">Edit</Link>

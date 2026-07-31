@@ -1,4 +1,4 @@
-# Buyer Manual — HStock v1.0
+# Buyer Manual — ApnaStore v1.0
 
 ## Account
 

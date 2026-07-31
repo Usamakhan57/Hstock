@@ -1,6 +1,6 @@
-# HStock API — v1.0 Release Candidate
+# ApnaStore API — v1.0 Release Candidate
 
-Production **Node.js + Express + MongoDB** backend for the HStock multi-vendor digital marketplace.
+Production **Node.js + Express + MongoDB** backend for the ApnaStore multi-vendor digital marketplace.
 
 ## Stack
 

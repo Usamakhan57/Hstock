@@ -13,15 +13,15 @@ const platformConfigSchema = new mongoose.Schema(
     },
     storeName: {
       type: String,
-      default: 'HStock',
+      default: 'ApnaStore',
     },
     storeEmail: {
       type: String,
-      default: 'support@hstock.store',
+      default: 'support@apnastore.org',
     },
     storeUrl: {
       type: String,
-      default: 'https://hstock.store',
+      default: 'https://apnastore.org',
     },
     maintenanceMode: {
       type: Boolean,
@@ -56,7 +56,7 @@ const platformConfigSchema = new mongoose.Schema(
     },
     supportEmail: {
       type: String,
-      default: 'support@hstock.store',
+      default: 'support@apnastore.org',
     },
     updatedBy: {
       type: mongoose.Schema.Types.ObjectId,
