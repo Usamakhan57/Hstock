@@ -1,0 +1,128 @@
+/*
+  HStock — premium digital art marketplace theme
+*/
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  font-family: "Inter", sans-serif;
+  overflow-x: clip;
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+  -webkit-font-smoothing: antialiased;
+}
+
+@layer base {
+  :root {
+    /* HStock palette */
+    --brand: 276 78% 56%;        /* #7C3AED */
+    --brand-2: 327 83% 57%;      /* #EC4899 */
+    --accent-pink: 327 83% 57%;  /* #EC4899 */
+
+    --background: 214 100% 98%;  /* #F8FAFC */
+    --foreground: 221 33% 10%;   /* #111827 */
+    --card: 0 0% 100%;
+    --card-foreground: 221 33% 10%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 221 33% 10%;
+    --primary: 276 78% 56%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 230 16% 96%;
+    --secondary-foreground: 226 13% 55%;
+    --muted: 224 25% 96%;
+    --muted-foreground: 226 13% 55%;
+    --accent: 327 83% 57%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 359 82% 57%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 89%;
+    --input: 230 16% 96%;
+    --ring: 276 78% 56%;
+    --radius: 1.25rem;
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 223 14% 16%;
+    --sidebar-primary: 276 78% 56%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 224 25% 96%;
+    --sidebar-accent-foreground: 226 13% 55%;
+    --sidebar-border: 0 0% 89%;
+    --sidebar-ring: 276 78% 56%;
+  }
+}
+
+@layer utilities {
+  .brand-gradient {
+    background-image: linear-gradient(120deg, #7C3AED 0%, #A855F7 50%, #EC4899 100%);
+  }
+  .brand-text {
+    background-image: linear-gradient(120deg, #6C3BFF 0%, #8F63FF 45%, #FF4FD8 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .glass {
+    background: rgba(255, 255, 255, 0.65);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    border: 1px solid rgba(255, 255, 255, 0.6);
+  }
+  .soft-shadow {
+    box-shadow: 0 10px 40px -12px rgba(108, 59, 255, 0.18);
+  }
+  .soft-shadow-lg {
+    box-shadow: 0 30px 70px -20px rgba(108, 59, 255, 0.28);
+  }
+  .no-scrollbar {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@keyframes float-slow {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-18px) rotate(3deg); }
+}
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+.animate-float-slow { animation: float-slow 7s ease-in-out infinite; }
+.animate-marquee { animation: marquee 28s linear infinite; }
+
+@keyframes float-slower {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-12px) rotate(-2deg); }
+}
+.animate-float-slower { animation: float-slower 9s ease-in-out infinite; }
+
+@keyframes mega-in {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-mega-in { animation: mega-in 0.22s ease-out; }
+
+@keyframes drawer-in {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+.animate-drawer-in { animation: drawer-in 0.22s ease-out forwards; }
+
+@keyframes hero-blob {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(20px, -20px) scale(1.05); }
+}
+.animate-hero-blob { animation: hero-blob 10s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-float-slow, .animate-marquee, .animate-float-slower, .animate-hero-blob { animation: none; }
+}
+
+::selection { background: rgba(108, 59, 255, 0.2); }
+
+::-webkit-scrollbar { width: 10px; }
+::-webkit-scrollbar-thumb { background: hsl(258 40% 85%); border-radius: 999px; }
