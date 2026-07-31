@@ -38,3 +38,7 @@ export {
   detectOcrSensitiveContent,
   validateChatAttachment,
 } from './contentFilter.helper.js';
+export {
+  normalizeAssetIdentifier,
+  resolveAssetKind,
+} from './asset.helper.js';

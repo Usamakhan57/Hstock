@@ -10,6 +10,7 @@ import {
   APPROVAL_STATUS_VALUES,
   DOWNLOAD_TYPE_VALUES,
 } from '../constants/productTypes.js';
+import { ASSET_PLATFORM_VALUES } from '../constants/assetUniqueness.js';
 
 const digitalSchema = z.object({
   downloadType: z.enum(DOWNLOAD_TYPE_VALUES).optional(),
@@ -36,6 +37,9 @@ export const listProductsSchema = {
     featured: z.enum(['true', 'false']).optional(),
     mine: z.enum(['true', 'false']).optional(),
     search: z.string().max(200).optional(),
+    assetIdentifier: z.string().min(1).max(500).optional(),
+    assetIdentifierNormalized: z.string().min(1).max(500).optional(),
+    assetPlatform: z.enum(ASSET_PLATFORM_VALUES).optional(),
   }),
 };
 
@@ -73,6 +77,8 @@ export const createProductSchema = {
     featured: z.boolean().optional(),
     deliveryType: z.enum(DELIVERY_TYPE_VALUES).optional(),
     productType: z.enum(PRODUCT_TYPE_VALUES),
+    assetIdentifier: z.string().min(1).max(500).nullable().optional(),
+    assetPlatform: z.enum(ASSET_PLATFORM_VALUES).nullable().optional(),
     licenseType: z.enum(LICENSE_TYPE_VALUES).nullable().optional(),
     stockType: z.enum(STOCK_TYPE_VALUES).optional(),
     seoTitle: z.string().max(200).nullable().optional(),

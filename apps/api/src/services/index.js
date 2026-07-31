@@ -4,6 +4,7 @@ export * as configService from './config.service.js';
 export * as catalogService from './catalog.service.js';
 export * as productService from './product.service.js';
 export * as activityService from './activity.service.js';
+export * as assetUniquenessService from './assetUniqueness.service.js';
 export * as commissionService from './commission.service.js';
 export * as ledgerService from './ledger.service.js';
 export * as walletService from './wallet.service.js';

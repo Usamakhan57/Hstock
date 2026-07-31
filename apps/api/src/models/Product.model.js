@@ -14,6 +14,10 @@ import {
   STOCK_TYPES,
   DELIVERY_TYPES,
 } from '../constants/productTypes.js';
+import {
+  ASSET_BLOCKING_STATUSES,
+  ASSET_PLATFORM_VALUES,
+} from '../constants/assetUniqueness.js';
 
 const productSchema = new mongoose.Schema(
   {
@@ -127,6 +131,31 @@ const productSchema = new mongoose.Schema(
       required: true,
       index: true,
     },
+    /**
+     * Raw marketplace asset identifier as provided by the seller
+     * (email, username, domain, URL, repo key, etc.).
+     */
+    assetIdentifier: {
+      type: String,
+      default: null,
+      trim: true,
+      maxlength: 500,
+    },
+    /**
+     * Canonical normalized form used for global uniqueness + search.
+     */
+    assetIdentifierNormalized: {
+      type: String,
+      default: null,
+      trim: true,
+      maxlength: 500,
+    },
+    assetPlatform: {
+      type: String,
+      enum: ASSET_PLATFORM_VALUES,
+      default: null,
+      index: true,
+    },
     licenseType: {
       type: String,
       enum: LICENSE_TYPE_VALUES,
@@ -178,6 +207,22 @@ productSchema.index({ title: 'text', shortDescription: 'text', description: 'tex
 productSchema.index({ status: 1, visibility: 1, approvalStatus: 1 });
 productSchema.index({ seller: 1, status: 1 });
 productSchema.index({ createdAt: -1 });
+productSchema.index({ assetIdentifierNormalized: 1 });
+
+// Global uniqueness among blocking (active) listings only.
+// Soft-deleted / rejected / archived products do not occupy the index.
+productSchema.index(
+  { assetIdentifierNormalized: 1 },
+  {
+    name: 'uniq_blocking_asset_identifier',
+    unique: true,
+    partialFilterExpression: {
+      assetIdentifierNormalized: { $type: 'string' },
+      deletedAt: null,
+      status: { $in: [...ASSET_BLOCKING_STATUSES] },
+    },
+  },
+);
 
 const Product = mongoose.models.Product || mongoose.model('Product', productSchema);
 

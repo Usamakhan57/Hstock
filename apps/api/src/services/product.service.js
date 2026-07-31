@@ -17,6 +17,14 @@ import {
   DOWNLOAD_TYPES,
 } from '../constants/productTypes.js';
 import { USER_ROLES } from '../constants/roles.js';
+import { normalizeAssetIdentifier } from '../helpers/asset.helper.js';
+import {
+  prepareAssetFields,
+  assertAssetAvailable,
+  syncProductAssetClaim,
+  releaseDigitalAssetClaim,
+  wrapDuplicateAssetError,
+} from './assetUniqueness.service.js';
 
 async function ensureUniqueProductSlug(base, excludeId = null) {
   let slug = toSlug(base);
@@ -73,8 +81,41 @@ export async function listProducts(query = {}, actor = null) {
   if (query.seller) filter.seller = query.seller;
   if (query.featured !== undefined) filter.featured = query.featured === 'true';
   if (query.tag) filter.tags = query.tag;
+  if (query.assetPlatform) filter.assetPlatform = query.assetPlatform;
+
+  // Search by normalized asset identifier (exact global identity match)
+  if (query.assetIdentifier || query.assetIdentifierNormalized) {
+    const normalized = query.assetIdentifierNormalized
+      || normalizeAssetIdentifier(query.assetIdentifier, {
+        productType: query.productType || null,
+        assetPlatform: query.assetPlatform || null,
+      });
+    if (normalized) {
+      filter.assetIdentifierNormalized = normalized;
+    }
+  }
+
   if (query.search) {
-    filter.$text = { $search: query.search };
+    const rawSearch = String(query.search).trim();
+    const searchNormalized = normalizeAssetIdentifier(rawSearch, {
+      productType: query.productType || null,
+      assetPlatform: query.assetPlatform || null,
+    });
+    const looksLikeAsset = Boolean(
+      searchNormalized
+      && (
+        rawSearch.includes('@')
+        || rawSearch.includes('://')
+        || rawSearch.startsWith('@')
+        || rawSearch.includes('.')
+      ),
+    );
+
+    if (looksLikeAsset) {
+      filter.assetIdentifierNormalized = searchNormalized;
+    } else {
+      filter.$text = { $search: query.search };
+    }
   }
 
   const [items, total] = await Promise.all([
@@ -170,75 +211,83 @@ export async function createProduct(payload, actor) {
   }
 
   const slug = await ensureUniqueProductSlug(payload.slug || payload.title);
+  const assetFields = prepareAssetFields(payload);
+  const status = payload.status || PRODUCT_STATUS.DRAFT;
 
-  const product = await withTransaction(async (session) => {
-    const createOpts = session ? { session } : undefined;
-    const productDoc = session
-      ? (await Product.create([{
+  if (assetFields.assetIdentifierNormalized) {
+    await assertAssetAvailable(assetFields.assetIdentifierNormalized);
+  }
+
+  let product;
+  try {
+    product = await withTransaction(async (session) => {
+      const createOpts = session ? { session } : undefined;
+      const docPayload = {
         ...payload,
+        ...assetFields,
         slug,
         seller: sellerId,
-        status: payload.status || PRODUCT_STATUS.DRAFT,
+        status,
         approvalStatus: payload.approvalStatus || APPROVAL_STATUS.PENDING,
         createdBy: actor.id,
         updatedBy: actor.id,
-      }], createOpts))[0]
-      : await Product.create({
-        ...payload,
-        slug,
-        seller: sellerId,
-        status: payload.status || PRODUCT_STATUS.DRAFT,
-        approvalStatus: payload.approvalStatus || APPROVAL_STATUS.PENDING,
-        createdBy: actor.id,
-        updatedBy: actor.id,
-      });
-
-    if (payload.gallery?.length) {
-      const images = payload.gallery.map((url, index) => ({
-        product: productDoc._id,
-        url,
-        sortOrder: index,
-        isPrimary: index === 0,
-        createdBy: actor.id,
-      }));
-      if (session) {
-        await ProductImage.create(images, { session });
-      } else {
-        await ProductImage.insertMany(images);
-      }
-    }
-
-    if (payload.digital) {
-      const digital = payload.digital;
-      const digitalDoc = {
-        product: productDoc._id,
-        downloadType: digital.downloadType || DOWNLOAD_TYPES.MANUAL,
-        manual: digital.manual ?? digital.downloadType !== DOWNLOAD_TYPES.AUTOMATIC,
-        automatic: digital.automatic ?? digital.downloadType === DOWNLOAD_TYPES.AUTOMATIC,
-        licenseKey: digital.licenseKey || null,
-        downloadUrl: digital.downloadUrl || null,
-        externalUrl: digital.externalUrl || null,
-        deliveryInstructions: digital.deliveryInstructions || '',
-        fileSize: digital.fileSize ?? null,
-        fileType: digital.fileType || null,
       };
-      if (session) {
-        await DigitalProduct.create([digitalDoc], { session });
-      } else {
-        await DigitalProduct.create(digitalDoc);
+
+      const productDoc = session
+        ? (await Product.create([docPayload], createOpts))[0]
+        : await Product.create(docPayload);
+
+      if (payload.gallery?.length) {
+        const images = payload.gallery.map((url, index) => ({
+          product: productDoc._id,
+          url,
+          sortOrder: index,
+          isPrimary: index === 0,
+          createdBy: actor.id,
+        }));
+        if (session) {
+          await ProductImage.create(images, { session });
+        } else {
+          await ProductImage.insertMany(images);
+        }
       }
-    }
 
-    if (payload.tags?.length) {
-      await Tag.updateMany(
-        { _id: { $in: payload.tags } },
-        { $inc: { productCount: 1 } },
-        session ? { session } : undefined,
-      );
-    }
+      if (payload.digital) {
+        const digital = payload.digital;
+        const digitalDoc = {
+          product: productDoc._id,
+          downloadType: digital.downloadType || DOWNLOAD_TYPES.MANUAL,
+          manual: digital.manual ?? digital.downloadType !== DOWNLOAD_TYPES.AUTOMATIC,
+          automatic: digital.automatic ?? digital.downloadType === DOWNLOAD_TYPES.AUTOMATIC,
+          licenseKey: digital.licenseKey || null,
+          downloadUrl: digital.downloadUrl || null,
+          externalUrl: digital.externalUrl || null,
+          deliveryInstructions: digital.deliveryInstructions || '',
+          fileSize: digital.fileSize ?? null,
+          fileType: digital.fileType || null,
+        };
+        if (session) {
+          await DigitalProduct.create([digitalDoc], { session });
+        } else {
+          await DigitalProduct.create(digitalDoc);
+        }
+      }
 
-    return productDoc;
-  });
+      if (payload.tags?.length) {
+        await Tag.updateMany(
+          { _id: { $in: payload.tags } },
+          { $inc: { productCount: 1 } },
+          session ? { session } : undefined,
+        );
+      }
+
+      await syncProductAssetClaim(productDoc, { session });
+
+      return productDoc;
+    });
+  } catch (error) {
+    throw wrapDuplicateAssetError(error);
+  }
 
   return getProduct(product._id, actor, { skipAccessCheck: true });
 }
@@ -268,46 +317,88 @@ export async function updateProduct(id, payload, actor) {
   }
 
   const { digital, gallery, ...productFields } = payload;
+  const assetFields = prepareAssetFields(payload, product);
 
-  Object.assign(product, productFields, { updatedBy: actor.id });
-  await product.save();
+  const nextStatus = productFields.status ?? product.status;
+  const nextNormalized = assetFields.assetIdentifierNormalized;
 
-  if (gallery) {
-    await ProductImage.deleteMany({ product: product._id });
-    if (gallery.length) {
-      await ProductImage.insertMany(
-        gallery.map((url, index) => ({
-          product: product._id,
-          url,
-          sortOrder: index,
-          isPrimary: index === 0,
-          createdBy: actor.id,
-        })),
-      );
-      product.gallery = gallery;
-      product.thumbnail = product.thumbnail || gallery[0];
-      await product.save();
-    }
+  if (
+    nextNormalized
+    && nextNormalized !== product.assetIdentifierNormalized
+  ) {
+    await assertAssetAvailable(nextNormalized, { excludeProductId: product._id });
+  } else if (
+    nextNormalized
+    && productFields.status
+    && productFields.status !== product.status
+  ) {
+    await assertAssetAvailable(nextNormalized, { excludeProductId: product._id });
   }
 
-  if (digital) {
-    await DigitalProduct.findOneAndUpdate(
-      { product: product._id },
-      {
-        $set: {
-          downloadType: digital.downloadType,
-          manual: digital.manual,
-          automatic: digital.automatic,
-          licenseKey: digital.licenseKey,
-          downloadUrl: digital.downloadUrl,
-          externalUrl: digital.externalUrl,
-          deliveryInstructions: digital.deliveryInstructions,
-          fileSize: digital.fileSize,
-          fileType: digital.fileType,
-        },
-      },
-      { upsert: true, new: true },
-    );
+  Object.assign(product, productFields, assetFields, { updatedBy: actor.id });
+
+  try {
+    await withTransaction(async (session) => {
+      if (session) {
+        await product.save({ session });
+      } else {
+        await product.save();
+      }
+
+      if (gallery) {
+        await ProductImage.deleteMany(
+          { product: product._id },
+          session ? { session } : undefined,
+        );
+        if (gallery.length) {
+          const images = gallery.map((url, index) => ({
+            product: product._id,
+            url,
+            sortOrder: index,
+            isPrimary: index === 0,
+            createdBy: actor.id,
+          }));
+          if (session) {
+            await ProductImage.create(images, { session });
+          } else {
+            await ProductImage.insertMany(images);
+          }
+          product.gallery = gallery;
+          product.thumbnail = product.thumbnail || gallery[0];
+          if (session) {
+            await product.save({ session });
+          } else {
+            await product.save();
+          }
+        }
+      }
+
+      if (digital) {
+        await DigitalProduct.findOneAndUpdate(
+          { product: product._id },
+          {
+            $set: {
+              downloadType: digital.downloadType,
+              manual: digital.manual,
+              automatic: digital.automatic,
+              licenseKey: digital.licenseKey,
+              downloadUrl: digital.downloadUrl,
+              externalUrl: digital.externalUrl,
+              deliveryInstructions: digital.deliveryInstructions,
+              fileSize: digital.fileSize,
+              fileType: digital.fileType,
+            },
+          },
+          { upsert: true, new: true, ...(session ? { session } : {}) },
+        );
+      }
+
+      // Ensure status used for claim sync reflects latest values
+      product.status = nextStatus;
+      await syncProductAssetClaim(product, { session });
+    });
+  } catch (error) {
+    throw wrapDuplicateAssetError(error);
   }
 
   return getProduct(product._id, actor, { skipAccessCheck: true });
@@ -333,7 +424,15 @@ export async function deleteProduct(id, actor) {
   product.deletedAt = new Date();
   product.status = PRODUCT_STATUS.ARCHIVED;
   product.updatedBy = actor.id;
-  await product.save();
+
+  await withTransaction(async (session) => {
+    if (session) {
+      await product.save({ session });
+    } else {
+      await product.save();
+    }
+    await releaseDigitalAssetClaim(product._id, { session });
+  });
 
   return { deleted: true, id: product._id };
 }
@@ -353,10 +452,28 @@ export async function submitProduct(id, actor) {
     throw new AppError('Forbidden', 403, { code: 'FORBIDDEN' });
   }
 
+  if (product.assetIdentifierNormalized) {
+    await assertAssetAvailable(product.assetIdentifierNormalized, {
+      excludeProductId: product._id,
+    });
+  }
+
   product.status = PRODUCT_STATUS.PENDING;
   product.approvalStatus = APPROVAL_STATUS.PENDING;
   product.updatedBy = actor.id;
-  await product.save();
+
+  try {
+    await withTransaction(async (session) => {
+      if (session) {
+        await product.save({ session });
+      } else {
+        await product.save();
+      }
+      await syncProductAssetClaim(product, { session });
+    });
+  } catch (error) {
+    throw wrapDuplicateAssetError(error);
+  }
 
   return getProduct(product._id, actor, { skipAccessCheck: true });
 }
@@ -380,7 +497,25 @@ export async function moderateProduct(id, payload, actor) {
   if (payload.featured !== undefined) product.featured = payload.featured;
 
   product.updatedBy = actor.id;
-  await product.save();
+
+  if (product.assetIdentifierNormalized) {
+    await assertAssetAvailable(product.assetIdentifierNormalized, {
+      excludeProductId: product._id,
+    });
+  }
+
+  try {
+    await withTransaction(async (session) => {
+      if (session) {
+        await product.save({ session });
+      } else {
+        await product.save();
+      }
+      await syncProductAssetClaim(product, { session });
+    });
+  } catch (error) {
+    throw wrapDuplicateAssetError(error);
+  }
 
   return getProduct(product._id, actor, { skipAccessCheck: true });
 }

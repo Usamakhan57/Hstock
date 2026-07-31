@@ -16,6 +16,7 @@ export { default as Tag } from './Tag.model.js';
 export { default as Product } from './Product.model.js';
 export { default as ProductImage } from './ProductImage.model.js';
 export { default as DigitalProduct } from './DigitalProduct.model.js';
+export { default as DigitalAssetClaim } from './DigitalAssetClaim.model.js';
 export { default as Order } from './Order.model.js';
 export { default as Payment } from './Payment.model.js';
 export { default as Escrow } from './Escrow.model.js';
