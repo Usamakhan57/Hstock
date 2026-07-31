@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   detectBlockedContent,
+  detectOcrSensitiveContent,
   validateChatAttachment,
   normalizeForDetection,
 } from '../../src/helpers/contentFilter.helper.js';
@@ -36,6 +37,17 @@ test('blocks social profile links and emails', () => {
   assert.ok(detectBlockedContent('contact me at amankhan@gmail.com').blocked);
   assert.ok(detectBlockedContent('name@hotmail.com').blocked);
   assert.ok(detectBlockedContent('user@proton.me').blocked);
+});
+
+test('allows digital-account status discussion without profile links', () => {
+  assert.equal(
+    detectBlockedContent('The Instagram account is disabled and Facebook shows a checkpoint.').blocked,
+    false,
+  );
+  assert.equal(
+    detectBlockedContent('Gmail security warning appeared after login failed.').blocked,
+    false,
+  );
 });
 
 test('blocks URLs and wallet keywords', () => {
@@ -75,4 +87,17 @@ test('attachment allowlist and executable rejection', () => {
 test('normalize collapses obfuscation', () => {
   const { collapsed } = normalizeForDetection('W.h.a.t.s.a.p.p');
   assert.equal(collapsed.includes('whatsapp'), true);
+});
+
+test('OCR scan allows account UI wording but flags contact payloads', () => {
+  const ui = detectOcrSensitiveContent(
+    'Login failed. Wrong password. Facebook checkpoint. Gmail security warning. cPanel dashboard.',
+  );
+  assert.equal(ui.sensitive, false);
+
+  const contact = detectOcrSensitiveContent(
+    'WhatsApp me at +923001234567 or recovery@gmail.com https://t.me/seller',
+  );
+  assert.equal(contact.sensitive, true);
+  assert.ok(contact.rules.includes('phone') || contact.rules.includes('email'));
 });

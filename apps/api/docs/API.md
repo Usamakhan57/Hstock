@@ -112,13 +112,17 @@ Auto-created when a buyer opens a dispute. Private to buyer, seller, and assigne
 | DELETE | `/disputes/:id/chat/messages/:messageId` | Author/Assigned admin | Soft delete |
 | POST | `/disputes/:id/chat/assign` | Admin/Support | Assign moderator |
 | GET | `/disputes/:id/chat/blocked-attempts` | Assigned admin | View blocked contact attempts |
+| GET | `/disputes/:id/chat/flagged-attachments` | Assigned admin | OCR-flagged evidence screenshots |
+| POST | `/disputes/:id/chat/messages/:messageId/attachments/:attachmentId/review` | Assigned admin | Clear or confirm flagged screenshot |
 | GET | `/disputes/:id/chat/audit` | Assigned admin | Full chat audit trail |
 | GET | `/disputes/violations` | Staff | Violation counters |
 | POST | `/disputes/:id/messages` | Participant | Legacy path (same secure filter) |
 
-Blocked contact / off-platform content → **HTTP 400** `CONTACT_INFO_BLOCKED`:
+Blocked **text** contact / off-platform content → **HTTP 400** `CONTACT_INFO_BLOCKED`:
 
 `For your security, sharing personal contact information or external links is not allowed.`
+
+Evidence **screenshots are never auto-blocked**. OCR may flag them for admin review with a moderator warning badge.
 
 Details: `docs/SECURE_DISPUTE_CHAT.md`.
 

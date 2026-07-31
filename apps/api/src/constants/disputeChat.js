@@ -34,7 +34,39 @@ export const DISPUTE_CHAT_AUDIT_ACTIONS = Object.freeze({
   WARNING_ISSUED: 'warning_issued',
   ADMIN_NOTIFIED: 'admin_notified',
   ATTACHMENT_REJECTED: 'attachment_rejected',
+  ATTACHMENT_FLAGGED: 'attachment_flagged',
+  ATTACHMENT_REVIEWED: 'attachment_reviewed',
 });
+
+/** Image types eligible for OCR evidence scanning. */
+export const DISPUTE_CHAT_IMAGE_EXTENSIONS = Object.freeze([
+  'jpg',
+  'jpeg',
+  'png',
+  'gif',
+  'webp',
+]);
+
+export const DISPUTE_CHAT_OCR_STATUS = Object.freeze({
+  PENDING: 'pending',
+  COMPLETED: 'completed',
+  SKIPPED: 'skipped',
+  FAILED: 'failed',
+});
+
+export const DISPUTE_CHAT_OCR_STATUS_VALUES = Object.freeze(
+  Object.values(DISPUTE_CHAT_OCR_STATUS),
+);
+
+export const DISPUTE_CHAT_ATTACHMENT_REVIEW_STATUS = Object.freeze({
+  PENDING: 'pending',
+  CLEARED: 'cleared',
+  CONFIRMED_VIOLATION: 'confirmed_violation',
+});
+
+export const DISPUTE_CHAT_ATTACHMENT_REVIEW_STATUS_VALUES = Object.freeze(
+  Object.values(DISPUTE_CHAT_ATTACHMENT_REVIEW_STATUS),
+);
 
 export const DISPUTE_CHAT_AUDIT_ACTION_VALUES = Object.freeze(
   Object.values(DISPUTE_CHAT_AUDIT_ACTIONS),
@@ -91,4 +123,9 @@ export default {
   DISPUTE_CHAT_VIOLATION_THRESHOLDS,
   DISPUTE_CHAT_ALLOWED_EXTENSIONS,
   DISPUTE_CHAT_BLOCKED_EXTENSIONS,
+  DISPUTE_CHAT_IMAGE_EXTENSIONS,
+  DISPUTE_CHAT_OCR_STATUS,
+  DISPUTE_CHAT_OCR_STATUS_VALUES,
+  DISPUTE_CHAT_ATTACHMENT_REVIEW_STATUS,
+  DISPUTE_CHAT_ATTACHMENT_REVIEW_STATUS_VALUES,
 };

@@ -39,10 +39,36 @@ Per-user counter (`DisputeChatViolation`):
 
 Admins may suspend accounts via existing user management APIs.
 
-## Attachments
+## Attachments / evidence screenshots
 
 Allowed: images (`jpg/jpeg/png/gif/webp`), `pdf`, `zip`, `txt`  
-Rejected: executables and dangerous extensions (`exe`, `js`, `sh`, …)
+Rejected (file type only): executables and dangerous extensions (`exe`, `js`, `sh`, …)
+
+**Screenshots are never auto-blocked.** HStock sells digital accounts, so dispute evidence often contains account UI text such as:
+
+- Login failed / wrong password
+- Recovery email screens
+- Instagram disabled
+- Gmail security warning
+- Facebook checkpoint
+- Domain dashboard / cPanel / hosting panel
+
+### OCR policy
+
+1. Run OCR on uploaded/linked images
+2. If OCR finds phones, emails, Telegram/WhatsApp, external URLs, or wallet addresses:
+   - **Do not reject** the image
+   - Store the image
+   - Record OCR text + findings
+   - Flag for admin review
+   - Show a **warning badge** to moderators only
+3. Only **text chat messages** are auto-blocked by the contact filter
+4. Admins review flagged screenshots and mark `cleared` or `confirmed_violation`
+
+Moderator endpoints:
+
+- `GET /disputes/:id/chat/flagged-attachments`
+- `POST /disputes/:id/chat/messages/:messageId/attachments/:attachmentId/review`
 
 ## Rate limits
 

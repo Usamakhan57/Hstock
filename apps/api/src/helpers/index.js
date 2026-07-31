@@ -35,5 +35,6 @@ export {
 export {
   normalizeForDetection,
   detectBlockedContent,
+  detectOcrSensitiveContent,
   validateChatAttachment,
 } from './contentFilter.helper.js';

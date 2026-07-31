@@ -102,6 +102,34 @@ export const listViolations = asyncHandler(async (req, res) => {
   });
 });
 
+export const listFlaggedAttachments = asyncHandler(async (req, res) => {
+  const result = await disputeChatService.listFlaggedAttachments(
+    req.params.id,
+    req.query,
+    req.user,
+  );
+  return sendSuccess(res, {
+    message: 'Flagged evidence screenshots',
+    data: result.items,
+    meta: result.meta,
+  });
+});
+
+export const reviewFlaggedAttachment = asyncHandler(async (req, res) => {
+  const data = await disputeChatService.reviewFlaggedAttachment(
+    req.params.id,
+    req.params.messageId,
+    req.params.attachmentId,
+    req.body,
+    req.user,
+    requestMeta(req),
+  );
+  return sendSuccess(res, {
+    message: 'Attachment review saved',
+    data,
+  });
+});
+
 export default {
   getChat,
   listMessages,
@@ -112,4 +140,6 @@ export default {
   listBlockedAttempts,
   listAuditLogs,
   listViolations,
+  listFlaggedAttachments,
+  reviewFlaggedAttachment,
 };

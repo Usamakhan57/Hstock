@@ -12,9 +12,12 @@ import { USER_ROLES } from '../constants/roles.js';
 import {
   CONTACT_FILTER_CODE,
   CONTACT_FILTER_MESSAGE,
+  DISPUTE_CHAT_ATTACHMENT_REVIEW_STATUS,
   DISPUTE_CHAT_AUDIT_ACTIONS,
+  DISPUTE_CHAT_IMAGE_EXTENSIONS,
   DISPUTE_CHAT_MESSAGE_STATUS,
   DISPUTE_CHAT_MUTE_DURATION_MS,
+  DISPUTE_CHAT_OCR_STATUS,
   DISPUTE_CHAT_RATE_LIMIT,
   DISPUTE_CHAT_ROLES,
   DISPUTE_CHAT_STATUS,
@@ -23,9 +26,11 @@ import {
 import { DISPUTE_STATUS } from '../constants/statuses.js';
 import {
   detectBlockedContent,
+  detectOcrSensitiveContent,
   validateChatAttachment,
 } from '../helpers/contentFilter.helper.js';
 import { logActivity } from './activity.service.js';
+import { extractTextFromImage } from './ocr.service.js';
 
 function isSuperAdmin(actor) {
   return actor?.roles?.includes(USER_ROLES.SUPER_ADMIN);
@@ -212,31 +217,102 @@ async function assertRateLimit(chat, actor) {
   }
 }
 
-function normalizeAttachments(attachments = []) {
+function attachmentFilename(url) {
+  try {
+    return new URL(url).pathname.split('/').pop() || null;
+  } catch {
+    return String(url).split('/').pop() || null;
+  }
+}
+
+/**
+ * Validate file type, store evidence, and OCR-scan images.
+ * Screenshots are NEVER auto-rejected for contact-like OCR content —
+ * they are flagged for admin review instead.
+ */
+async function processAttachments(attachments = []) {
   if (!attachments?.length) return [];
-  const normalized = [];
+
+  const processed = [];
   for (const item of attachments) {
     const url = typeof item === 'string' ? item : item?.url;
     const check = validateChatAttachment(url);
     if (!check.ok) {
+      // Only dangerous/unsupported file types are rejected — never OCR content.
       throw new AppError('Attachment type is not allowed', 400, {
         code: 'ATTACHMENT_REJECTED',
         details: { reason: check.reason, extension: check.extension, url },
       });
     }
-    let filename = null;
-    try {
-      filename = new URL(url).pathname.split('/').pop() || null;
-    } catch {
-      filename = String(url).split('/').pop() || null;
-    }
-    normalized.push({
+
+    const filename = attachmentFilename(url);
+    const attachment = {
       url,
       filename,
       extension: check.extension,
-    });
+      ocrStatus: DISPUTE_CHAT_OCR_STATUS.SKIPPED,
+      ocrText: null,
+      ocrConfidence: null,
+      ocrFindings: [],
+      ocrError: null,
+      flaggedForReview: false,
+      warningBadge: false,
+      adminReviewStatus: null,
+    };
+
+    if (DISPUTE_CHAT_IMAGE_EXTENSIONS.includes(check.extension)) {
+      // Evidence screenshots (login failed, recovery email, Instagram disabled,
+      // Gmail warnings, Facebook checkpoint, cPanel, hosting panels, etc.)
+      // must always be stored. OCR only flags for moderator review.
+      const ocr = await extractTextFromImage({ url });
+      if (ocr.error && !ocr.text) {
+        attachment.ocrStatus = DISPUTE_CHAT_OCR_STATUS.FAILED;
+        attachment.ocrError = ocr.error;
+      } else {
+        attachment.ocrStatus = DISPUTE_CHAT_OCR_STATUS.COMPLETED;
+        attachment.ocrText = ocr.text || '';
+        attachment.ocrConfidence = ocr.confidence;
+        const detection = detectOcrSensitiveContent(attachment.ocrText);
+        if (detection.sensitive) {
+          attachment.flaggedForReview = true;
+          attachment.warningBadge = true;
+          attachment.ocrFindings = detection.rules;
+          attachment.adminReviewStatus = DISPUTE_CHAT_ATTACHMENT_REVIEW_STATUS.PENDING;
+        }
+      }
+    }
+
+    processed.push(attachment);
   }
-  return normalized;
+  return processed;
+}
+
+function canViewModeratorSignals(chat, actor) {
+  if (isSuperAdmin(actor)) return true;
+  const id = String(actorId(actor));
+  return Boolean(chat.assignedAdmin && refId(chat.assignedAdmin) === id);
+}
+
+/**
+ * Buyer/seller see images; OCR findings + warning badges are moderator-only.
+ */
+function presentMessageForActor(message, chat, actor) {
+  const plain = typeof message.toObject === 'function' ? message.toObject() : { ...message };
+  if (canViewModeratorSignals(chat, actor)) {
+    return plain;
+  }
+
+  return {
+    ...plain,
+    moderatorWarningBadge: undefined,
+    hasFlaggedAttachments: undefined,
+    attachments: (plain.attachments || []).map((attachment) => ({
+      _id: attachment._id,
+      url: attachment.url,
+      filename: attachment.filename,
+      extension: attachment.extension,
+    })),
+  };
 }
 
 async function recordViolation({
@@ -397,7 +473,10 @@ export async function listMessages(disputeId, query, actor) {
     DisputeChatMessage.countDocuments(filter),
   ]);
 
-  return { items, meta: buildPaginationMeta({ page, limit, total }) };
+  return {
+    items: items.map((item) => presentMessageForActor(item, chat, actor)),
+    meta: buildPaginationMeta({ page, limit, total }),
+  };
 }
 
 export async function sendMessage(disputeId, payload, actor, requestMeta = {}) {
@@ -428,7 +507,9 @@ export async function sendMessage(disputeId, payload, actor, requestMeta = {}) {
 
   let attachments;
   try {
-    attachments = normalizeAttachments(payload.attachments || []);
+    // Evidence screenshots are always stored. OCR may flag for admin review
+    // but never auto-rejects screenshot content.
+    attachments = await processAttachments(payload.attachments || []);
   } catch (error) {
     if (error instanceof AppError && error.code === 'ATTACHMENT_REJECTED') {
       await writeAudit({
@@ -445,8 +526,7 @@ export async function sendMessage(disputeId, payload, actor, requestMeta = {}) {
     throw error;
   }
 
-  // Scan message body only. Attachment URLs are validated via allowlist
-  // (images/pdf/zip/txt) — hosting URLs themselves are not treated as contact leaks.
+  // Only TEXT chat messages are auto-blocked. Screenshots are never blocked.
   const detection = detectBlockedContent(body);
 
   if (detection.blocked) {
@@ -473,6 +553,8 @@ export async function sendMessage(disputeId, payload, actor, requestMeta = {}) {
     });
   }
 
+  const hasFlaggedAttachments = attachments.some((a) => a.flaggedForReview);
+
   const message = await DisputeChatMessage.create({
     chat: chat._id,
     dispute: chat.dispute,
@@ -481,6 +563,8 @@ export async function sendMessage(disputeId, payload, actor, requestMeta = {}) {
     role,
     body,
     attachments,
+    hasFlaggedAttachments,
+    moderatorWarningBadge: hasFlaggedAttachments,
   });
 
   chat.messageCount = (chat.messageCount || 0) + 1;
@@ -506,12 +590,30 @@ export async function sendMessage(disputeId, payload, actor, requestMeta = {}) {
     actor,
     action: DISPUTE_CHAT_AUDIT_ACTIONS.MESSAGE_SENT,
     message,
-    meta: { role },
+    meta: { role, hasFlaggedAttachments },
     ip: requestMeta.ip,
     userAgent: requestMeta.userAgent,
   });
 
-  return message.toObject();
+  if (hasFlaggedAttachments) {
+    await writeAudit({
+      chat,
+      dispute: chat.dispute,
+      order: chat.order,
+      actor,
+      action: DISPUTE_CHAT_AUDIT_ACTIONS.ATTACHMENT_FLAGGED,
+      message,
+      meta: {
+        findings: attachments
+          .filter((a) => a.flaggedForReview)
+          .map((a) => ({ url: a.url, rules: a.ocrFindings })),
+      },
+      ip: requestMeta.ip,
+      userAgent: requestMeta.userAgent,
+    });
+  }
+
+  return presentMessageForActor(message, chat, actor);
 }
 
 export async function editMessage(disputeId, messageId, payload, actor, requestMeta = {}) {
@@ -748,6 +850,138 @@ export async function closeChatForDispute(disputeId, { session = null } = {}) {
   return chat;
 }
 
+function assertModeratorAccess(chat, actor) {
+  if (!chat) {
+    throw new AppError('Dispute chat not found', 404, { code: 'CHAT_NOT_FOUND' });
+  }
+  if (!canViewModeratorSignals(chat, actor)) {
+    throw new AppError('Only the assigned admin can review flagged attachments', 403, {
+      code: 'ADMIN_NOT_ASSIGNED',
+    });
+  }
+}
+
+export async function listFlaggedAttachments(disputeId, query, actor) {
+  const chat = await DisputeChat.findOne({ dispute: disputeId });
+  assertModeratorAccess(chat, actor);
+
+  const { page, limit, skip } = parsePagination(query);
+  const filter = {
+    chat: chat._id,
+    hasFlaggedAttachments: true,
+    status: DISPUTE_CHAT_MESSAGE_STATUS.VISIBLE,
+  };
+
+  const [messages, total] = await Promise.all([
+    DisputeChatMessage.find(filter)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .populate('author', 'name email roles')
+      .lean(),
+    DisputeChatMessage.countDocuments(filter),
+  ]);
+
+  const items = messages.flatMap((message) =>
+    (message.attachments || [])
+      .filter((attachment) => attachment.flaggedForReview)
+      .map((attachment) => ({
+        messageId: message._id,
+        attachmentId: attachment._id,
+        author: message.author,
+        bodyPreview: String(message.body || '').slice(0, 200),
+        warningBadge: true,
+        attachment,
+        createdAt: message.createdAt,
+      })),
+  );
+
+  return { items, meta: buildPaginationMeta({ page, limit, total }) };
+}
+
+export async function reviewFlaggedAttachment(
+  disputeId,
+  messageId,
+  attachmentId,
+  payload,
+  actor,
+  requestMeta = {},
+) {
+  const chat = await DisputeChat.findOne({ dispute: disputeId });
+  assertModeratorAccess(chat, actor);
+
+  const decision = payload?.decision;
+  if (![
+    DISPUTE_CHAT_ATTACHMENT_REVIEW_STATUS.CLEARED,
+    DISPUTE_CHAT_ATTACHMENT_REVIEW_STATUS.CONFIRMED_VIOLATION,
+  ].includes(decision)) {
+    throw new AppError('Invalid review decision', 400, { code: 'INVALID_REVIEW_DECISION' });
+  }
+
+  const message = await DisputeChatMessage.findOne({
+    _id: messageId,
+    chat: chat._id,
+  });
+  if (!message) {
+    throw new AppError('Message not found', 404, { code: 'MESSAGE_NOT_FOUND' });
+  }
+
+  const attachment = message.attachments.id(attachmentId);
+  if (!attachment) {
+    throw new AppError('Attachment not found', 404, { code: 'ATTACHMENT_NOT_FOUND' });
+  }
+
+  attachment.adminReviewStatus = decision;
+  attachment.reviewedAt = new Date();
+  attachment.reviewedBy = actorId(actor);
+  attachment.reviewNote = payload.note || null;
+  // Keep warning badge until cleared; confirmed violations keep badge for history
+  if (decision === DISPUTE_CHAT_ATTACHMENT_REVIEW_STATUS.CLEARED) {
+    attachment.warningBadge = false;
+    attachment.flaggedForReview = false;
+  }
+
+  message.hasFlaggedAttachments = message.attachments.some((a) => a.flaggedForReview);
+  message.moderatorWarningBadge = message.hasFlaggedAttachments;
+  await message.save();
+
+  await writeAudit({
+    chat,
+    dispute: chat.dispute,
+    order: chat.order,
+    actor,
+    action: DISPUTE_CHAT_AUDIT_ACTIONS.ATTACHMENT_REVIEWED,
+    message,
+    meta: {
+      attachmentId,
+      decision,
+      note: payload.note || null,
+      ocrFindings: attachment.ocrFindings,
+    },
+    ip: requestMeta.ip,
+    userAgent: requestMeta.userAgent,
+  });
+
+  if (decision === DISPUTE_CHAT_ATTACHMENT_REVIEW_STATUS.CONFIRMED_VIOLATION) {
+    await logActivity({
+      userId: actorId(actor),
+      action: 'dispute_chat.attachment_confirmed_violation',
+      resource: 'DisputeChatMessage',
+      resourceId: message._id,
+      ip: requestMeta.ip,
+      userAgent: requestMeta.userAgent,
+      meta: {
+        disputeId: chat.dispute,
+        attachmentId,
+        authorId: message.author,
+        ocrFindings: attachment.ocrFindings,
+      },
+    });
+  }
+
+  return presentMessageForActor(message, chat, actor);
+}
+
 export default {
   createDisputeChat,
   getChatByDisputeId,
@@ -760,6 +994,8 @@ export default {
   listBlockedAttempts,
   listAuditLogs,
   listViolations,
+  listFlaggedAttachments,
+  reviewFlaggedAttachment,
   closeChatForDispute,
   assertChatAccess,
 };

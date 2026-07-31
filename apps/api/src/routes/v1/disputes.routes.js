@@ -20,6 +20,8 @@ import {
   listDisputeChatBlockedSchema,
   listDisputeChatAuditSchema,
   listDisputeChatViolationsSchema,
+  listFlaggedAttachmentsSchema,
+  reviewFlaggedAttachmentSchema,
 } from '../../validators/commerce.validator.js';
 import * as disputesController from '../../controllers/disputes/disputes.controller.js';
 import * as disputeChatController from '../../controllers/disputes/disputeChat.controller.js';
@@ -148,6 +150,24 @@ router.get(
   requirePermission(PERMISSIONS.DISPUTES_MANAGE),
   validate(listDisputeChatAuditSchema),
   disputeChatController.listAuditLogs,
+);
+
+router.get(
+  '/:id/chat/flagged-attachments',
+  requireAuth,
+  requireRole(USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN, USER_ROLES.SUPPORT),
+  requirePermission(PERMISSIONS.DISPUTES_MANAGE),
+  validate(listFlaggedAttachmentsSchema),
+  disputeChatController.listFlaggedAttachments,
+);
+
+router.post(
+  '/:id/chat/messages/:messageId/attachments/:attachmentId/review',
+  requireAuth,
+  requireRole(USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN, USER_ROLES.SUPPORT),
+  requirePermission(PERMISSIONS.DISPUTES_MANAGE),
+  validate(reviewFlaggedAttachmentSchema),
+  disputeChatController.reviewFlaggedAttachment,
 );
 
 export default router;

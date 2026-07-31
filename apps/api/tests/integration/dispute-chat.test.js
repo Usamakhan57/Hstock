@@ -16,6 +16,10 @@ const {
 const { hashPassword } = await import('../../src/utils/password.js');
 const { USER_ROLES } = await import('../../src/constants/roles.js');
 const { CONTACT_FILTER_MESSAGE } = await import('../../src/constants/disputeChat.js');
+const {
+  setOcrImplementation,
+  resetOcrImplementation,
+} = await import('../../src/services/ocr.service.js');
 
 async function createAdminToken(email = 'chat-admin@example.com') {
   await User.create({
@@ -137,9 +141,26 @@ before(async () => {
 
 beforeEach(async () => {
   await resetDb();
+  // Deterministic OCR for evidence screenshots (no network / tesseract in CI)
+  setOcrImplementation(async ({ url } = {}) => {
+    if (String(url).includes('with-contact')) {
+      return {
+        text: 'Contact support via WhatsApp +923001234567 or email recovery@gmail.com',
+        confidence: 90,
+      };
+    }
+    if (String(url).includes('login-failed') || String(url).includes('checkpoint')) {
+      return {
+        text: 'Login failed. Wrong password. Facebook checkpoint. Try again.',
+        confidence: 88,
+      };
+    }
+    return { text: 'Account settings dashboard', confidence: 85 };
+  });
 });
 
 after(async () => {
+  resetOcrImplementation();
   await teardownTestDb();
 });
 
@@ -276,6 +297,80 @@ test('allows clean messages and attachment allowlist', async () => {
     });
   assert.equal(exe.status, 400);
   assert.equal(exe.body.code, 'ATTACHMENT_REJECTED');
+});
+
+test('account evidence screenshots are stored and never auto-blocked', async () => {
+  const ctx = await openPaidDispute();
+
+  const evidence = await request(app)
+    .post(`/api/v1/disputes/${ctx.disputeId}/chat/messages`)
+    .set('Authorization', `Bearer ${ctx.buyerToken}`)
+    .send({
+      body: 'Screenshot of login failed and Facebook checkpoint.',
+      attachments: [
+        'https://cdn.example.com/evidence/login-failed.png',
+        'https://cdn.example.com/evidence/checkpoint.png',
+      ],
+    });
+
+  assert.equal(evidence.status, 201, JSON.stringify(evidence.body));
+  assert.equal(evidence.body.data.attachments.length, 2);
+
+  // Buyer response must not expose OCR moderator fields
+  assert.equal(evidence.body.data.attachments[0].ocrFindings, undefined);
+  assert.equal(evidence.body.data.moderatorWarningBadge, undefined);
+
+  const stored = await DisputeChatMessage.findById(evidence.body.data._id).lean();
+  assert.equal(stored.attachments[0].ocrStatus, 'completed');
+  assert.equal(stored.hasFlaggedAttachments, false);
+});
+
+test('OCR contact findings flag screenshots for admin review without rejecting', async () => {
+  const ctx = await openPaidDispute();
+
+  const flagged = await request(app)
+    .post(`/api/v1/disputes/${ctx.disputeId}/chat/messages`)
+    .set('Authorization', `Bearer ${ctx.buyerToken}`)
+    .send({
+      body: 'Here is the recovery email screen from the account.',
+      attachments: ['https://cdn.example.com/evidence/with-contact-recovery.png'],
+    });
+
+  assert.equal(flagged.status, 201, JSON.stringify(flagged.body));
+
+  const stored = await DisputeChatMessage.findById(flagged.body.data._id).lean();
+  assert.equal(stored.hasFlaggedAttachments, true);
+  assert.equal(stored.moderatorWarningBadge, true);
+  assert.equal(stored.attachments[0].flaggedForReview, true);
+  assert.equal(stored.attachments[0].warningBadge, true);
+  assert.ok(stored.attachments[0].ocrFindings.length >= 1);
+  assert.equal(stored.attachments[0].adminReviewStatus, 'pending');
+
+  await request(app)
+    .post(`/api/v1/disputes/${ctx.disputeId}/chat/assign`)
+    .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+  const list = await request(app)
+    .get(`/api/v1/disputes/${ctx.disputeId}/chat/flagged-attachments`)
+    .set('Authorization', `Bearer ${ctx.adminToken}`);
+  assert.equal(list.status, 200);
+  assert.ok(list.body.data.length >= 1);
+  assert.equal(list.body.data[0].warningBadge, true);
+
+  const attachmentId = stored.attachments[0]._id;
+  const review = await request(app)
+    .post(
+      `/api/v1/disputes/${ctx.disputeId}/chat/messages/${stored._id}/attachments/${attachmentId}/review`,
+    )
+    .set('Authorization', `Bearer ${ctx.adminToken}`)
+    .send({ decision: 'cleared', note: 'Legitimate recovery email evidence' });
+
+  assert.equal(review.status, 200, JSON.stringify(review.body));
+
+  const after = await DisputeChatMessage.findById(stored._id).lean();
+  assert.equal(after.attachments[0].adminReviewStatus, 'cleared');
+  assert.equal(after.attachments[0].flaggedForReview, false);
+  assert.equal(after.attachments[0].warningBadge, false);
 });
 
 test('repeat violations: warning → mute → notify admin', async () => {

@@ -189,6 +189,23 @@ export const listDisputeChatViolationsSchema = {
   }),
 };
 
+export const listFlaggedAttachmentsSchema = {
+  params: z.object({ id: objectIdSchema }),
+  query: paginationSchema,
+};
+
+export const reviewFlaggedAttachmentSchema = {
+  params: z.object({
+    id: objectIdSchema,
+    messageId: objectIdSchema,
+    attachmentId: objectIdSchema,
+  }),
+  body: z.object({
+    decision: z.enum(['cleared', 'confirmed_violation']),
+    note: z.string().trim().max(2000).optional(),
+  }),
+};
+
 export const resolveDisputeSchema = {
   params: z.object({ id: objectIdSchema }),
   body: z.object({
@@ -268,6 +285,8 @@ export default {
   listDisputeChatBlockedSchema,
   listDisputeChatAuditSchema,
   listDisputeChatViolationsSchema,
+  listFlaggedAttachmentsSchema,
+  reviewFlaggedAttachmentSchema,
   resolveDisputeSchema,
   createRefundSchema,
   listRefundsSchema,

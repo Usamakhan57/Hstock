@@ -14,4 +14,5 @@ export * as orderService from './order.service.js';
 export * as withdrawalService from './withdrawal.service.js';
 export * as disputeService from './dispute.service.js';
 export * as disputeChatService from './disputeChat.service.js';
+export * as ocrService from './ocr.service.js';
 export * as refundService from './refund.service.js';
