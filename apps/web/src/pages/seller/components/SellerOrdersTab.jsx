@@ -3,23 +3,24 @@ import { ShoppingCart } from 'lucide-react';
 import StatusBadge from '../../../admin/components/StatusBadge';
 import EmptyState from '../../../admin/components/EmptyState';
 
-const fmtDate = (iso) => new Date(iso).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+const fmtDate = (iso) => (iso ? new Date(iso).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : '—');
 
 const ORDER_TABS = [
   { key: 'all', label: 'All' },
-  { key: 'pending', label: 'Pending' },
-  { key: 'processing', label: 'Processing' },
+  { key: 'pending_payment', label: 'Pending Payment' },
+  { key: 'escrow', label: 'Escrow' },
   { key: 'completed', label: 'Completed' },
   { key: 'refunded', label: 'Refunded' },
   { key: 'cancelled', label: 'Cancelled' },
+  { key: 'disputed', label: 'Disputed' },
 ];
 
-const SellerOrdersTab = ({ orders }) => {
+const SellerOrdersTab = ({ orders = [] }) => {
   const [tab, setTab] = useState('all');
 
   const filtered = useMemo(
     () => (tab === 'all' ? orders : orders.filter((o) => o.status === tab)),
-    [orders, tab]
+    [orders, tab],
   );
 
   return (
@@ -45,9 +46,10 @@ const SellerOrdersTab = ({ orders }) => {
               <thead className="bg-secondary/60 text-left text-xs uppercase tracking-wide text-muted-foreground">
                 <tr>
                   <th className="px-5 py-3 font-semibold">Order ID</th>
-                  <th className="px-5 py-3 font-semibold">Customer</th>
                   <th className="px-5 py-3 font-semibold">Product</th>
                   <th className="px-5 py-3 font-semibold">Amount</th>
+                  <th className="px-5 py-3 font-semibold">Payment</th>
+                  <th className="px-5 py-3 font-semibold">Escrow</th>
                   <th className="px-5 py-3 font-semibold">Date</th>
                   <th className="px-5 py-3 font-semibold">Status</th>
                 </tr>
@@ -56,14 +58,15 @@ const SellerOrdersTab = ({ orders }) => {
                 {filtered.map((o) => (
                   <tr key={o.id}>
                     <td className="px-5 py-3.5 font-medium text-primary">{o.id}</td>
-                    <td className="px-5 py-3.5">{o.customer}</td>
                     <td className="px-5 py-3.5">
                       <div className="flex items-center gap-2.5">
-                        <img src={o.productImg} alt="" className="w-8 h-8 rounded-lg object-cover bg-secondary shrink-0" />
-                        <span className="truncate max-w-[200px]">{o.product}</span>
+                        {o.product?.img ? <img src={o.product.img} alt="" className="w-8 h-8 rounded-lg object-cover bg-secondary shrink-0" /> : <span className="w-8 h-8 rounded-lg bg-secondary shrink-0" />}
+                        <span className="truncate max-w-[200px]">{o.product?.title}</span>
                       </div>
                     </td>
                     <td className="px-5 py-3.5 font-semibold">${o.amount.toFixed(2)}</td>
+                    <td className="px-5 py-3.5 text-muted-foreground">{o.paymentStatusLabel}</td>
+                    <td className="px-5 py-3.5 text-muted-foreground">{o.escrowStatusLabel}</td>
                     <td className="px-5 py-3.5 text-muted-foreground">{fmtDate(o.date)}</td>
                     <td className="px-5 py-3.5"><StatusBadge status={o.status} /></td>
                   </tr>

@@ -12,6 +12,7 @@ import BlogPostPage from '../../pages/BlogPostPage';
 import AboutPage from '../../pages/AboutPage';
 import ComparePage from '../../pages/ComparePage';
 import OrderFailedPage from '../../pages/OrderFailedPage';
+import OrderSuccessPage from '../../pages/OrderSuccessPage';
 import ForbiddenPage from '../../pages/ForbiddenPage';
 import MaintenancePage from '../../pages/MaintenancePage';
 import ComingSoonPage from '../../pages/ComingSoonPage';
@@ -87,6 +88,7 @@ export function storefrontRoutes() {
       <Route path="/verify-email" element={<VerifyEmailPage />} />
       <Route path="/search" element={<SearchResultsPage />} />
       <Route path="/order-failed" element={<OrderFailedPage />} />
+      <Route path="/order-success" element={<RequireCustomerAuth><OrderSuccessPage /></RequireCustomerAuth>} />
 
       {/* ── Customer account (auth required) ─────────────────── */}
       <Route path="/profile" element={<RequireCustomerAuth><ProfilePage /></RequireCustomerAuth>} />

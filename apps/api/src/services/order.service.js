@@ -212,7 +212,8 @@ export async function buyNow(payload, actor, requestMeta = {}) {
       userAgent: requestMeta.userAgent,
       meta: {
         productId: product._id,
-        amount: unitPrice,
+        amount: subtotal,
+        quantity,
         cryptomusOrderId,
       },
       session,
@@ -222,11 +223,15 @@ export async function buyNow(payload, actor, requestMeta = {}) {
   });
 
   const callbackUrl = cryptomusService.buildCallbackUrl();
+  const successBase = payload.urlSuccess || undefined;
+  const urlSuccess = successBase
+    ? `${successBase}${successBase.includes('?') ? '&' : '?'}order=${encodeURIComponent(orderNumber)}`
+    : undefined;
   let invoice;
   let simulated = false;
   try {
     const created = await cryptomusService.createInvoiceOrSimulate({
-      amount: unitPrice,
+      amount: subtotal,
       currency: result.order.currency,
       orderId: cryptomusOrderId,
       network: payload.network || null,
@@ -234,7 +239,7 @@ export async function buyNow(payload, actor, requestMeta = {}) {
       lifetime: lifetimeSeconds,
       urlCallback: callbackUrl,
       urlReturn: payload.urlReturn || undefined,
-      urlSuccess: payload.urlSuccess || undefined,
+      urlSuccess,
       additionalData: String(result.order._id),
     });
     invoice = created.invoice;

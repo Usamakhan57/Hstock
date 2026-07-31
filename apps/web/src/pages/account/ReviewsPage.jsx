@@ -5,8 +5,9 @@ import Seo from '../../components/Seo';
 import AccountLayout from './AccountLayout';
 import EmptyState from '../../components/EmptyState';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '../../components/ui/dialog';
-import { useStore } from '../../context/StoreContext';
 import { useToast } from '../../hooks/use-toast';
+import { useFetch } from '../../hooks/useFetch';
+import { ordersApi } from '../../services/ordersApi';
 import { buildDefaultReviews, loadLS, saveLS, uid } from '../../services/buyerDashboard';
 
 const KEY = 'pm_buyer_reviews';
@@ -35,7 +36,7 @@ const ReviewModal = ({ open, onOpenChange, orders, onSave, editing }) => {
 
   const submit = (e) => {
     e.preventDefault();
-    const product = purchasedProducts.find((p) => p.id === Number(productId)) || purchasedProducts[0];
+    const product = purchasedProducts.find((p) => String(p.id) === String(productId)) || purchasedProducts[0];
     onSave({
       id: editing?.id || uid('rev'),
       productId: product?.id,
@@ -80,7 +81,8 @@ const ReviewModal = ({ open, onOpenChange, orders, onSave, editing }) => {
 };
 
 const ReviewsPage = () => {
-  const { orders } = useStore();
+  const { data } = useFetch(() => ordersApi.list({ page: 1, limit: 100, scope: 'buyer' }), []);
+  const orders = data?.items || [];
   const { toast } = useToast();
   const [reviews, setReviews] = useState(() => loadLS(KEY, null) || buildDefaultReviews());
   const [ratingFilter, setRatingFilter] = useState('All');

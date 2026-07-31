@@ -7,7 +7,7 @@ import {
 import { LOGO } from '../data';
 import { useStore } from '../context/StoreContext';
 import { useSellerAuth } from '../context/SellerAuthContext';
-import { productsApi } from '../services/api';
+import { productsApi, walletApi } from '../services/api';
 import SellerSidebar from './SellerSidebar';
 import { getCategoryTreeForStorefront } from '../services/categoryRepository';
 import { getProductCountByCategoryId } from '../services/productRepository';
@@ -288,15 +288,33 @@ const Header = () => {
   const [recent, setRecent] = useState(loadRecent);
   const loc = useLocation();
   const navigate = useNavigate();
-  const { wallet, user, logout, notifications, markNotificationRead, catalogVersion } = useStore();
+  const { user, logout, notifications, markNotificationRead, catalogVersion } = useStore();
   const { seller, isAuthenticated: isSellerAuthenticated, logout: logoutSeller } = useSellerAuth();
   const isUserLoggedIn = Boolean(user);
   const isSellerUser = Boolean(user?.roles?.includes?.('seller') || isSellerAuthenticated);
   const sellerNotificationsCount = notifications.filter((n) => !n.read).length;
+  const [sellerWalletBalance, setSellerWalletBalance] = useState(0);
   const megaRef = useRef(null);
   const searchRef = useRef(null);
   const drawerCloseTimeoutRef = useRef(null);
   const notifRef = useRef(null);
+
+  useEffect(() => {
+    if (!isSellerUser || !isUserLoggedIn) {
+      setSellerWalletBalance(0);
+      return undefined;
+    }
+    let alive = true;
+    walletApi.me()
+      .then((wallet) => {
+        if (!alive) return;
+        setSellerWalletBalance(Number(wallet?.availableBalance ?? wallet?.withdrawableBalance ?? 0) || 0);
+      })
+      .catch(() => {
+        if (alive) setSellerWalletBalance(0);
+      });
+    return () => { alive = false; };
+  }, [isSellerUser, isUserLoggedIn, loc.pathname]);
 
   const showSellerDrawer = sellerDrawerOpen || sellerDrawerClosing;
   const openSellerDrawer = () => {
@@ -486,9 +504,9 @@ const Header = () => {
             )}
 
             {isUserLoggedIn && (
-              <Link to="/wallet" aria-label={`Wallet balance $${wallet.toFixed(2)}`} className="flex items-center gap-1.5 pl-2.5 pr-3 sm:pl-3 sm:pr-4 py-1.5 sm:py-2 rounded-full bg-secondary hover:bg-secondary/70 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+              <Link to="/wallet" aria-label="Payments wallet" className="flex items-center gap-1.5 pl-2.5 pr-3 sm:pl-3 sm:pr-4 py-1.5 sm:py-2 rounded-full bg-secondary hover:bg-secondary/70 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
                 <Wallet className="w-[18px] h-[18px] sm:w-5 sm:h-5 text-primary" aria-hidden="true" />
-                <span className="text-sm font-semibold hidden sm:inline">${wallet.toFixed(2)}</span>
+                <span className="text-sm font-semibold hidden sm:inline">Payments</span>
               </Link>
             )}
 
@@ -640,8 +658,8 @@ const Header = () => {
 
           {isUserLoggedIn && !isSellerUser && (
             <div className="border-t border-border pt-4 flex items-center gap-3">
-              <Link to="/wallet" aria-label={`Wallet balance $${wallet.toFixed(2)}`} className="flex-1 flex items-center justify-center gap-2 py-3 rounded-full bg-secondary text-primary text-sm font-semibold">
-                <Wallet className="w-5 h-5" aria-hidden="true" /> ${wallet.toFixed(2)}
+              <Link to="/wallet" aria-label="Payments wallet" className="flex-1 flex items-center justify-center gap-2 py-3 rounded-full bg-secondary text-primary text-sm font-semibold">
+                <Wallet className="w-5 h-5" aria-hidden="true" /> Payments
               </Link>
             </div>
           )}
@@ -665,7 +683,7 @@ const Header = () => {
             closing={sellerDrawerClosing}
             onClose={closeSellerDrawer}
             seller={seller}
-            walletBalance={wallet}
+            walletBalance={sellerWalletBalance}
             notificationsCount={sellerNotificationsCount}
             onLogout={logoutSeller}
           />

@@ -19,14 +19,14 @@ const OrderFailedPage = () => {
           <XCircle className="w-9 h-9" />
         </span>
         <h1 className="text-2xl md:text-3xl font-black tracking-tight">Payment failed</h1>
-        <p className="text-muted-foreground mt-2 leading-relaxed">{reason} No charge was made to your wallet.</p>
+        <p className="text-muted-foreground mt-2 leading-relaxed">{reason} You can retry from the product page or open a pending order invoice.</p>
 
         <div className="flex flex-wrap items-center justify-center gap-3 mt-8">
           <button
-            onClick={() => navigate('/wallet')}
+            onClick={() => navigate(state?.orderId ? `/orders/${state.orderId}` : '/orders')}
             className="inline-flex items-center gap-1.5 px-6 py-3 rounded-full brand-gradient text-white font-semibold soft-shadow hover:soft-shadow-lg transition-shadow"
           >
-            <RotateCw className="w-4 h-4" /> Retry Payment
+            <RotateCw className="w-4 h-4" /> View Orders
           </button>
           <Link to="/support" className="inline-flex items-center gap-1.5 px-6 py-3 rounded-full border border-border font-semibold hover:bg-secondary transition-colors">
             <LifeBuoy className="w-4 h-4" /> Contact Support
