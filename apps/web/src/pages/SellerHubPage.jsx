@@ -14,16 +14,16 @@ const SellerHubPage = () => {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <Seo title="Seller Center" description="Sign in to your HStock seller account or start selling your digital art today." noIndex />
+      <Seo title="Seller Center" description="Sign in to your ApnaStore seller account or open a storefront to sell digital assets today." noIndex />
       <Header />
       <div className="flex-1 grid place-items-center px-5 py-20 text-center">
         <div className="max-w-md">
           <span className="grid place-items-center w-16 h-16 rounded-full brand-gradient text-white mx-auto mb-6">
             <Store className="w-7 h-7" />
           </span>
-          <h1 className="text-3xl font-black tracking-tight">Seller Center</h1>
+          <h1 className="text-3xl font-black tracking-tight">ApnaStore Seller Center</h1>
           <p className="text-muted-foreground mt-2 leading-relaxed">
-            Sign in to manage your store, or create a seller account to start selling your digital art on HStock.
+            Sign in to manage listings, orders, and payouts — or create a seller account to start selling on ApnaStore.
           </p>
           <div className="flex flex-wrap items-center justify-center gap-3 mt-8">
             <Link to="/seller/login" className="inline-flex items-center gap-1.5 px-6 py-3 rounded-full brand-gradient text-white font-semibold soft-shadow hover:soft-shadow-lg transition-shadow">

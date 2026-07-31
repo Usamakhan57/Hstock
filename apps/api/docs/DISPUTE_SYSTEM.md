@@ -1,4 +1,4 @@
-# HStock Final Dispute System
+# ApnaStore Final Dispute System
 
 Production dispute system for the digital-account marketplace: partial disputes, partial escrow, secure chat, credential protection, replacement accounts, OCR evidence review, timeline, and admin dashboard.
 

@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
   mapBackendCategory,
-  mapBackendCollection,
   mapBackendProduct,
   mapBackendSeller,
 } from './catalogMappers';
@@ -36,14 +35,8 @@ describe('catalogMappers', () => {
     expect(product.rating).toBeNull();
   });
 
-  it('maps categories, collections, and sellers', () => {
+  it('maps categories and sellers', () => {
     expect(mapBackendCategory({ _id: 'c1', name: 'Domains', slug: 'domains' }).slug).toBe('domains');
-    expect(mapBackendCollection({
-      _id: 'col1',
-      name: 'Starter Pack',
-      slug: 'starter',
-      products: ['p1', 'p2'],
-    }).productIds).toEqual(['p1', 'p2']);
     expect(mapBackendSeller({ _id: 's1', storeName: 'Acme', storeSlug: 'acme', status: 'approved' }).verified).toBe(true);
   });
 });

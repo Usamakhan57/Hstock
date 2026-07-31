@@ -73,13 +73,13 @@ const LoginPage = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-[#F6F8FC] px-4 py-10 sm:px-5 sm:py-16">
-      <Seo title="Sign In" description="Sign in to your HStock account to access your wallet, downloads, and orders." noIndex />
+      <Seo title="Sign In" description="Sign in to your ApnaStore account to access your wallet, downloads, and orders." noIndex />
       <Header />
       <main className="flex-1 grid place-items-center">
         <div className="w-full max-w-[560px]">
           <div className="bg-white rounded-[24px] border border-border soft-shadow p-8 sm:p-10 lg:p-12">
             <div className="flex flex-col items-center text-center">
-              <img src={LOGO} alt="Hstock" className="h-12 w-auto object-contain" />
+              <img src={LOGO} alt="ApnaStore" className="h-12 w-auto object-contain" />
               <h1 className="mt-6 text-3xl font-black tracking-tight text-foreground">Welcome Back</h1>
               <p className="mt-3 text-sm text-muted-foreground max-w-[420px]">
                 Sign in to access your buyer or seller account.

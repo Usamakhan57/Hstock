@@ -1,4 +1,4 @@
-# HStock Production Deployment (Hostinger VPS)
+# ApnaStore Production Deployment (Hostinger VPS)
 
 ## Stack
 
@@ -8,49 +8,80 @@
 - Nginx (+ Certbot SSL)
 - MongoDB (bind `127.0.0.1`)
 - Redis (optional — multi-instance Socket.io / queues)
-- Cryptomus webhooks → `https://hstock.store/api/v1/payments/cryptomus/webhook`
+- Cryptomus webhooks → `https://apnastore.org/api/v1/payments/cryptomus/webhook`
+- SMTP for transactional email
 
 ## Checklist
 
-1. Clone repo to `/var/www/hstock`
+1. Clone repo to `/var/www/apnastore`
 2. Copy `apps/api/.env.example` → `apps/api/.env` and fill secrets
-3. Set `NODE_ENV=production`, strong JWT secrets, SMTP, Cryptomus, `CORS_ORIGINS`, `FRONTEND_URL`
-4. Set `ENABLE_JOBS=true`
+3. Set `NODE_ENV=production`, strong JWT secrets, `CREDENTIALS_ENCRYPTION_KEY`, SMTP, Cryptomus production, `CORS_ORIGINS`, `FRONTEND_URL`
+4. Set `ENABLE_JOBS=true` and `CRYPTOMUS_ENFORCE_IP_WHITELIST=true`
 5. `npm ci` in `apps/api` and `apps/web`
-6. `npm run build` for web; sync `apps/web/dist` → `/var/www/hstock/web`
-7. Install Nginx site from `deploy/nginx/hstock.conf`
-8. `certbot --nginx -d hstock.store -d www.hstock.store`
-9. Start API: `pm2 start deploy/pm2/ecosystem.config.cjs --env production`
+6. `npm run build` for web; sync `apps/web/dist` → `/var/www/apnastore/web`
+7. Install Nginx site from `deploy/nginx/apnastore.conf`
+8. `certbot --nginx -d apnastore.org -d www.apnastore.org`
+9. Start API: `pm2 start ecosystem.config.js --env production`
 10. `pm2 save && pm2 startup`
-11. Install logrotate config from `deploy/logrotate/hstock`
+11. Install logrotate config from `deploy/logrotate/apnastore`
 12. Cron daily backup: `deploy/scripts/backup.sh`
-13. Verify:
-    - `curl https://hstock.store/health`
-    - `curl https://hstock.store/health/ready`
+13. Practice restore once with `deploy/scripts/restore.sh` on a staging DB
+14. Verify:
+    - `curl https://apnastore.org/health`
+    - `curl https://apnastore.org/health/ready`
     - Admin login + Socket.io (browser Network → WS)
-    - Cryptomus sandbox/live webhook
+    - Cryptomus production webhook
+    - SMTP delivery (registration / password reset)
+
+Automated helper: `deploy/scripts/deploy.sh`
 
 ## Monitoring
 
-- PM2: `pm2 status`, `pm2 logs hstock-api`
+- PM2: `pm2 status`, `pm2 logs apnastore-api`, `pm2 monit`
 - Health: `/health`, `/health/live`, `/health/ready`
 - Admin System Health page: `/admin/system-health`
 - Nginx access/error logs
+- Disk: `df -h` · Memory: `free -m` · CPU: `top` / `pm2 monit`
+
+## Backup & recovery
+
+```bash
+# Backup
+MONGODB_URI="mongodb://127.0.0.1:27017" ./deploy/scripts/backup.sh
+
+# Restore (destructive)
+FORCE_RESTORE=1 MONGODB_URI="mongodb://127.0.0.1:27017" \
+  ./deploy/scripts/restore.sh /var/backups/apnastore/<archive>.tar.gz
+```
+
+Retention default: 14 days. See also [`ROLLBACK_PLAN.md`](./ROLLBACK_PLAN.md).
+
+## Crash recovery
+
+- PM2 `restart unless-stopped` / `max_memory_restart: 512M`
+- After reboot: `pm2 resurrect` via startup hook
+- MongoDB systemd enabled
+- Nginx systemd enabled
 
 ## Security
 
-- JWT access + refresh rotation
-- Helmet + CSP (Nginx + API)
-- Rate limiting, CORS allowlist
+- JWT access + refresh rotation with reuse detection
+- Helmet + CSP (API + Nginx)
+- Rate limiting, CORS allowlist (no `*`)
 - Mongo sanitize, Zod validators
-- Cryptomus webhook signature (+ optional IP allowlist)
-- Secrets only in `.env` (never commit)
-- XSS: React escaping + sanitize middleware
+- Cryptomus webhook signature + IP whitelist (required in prod)
+- OCR remote fetch SSRF guards
+- Upload MIME allowlist
+- Secrets only in `.env`
 
 ## Performance
 
-- Nginx gzip + static asset caching
+- Nginx gzip + static asset caching; `index.html` no-cache
 - Express compression
-- Vite production bundle + lazy routes where applicable
-- Mongo indexes on commerce collections
-- In-process queues (single instance); Redis optional for scale
+- Vite code-splitting (admin lazy routes + manual chunks)
+- Mongo compound indexes on commerce hot paths
+- Single-instance PM2 with in-process queues (add Redis adapter before scaling instances)
+
+## Socket.io
+
+Proxied at `/socket.io/` with `Upgrade` headers. Clients authenticate with JWT access token.

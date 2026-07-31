@@ -132,7 +132,7 @@ const CategoryMegaNode = ({ category, depth = 0, onNavigate }) => {
 const navLinks = [
   { name: 'Home', to: '/' },
   { name: 'Shop', to: '/shop' },
-  { name: 'Collections', to: '/collections' },
+  { name: 'Categories', to: '/categories' },
   { name: 'Blog', to: '/blog' },
   { name: 'About', to: '/about' },
 ];
@@ -394,10 +394,10 @@ const Header = () => {
       <div className="mx-auto max-w-[90rem] px-5 lg:px-8">
         <div className="flex items-center gap-2 sm:gap-3 md:gap-6 h-[64px] sm:h-[80px] md:h-[88px]">
           {/* Logo — enlarged for stronger branding */}
-          <Link to="/" className="flex items-center shrink-0 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-2xl" aria-label="HStock home">
+          <Link to="/" className="flex items-center shrink-0 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-2xl" aria-label="ApnaStore home">
             <img
               src={LOGO}
-              alt="HStock"
+              alt="ApnaStore"
               width="220"
               height="72"
               className="h-9 sm:h-16 md:h-[4.5rem] w-auto object-contain transition-transform duration-300 group-hover:scale-[1.03]"

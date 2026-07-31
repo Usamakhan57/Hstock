@@ -1,5 +1,5 @@
 /**
- * Centralized Axios API client for HStock backend (`/api/v1`).
+ * Centralized Axios API client for ApnaStore backend (`/api/v1`).
  * - JWT injection
  * - Auto refresh + single retry
  * - Standard error normalization

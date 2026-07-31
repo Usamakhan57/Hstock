@@ -1,5 +1,5 @@
 /*
-  HStock — premium digital art marketplace theme
+  ApnaStore — premium digital art marketplace theme
 */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
 @tailwind base;
@@ -16,7 +16,7 @@ body {
 
 @layer base {
   :root {
-    /* HStock palette */
+    /* ApnaStore palette */
     --brand: 276 78% 56%;        /* #7C3AED */
     --brand-2: 327 83% 57%;      /* #EC4899 */
     --accent-pink: 327 83% 57%;  /* #EC4899 */

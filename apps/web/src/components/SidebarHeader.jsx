@@ -10,7 +10,7 @@ const SidebarHeader = ({ seller, walletBalance, notificationsCount }) => (
         </span>
         <div className="min-w-0">
           <p className="truncate text-base font-semibold text-foreground">{seller?.storeName || 'Seller Workspace'}</p>
-          <p className="mt-1 truncate text-sm text-muted-foreground">{seller?.email || 'seller@hstock.app'}</p>
+          <p className="mt-1 truncate text-sm text-muted-foreground">{seller?.email || 'seller@apnastore.app'}</p>
           <span className="mt-3 inline-flex rounded-full bg-gradient-to-r from-primary to-accent px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.24em] text-white">
             Seller
           </span>

@@ -3,8 +3,8 @@
  */
 process.env.NODE_ENV = 'test';
 // Placeholder URI — tests/helpers/setup.js replaces this with mongodb-memory-server.
-process.env.MONGODB_URI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/hstock_phase2_test';
-process.env.MONGODB_DB_NAME = process.env.MONGODB_DB_NAME || 'hstock_phase2_test';
+process.env.MONGODB_URI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/apnastore_test';
+process.env.MONGODB_DB_NAME = process.env.MONGODB_DB_NAME || 'apnastore_test';
 process.env.USE_MEMORY_MONGO = process.env.USE_MEMORY_MONGO || 'true';
 process.env.JWT_ACCESS_SECRET = 'test-access-secret-32-characters-min';
 process.env.JWT_REFRESH_SECRET = 'test-refresh-secret-32-characters-min';

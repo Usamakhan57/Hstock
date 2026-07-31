@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# HStock production deploy helper (Hostinger Ubuntu VPS)
+# ApnaStore production deploy helper (Hostinger Ubuntu VPS)
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 WEB_ROOT="$(cd "$ROOT/../web" && pwd)"
-WEB_DIST_TARGET="${WEB_DIST_TARGET:-/var/www/hstock/web}"
+WEB_DIST_TARGET="${WEB_DIST_TARGET:-/var/www/apnastore/web}"
 
-echo "==> Deploying HStock from $ROOT"
+echo "==> Deploying ApnaStore from $ROOT"
 
 cd "$ROOT"
 npm ci --omit=dev

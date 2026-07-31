@@ -31,7 +31,7 @@ describe('notifications + admin ops API', () => {
   async function createAdmin() {
     const passwordHash = await hashPassword('AdminPass123!');
     const user = await User.create({
-      email: 'admin@hstock.test',
+      email: 'admin@apnastore.test',
       name: 'Admin',
       passwordHash,
       roles: ['admin'],
@@ -41,7 +41,7 @@ describe('notifications + admin ops API', () => {
     await AdminProfile.create({ user: user._id, title: 'Ops' });
     const login = await request(app)
       .post('/api/v1/auth/admin/login')
-      .send({ email: 'admin@hstock.test', password: 'AdminPass123!' });
+      .send({ email: 'admin@apnastore.test', password: 'AdminPass123!' });
     assert.equal(login.status, 200);
     return {
       user,
@@ -52,7 +52,7 @@ describe('notifications + admin ops API', () => {
   async function createBuyer() {
     const passwordHash = await hashPassword('BuyerPass123!');
     const user = await User.create({
-      email: 'buyer@hstock.test',
+      email: 'buyer@apnastore.test',
       name: 'Buyer',
       passwordHash,
       roles: ['buyer'],
@@ -61,7 +61,7 @@ describe('notifications + admin ops API', () => {
     });
     const login = await request(app)
       .post('/api/v1/auth/login')
-      .send({ email: 'buyer@hstock.test', password: 'BuyerPass123!' });
+      .send({ email: 'buyer@apnastore.test', password: 'BuyerPass123!' });
     assert.equal(login.status, 200);
     return { user, token: login.body.data.accessToken };
   }

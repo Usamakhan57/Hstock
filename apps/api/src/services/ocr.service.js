@@ -5,6 +5,7 @@
 
 import { createWorker } from 'tesseract.js';
 import { logger } from '../config/logger.js';
+import { assertSafeRemoteImageUrl } from '../utils/urlSafety.js';
 
 const FETCH_TIMEOUT_MS = 15_000;
 
@@ -35,21 +36,29 @@ async function getWorker() {
 }
 
 async function fetchImageBuffer(url) {
+  const safeUrl = await assertSafeRemoteImageUrl(url);
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
   try {
-    const response = await fetch(url, {
+    const response = await fetch(safeUrl, {
       signal: controller.signal,
-      redirect: 'follow',
+      redirect: 'manual',
+      headers: { Accept: 'image/*,application/octet-stream' },
     });
+    if (response.status >= 300 && response.status < 400) {
+      throw new Error('Redirects are not allowed for OCR image fetch');
+    }
     if (!response.ok) {
       throw new Error(`OCR image fetch failed with status ${response.status}`);
     }
     const contentType = response.headers.get('content-type') || '';
     if (contentType && !contentType.startsWith('image/') && !contentType.includes('octet-stream')) {
-      // Still attempt OCR — some CDNs omit content-type
+      throw new Error('OCR source is not an image');
     }
     const arrayBuffer = await response.arrayBuffer();
+    if (arrayBuffer.byteLength > 15 * 1024 * 1024) {
+      throw new Error('OCR image exceeds size limit');
+    }
     return Buffer.from(arrayBuffer);
   } finally {
     clearTimeout(timer);

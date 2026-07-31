@@ -17,14 +17,13 @@ import { Checkbox } from '../../../components/ui/checkbox';
 import { getProduct, createProduct, updateProduct } from '../../api/products';
 import { getCategories } from '../../api/categories';
 import { getCategoryTree, flattenCategories } from '../../../services/categoryTree';
-import { getCollections } from '../../api/collections';
 import { getBrands } from '../../api/brands';
 import { useToast } from '../../../hooks/use-toast';
 
 const TABS = ['Basic Info', 'Pricing', 'Digital Files', 'Licensing', 'Inventory', 'SEO', 'Options'];
 
 const EMPTY = {
-  title: '', slug: '', sku: '', categoryId: '', collectionIds: [], brandId: '',
+  title: '', slug: '', sku: '', categoryId: '', brandId: '',
   price: '', salePrice: '', cost: '',
   stock: '', lowStockThreshold: '10', status: 'draft', featured: false,
   thumbnail: '', gallery: [], previewImages: [], previewVideos: [], zipFile: null,
@@ -43,7 +42,6 @@ const ProductForm = () => {
   const [form, setForm] = useState(EMPTY);
   const [tab, setTab] = useState(TABS[0]);
   const [categories, setCategories] = useState([]);
-  const [collections, setCollections] = useState([]);
   const [brands, setBrands] = useState([]);
   const [loading, setLoading] = useState(isEdit);
   const [saving, setSaving] = useState(false);
@@ -51,7 +49,6 @@ const ProductForm = () => {
 
   useEffect(() => {
     getCategories().then(setCategories);
-    getCollections().then(setCollections);
     getBrands().then(setBrands);
   }, []);
 
@@ -78,7 +75,6 @@ const ProductForm = () => {
           cost: String(p.cost ?? ''),
           stock: String(p.stock ?? ''),
           lowStockThreshold: String(p.lowStockThreshold ?? '10'),
-          collectionIds: p.collectionIds || [],
           tags: p.tags || [],
           faq: Array.isArray(p.faq) ? p.faq : [],
           licenses: p.licenses || EMPTY_EXTENDED_PRODUCT.licenses,
@@ -90,15 +86,6 @@ const ProductForm = () => {
   }, [id, isEdit]);
 
   const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e?.target ? e.target.value : e }));
-
-  const toggleCollection = (collId) => {
-    setForm((f) => ({
-      ...f,
-      collectionIds: f.collectionIds.includes(collId)
-        ? f.collectionIds.filter((c) => c !== collId)
-        : [...f.collectionIds, collId],
-    }));
-  };
 
   const validate = () => {
     const errs = {};
@@ -265,18 +252,6 @@ const ProductForm = () => {
                       {brands.map((b) => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
                     </SelectContent>
                   </Select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1.5">Collections</label>
-                  <div className="space-y-2 max-h-40 overflow-y-auto rounded-xl border border-border p-3">
-                    {collections.length === 0 && <p className="text-xs text-muted-foreground">No collections yet.</p>}
-                    {collections.map((c) => (
-                      <label key={c.id} className="flex items-center gap-2 text-sm cursor-pointer">
-                        <Checkbox checked={form.collectionIds.includes(c.id)} onCheckedChange={() => toggleCollection(c.id)} />
-                        {c.name}
-                      </label>
-                    ))}
-                  </div>
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-1.5">Product Status</label>
@@ -490,7 +465,7 @@ const ProductForm = () => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-1.5">Canonical URL</label>
-                  <input value={form.canonicalUrl} onChange={set('canonicalUrl')} className={inputClass} placeholder="https://hstock.store/product/…" />
+                  <input value={form.canonicalUrl} onChange={set('canonicalUrl')} className={inputClass} placeholder="https://apnastore.org/product/…" />
                 </div>
               </div>
             )}

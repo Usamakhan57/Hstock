@@ -74,7 +74,7 @@ const PaymentMethodsPage = () => {
 
   return (
     <>
-      <Seo title="Crypto Wallets" description="Manage your saved crypto wallet addresses on HStock." noIndex />
+      <Seo title="Crypto Wallets" description="Manage your saved crypto wallet addresses on ApnaStore." noIndex />
       <AccountLayout title="Crypto Wallets" subtitle="Crypto wallet addresses only — no fiat payment methods are supported.">
         <div className="flex justify-end mb-5">
           <button onClick={() => setModalOpen(true)} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full brand-gradient text-white text-sm font-semibold hover:opacity-95 transition-opacity">

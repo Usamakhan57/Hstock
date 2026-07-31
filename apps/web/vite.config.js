@@ -402,6 +402,18 @@ export default defineConfig({
 				'@babel/generator',
 				'@babel/types'
 			],
+			output: {
+				manualChunks(id) {
+					if (!id.includes('node_modules')) return undefined;
+					if (id.includes('recharts')) return 'charts';
+					if (id.includes('socket.io-client')) return 'realtime';
+					if (id.includes('@radix-ui') || id.includes('lucide-react')) return 'ui';
+					if (id.includes('react-router') || id.includes('react-dom') || id.includes('/react/')) {
+						return 'vendor';
+					}
+					return 'vendor-misc';
+				},
+			},
 			checks: {
 				pluginTimings: false,
 			}

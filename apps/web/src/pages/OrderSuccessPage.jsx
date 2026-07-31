@@ -122,7 +122,7 @@ const OrderSuccessPage = () => {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <Seo title="Payment Status" description="Your HStock payment status." noIndex />
+      <Seo title="Payment Status" description="Your ApnaStore payment status." noIndex />
       <Header />
       <main className="flex-1 mx-auto max-w-lg w-full px-5 py-20 text-center">
         {loading ? (

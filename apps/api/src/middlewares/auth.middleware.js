@@ -52,11 +52,17 @@ export async function authenticate(req, _res, next) {
       return;
     }
 
-    if (user.status === UserStatusEnum.Suspended) {
+    if (user.status === UserStatusEnum.Suspended || user.status === UserStatusEnum.Inactive) {
       next(
-        new AppError('Account suspended', 403, {
-          code: 'ACCOUNT_SUSPENDED',
-        }),
+        new AppError(
+          user.status === UserStatusEnum.Inactive ? 'Account inactive' : 'Account suspended',
+          403,
+          {
+            code: user.status === UserStatusEnum.Inactive
+              ? 'ACCOUNT_INACTIVE'
+              : 'ACCOUNT_SUSPENDED',
+          },
+        ),
       );
       return;
     }

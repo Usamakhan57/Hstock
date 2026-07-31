@@ -48,13 +48,13 @@ const ResetPasswordPage = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-[#F6F8FC] px-4 py-10 sm:px-5 sm:py-16">
-      <Seo title="Reset Password" description="Choose a new HStock account password." noIndex />
+      <Seo title="Reset Password" description="Choose a new ApnaStore account password." noIndex />
       <Header />
       <main className="flex-1 grid place-items-center">
         <div className="w-full max-w-[520px]">
           <div className="bg-white rounded-[24px] border border-border soft-shadow p-8 sm:p-10">
             <div className="flex flex-col items-center text-center">
-              <img src={LOGO} alt="Hstock" className="h-12 w-auto object-contain" />
+              <img src={LOGO} alt="ApnaStore" className="h-12 w-auto object-contain" />
               <h1 className="mt-6 text-3xl font-black tracking-tight">Reset Password</h1>
               <p className="mt-3 text-sm text-muted-foreground">Create a new password for your account.</p>
             </div>

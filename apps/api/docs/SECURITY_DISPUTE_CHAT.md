@@ -2,7 +2,7 @@
 
 ## Threat model
 
-Attackers / opportunistic users may try to move buyers and sellers off HStock to avoid fees, run scams, or exchange wallet addresses. Dispute chat is a high-risk surface.
+Attackers / opportunistic users may try to move buyers and sellers off ApnaStore to avoid fees, run scams, or exchange wallet addresses. Dispute chat is a high-risk surface.
 
 ## Controls
 

@@ -76,7 +76,6 @@ export async function listProducts(query = {}, actor = null) {
 
   if (query.category) filter.category = query.category;
   if (query.brand) filter.brand = query.brand;
-  if (query.collection) filter.collection = query.collection;
   if (query.productType) filter.productType = query.productType;
   if (query.seller) filter.seller = query.seller;
   if (query.featured !== undefined) filter.featured = query.featured === 'true';
@@ -122,7 +121,6 @@ export async function listProducts(query = {}, actor = null) {
     Product.find(filter)
       .populate('category', 'name slug')
       .populate('brand', 'name slug')
-      .populate('collection', 'name slug')
       .populate('tags', 'name slug')
       .populate('seller', 'storeName slug status')
       .sort({ createdAt: -1 })
@@ -144,7 +142,6 @@ async function loadProductDocument(idOrSlug) {
   return Product.findOne(filter)
     .populate('category', 'name slug')
     .populate('brand', 'name slug')
-    .populate('collection', 'name slug')
     .populate('tags', 'name slug')
     .populate('seller', 'storeName slug status verified user')
     .lean();

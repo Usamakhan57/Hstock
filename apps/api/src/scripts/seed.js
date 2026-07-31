@@ -11,7 +11,7 @@ import { USER_ROLES } from '../constants/roles.js';
 import { env } from '../config/env.js';
 
 async function seedAdmin() {
-  const email = process.env.SEED_ADMIN_EMAIL || 'admin@hstock.store';
+  const email = process.env.SEED_ADMIN_EMAIL || 'admin@apnastore.org';
   const password = process.env.SEED_ADMIN_PASSWORD;
 
   if (!password || password.length < 8) {
@@ -25,7 +25,7 @@ async function seedAdmin() {
     user = await User.create({
       email,
       passwordHash: await hashPassword(password),
-      name: 'HStock Admin',
+      name: 'ApnaStore Admin',
       roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.ADMIN],
       emailVerified: true,
       verificationStatus: 'verified',
@@ -33,7 +33,7 @@ async function seedAdmin() {
 
     await AdminProfile.create({
       user: user._id,
-      displayName: 'HStock Admin',
+      displayName: 'ApnaStore Admin',
       staffRole: USER_ROLES.SUPER_ADMIN,
     });
 

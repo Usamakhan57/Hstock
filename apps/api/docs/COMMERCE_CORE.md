@@ -1,6 +1,6 @@
 # Commerce Core
 
-Production commerce layer for HStock Marketplace (`apps/api` only).
+Production commerce layer for ApnaStore Marketplace (`apps/api` only).
 
 ## New MongoDB models
 

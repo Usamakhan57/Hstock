@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Eye, Star, Zap, Scale, BadgeCheck, PackageCheck, AlertTriangle, Ban, Sparkles } from 'lucide-react';
+import { Eye, Star, Zap, Scale, BadgeCheck, PackageCheck, AlertTriangle, Ban } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 import { licenseCatalog, slugify } from '../data';
 import { resolveSellerVerified } from '../services/sellerRepository';
@@ -58,7 +58,7 @@ const ProductCard = ({ p }) => {
       <Link to={`/product/${realId}`} className="block relative overflow-hidden bg-secondary aspect-[4/4.2] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset" aria-label={p.title}>
         <img src={p.img} alt={p.title} loading="lazy" className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]" />
         {p.badge && <span className={`absolute left-3 top-3 rounded-full px-2.5 py-1 text-[11px] font-bold shadow-sm ${badgeStyle[p.badge] || 'bg-white'}`}>{p.badge}</span>}
-        {p.featured || p.promoted ? <span className="absolute right-3 top-3 rounded-full bg-primary/90 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-white">HStock</span> : null}
+        {p.featured ? <span className="absolute right-3 top-3 rounded-full bg-primary/90 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-white">Featured</span> : null}
         <div className="absolute inset-x-3 bottom-3 flex items-center gap-2 opacity-75 transition-opacity group-hover:opacity-100">
           <button type="button" onClick={(e) => { e.preventDefault(); setQuickView(true); }} className="flex items-center justify-center gap-1.5 rounded-full bg-white/95 px-3 py-1.5 text-[11px] font-semibold text-foreground shadow-sm transition-colors hover:bg-white" aria-label={`Quick view ${p.title}`}>
             <Eye className="h-3.5 w-3.5" aria-hidden="true" /> Quick View
@@ -91,7 +91,6 @@ const ProductCard = ({ p }) => {
         <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
           {p.rating != null && <span className="inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-1"><Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" aria-hidden="true" /> {p.rating}</span>}
           <span className="inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-1">Instant access</span>
-          {p.promoted ? <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-1 text-amber-700"><Sparkles className="h-3 w-3" /> Promoted</span> : null}
         </div>
 
         <div className="mt-4 flex items-end justify-between gap-3">

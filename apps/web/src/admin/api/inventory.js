@@ -3,7 +3,7 @@
  * — it reads/writes the same `products` records (stock, lowStockThreshold)
  * so Products and Inventory can never drift out of sync, while still
  * giving Inventory its own focused list/adjust API surface. A real
- * backend might instead model this as its own MongoDB collection with a
+ * backend might instead model this as its own MongoDB document store with a
  * productId reference — either way, only this file changes.
  */
 import { createResource } from './db';

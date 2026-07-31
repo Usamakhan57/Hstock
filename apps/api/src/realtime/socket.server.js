@@ -2,8 +2,9 @@ import { Server } from 'socket.io';
 import { env } from '../config/env.js';
 import { logger } from '../config/logger.js';
 import { verifyAccessToken } from '../utils/token.js';
-import { User } from '../models/index.js';
+import { User, Dispute, Order } from '../models/index.js';
 import { USER_ROLES } from '../constants/roles.js';
+import { UserStatusEnum } from '../constants/enums.js';
 import { SOCKET_EVENTS } from '../constants/events.js';
 
 let io = null;
@@ -16,8 +17,38 @@ function isStaff(roles = []) {
   ].includes(role));
 }
 
+function isBlockedStatus(status) {
+  return [
+    UserStatusEnum.Suspended,
+    UserStatusEnum.Deleted,
+    UserStatusEnum.Inactive,
+    'banned',
+  ].includes(status);
+}
+
 export function getIO() {
   return io;
+}
+
+async function canJoinDispute(user, disputeId) {
+  if (!disputeId) return false;
+  if (isStaff(user.roles)) return true;
+  const dispute = await Dispute.findById(disputeId).select('buyer sellerUser').lean();
+  if (!dispute) return false;
+  return [String(dispute.buyer), String(dispute.sellerUser)].includes(String(user.id));
+}
+
+async function canJoinOrder(user, orderId) {
+  if (!orderId) return false;
+  if (isStaff(user.roles)) return true;
+  const order = await Order.findById(orderId).select('buyer sellerUser').lean();
+  if (!order) {
+    // Allow orderNumber lookup for clients that join by number
+    const byNumber = await Order.findOne({ orderNumber: orderId }).select('buyer sellerUser').lean();
+    if (!byNumber) return false;
+    return [String(byNumber.buyer), String(byNumber.sellerUser)].includes(String(user.id));
+  }
+  return [String(order.buyer), String(order.sellerUser)].includes(String(user.id));
 }
 
 export function initializeSocket(httpServer) {
@@ -26,7 +57,7 @@ export function initializeSocket(httpServer) {
   io = new Server(httpServer, {
     path: '/socket.io',
     cors: {
-      origin: env.corsOrigins,
+      origin: env.corsOrigins.includes('*') ? false : env.corsOrigins,
       credentials: true,
       methods: ['GET', 'POST'],
     },
@@ -51,7 +82,7 @@ export function initializeSocket(httpServer) {
       if (!userId) return next(new Error('UNAUTHORIZED'));
 
       const user = await User.findById(userId).select('_id email name roles status').lean();
-      if (!user || user.status === 'suspended' || user.status === 'banned') {
+      if (!user || isBlockedStatus(user.status)) {
         return next(new Error('UNAUTHORIZED'));
       }
 
@@ -77,14 +108,26 @@ export function initializeSocket(httpServer) {
     if (roles.includes(USER_ROLES.BUYER)) socket.join(`buyer:${userId}`);
     if (isStaff(roles)) socket.join('admins');
 
-    socket.on('dispute:join', (disputeId) => {
-      if (disputeId) socket.join(`dispute:${disputeId}`);
+    socket.on('dispute:join', async (disputeId) => {
+      try {
+        if (await canJoinDispute(socket.user, disputeId)) {
+          socket.join(`dispute:${disputeId}`);
+        }
+      } catch (error) {
+        logger.warn('dispute:join denied', { userId, disputeId, message: error.message });
+      }
     });
     socket.on('dispute:leave', (disputeId) => {
       if (disputeId) socket.leave(`dispute:${disputeId}`);
     });
-    socket.on('order:join', (orderId) => {
-      if (orderId) socket.join(`order:${orderId}`);
+    socket.on('order:join', async (orderId) => {
+      try {
+        if (await canJoinOrder(socket.user, orderId)) {
+          socket.join(`order:${orderId}`);
+        }
+      } catch (error) {
+        logger.warn('order:join denied', { userId, orderId, message: error.message });
+      }
     });
     socket.on('order:leave', (orderId) => {
       if (orderId) socket.leave(`order:${orderId}`);

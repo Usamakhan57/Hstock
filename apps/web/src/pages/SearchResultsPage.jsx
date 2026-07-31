@@ -59,7 +59,7 @@ const SearchResultsPage = () => {
     <div className="min-h-screen">
       <Seo
         title={q ? `Search: ${q}` : 'Search'}
-        description="Search HStock for SVGs, cliparts, wall art, planners, templates and more from verified creators."
+        description="Search ApnaStore for social accounts, domains, SaaS, source code, websites, and digital tools from verified sellers."
         noIndex
       />
       <Header />
@@ -68,13 +68,13 @@ const SearchResultsPage = () => {
 
         <form onSubmit={submit} role="search" className="flex items-center gap-2 max-w-xl bg-white rounded-full px-4 py-3 border border-border mb-6">
           <SearchIcon className="w-4 h-4 text-muted-foreground shrink-0" />
-          <input value={value} onChange={(e) => setValue(e.target.value)} placeholder="Search SVGs, cliparts, templates…" aria-label="Search" className="bg-transparent outline-none text-sm w-full" />
+          <input value={value} onChange={(e) => setValue(e.target.value)} placeholder="Search accounts, domains, SaaS, source code…" aria-label="Search" className="bg-transparent outline-none text-sm w-full" />
         </form>
 
         {!q.trim() ? (
           <div className="max-w-lg space-y-6">
             <div className="bg-white rounded-3xl border border-border p-10 sm:p-12 text-center">
-              <h1 className="text-lg font-bold">Search HStock</h1>
+              <h1 className="text-lg font-bold">Search ApnaStore</h1>
               <p className="text-sm text-muted-foreground mt-1.5">Type a product, category, or artist name above to get started.</p>
             </div>
 

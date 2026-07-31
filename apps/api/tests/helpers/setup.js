@@ -32,8 +32,9 @@ export async function setupTestDb() {
 
 export async function resetDb() {
   await setupTestDb();
-  const collections = await mongoose.connection.db.collections();
-  await Promise.all(collections.map((collection) => collection.deleteMany({})));
+  // Clear every MongoDB store used by the API (native driver helper).
+  const stores = await mongoose.connection.db.collections();
+  await Promise.all(stores.map((store) => store.deleteMany({})));
   await ensureDefaultConfigs();
 }
 

@@ -5,7 +5,7 @@
  * Reads from `pm_admin_testimonials` (written by the Admin Testimonials
  * CMS) and maps the admin schema to the storefront shape those pages need.
  * Mirrors categoryRepository.js / productRepository.js / sellerRepository.js
- * / collectionRepository.js / faqRepository.js — closing the same gap
+ * / faqRepository.js — closing the same gap
  * (HomePage/AboutPage previously read a hardcoded `testimonials` array
  * from data.js, disconnected from the Testimonials CMS).
  *

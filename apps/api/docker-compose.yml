@@ -3,7 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: hstock-api
+    container_name: apnastore-api
     restart: unless-stopped
     ports:
       - "4000:4000"
@@ -13,8 +13,9 @@ services:
       NODE_ENV: production
       HOST: 0.0.0.0
       PORT: 4000
-      MONGODB_URI: mongodb://mongo:27017/hstock
-      MONGODB_DB_NAME: hstock
+      ENABLE_JOBS: "true"
+      MONGODB_URI: mongodb://mongo:27017/apnastore
+      MONGODB_DB_NAME: apnastore
     volumes:
       - api_uploads:/app/uploads
       - api_logs:/app/logs
@@ -22,15 +23,15 @@ services:
       mongo:
         condition: service_healthy
     networks:
-      - hstock
+      - apnastore
 
   mongo:
     image: mongo:7
-    container_name: hstock-mongo
+    container_name: apnastore-mongo
     restart: unless-stopped
     command: ['mongod', '--bind_ip_all']
     environment:
-      MONGO_INITDB_DATABASE: hstock
+      MONGO_INITDB_DATABASE: apnastore
     volumes:
       - mongo_data:/data/db
     healthcheck:
@@ -39,7 +40,7 @@ services:
       timeout: 5s
       retries: 10
     networks:
-      - hstock
+      - apnastore
     # Production on Hostinger VPS should prefer host-installed MongoDB
     # bound to 127.0.0.1. Keep this service for local/dev compose use.
 
@@ -49,5 +50,5 @@ volumes:
   api_logs:
 
 networks:
-  hstock:
+  apnastore:
     driver: bridge

@@ -35,12 +35,12 @@ const VerifyEmailPage = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-[#F6F8FC] px-4 py-10 sm:px-5 sm:py-16">
-      <Seo title="Verify Email" description="Verify your HStock account email." noIndex />
+      <Seo title="Verify Email" description="Verify your ApnaStore account email." noIndex />
       <Header />
       <main className="flex-1 grid place-items-center">
         <div className="w-full max-w-[520px]">
           <div className="bg-white rounded-[24px] border border-border soft-shadow p-8 sm:p-10 text-center">
-            <img src={LOGO} alt="Hstock" className="h-12 w-auto object-contain mx-auto" />
+            <img src={LOGO} alt="ApnaStore" className="h-12 w-auto object-contain mx-auto" />
             <h1 className="mt-6 text-3xl font-black tracking-tight">Email Verification</h1>
             <div className="mt-6 flex flex-col items-center gap-3">
               {status === 'loading' && <Loader2 className="w-8 h-8 animate-spin text-primary" />}

@@ -1,6 +1,6 @@
 # Global Digital Asset Uniqueness
 
-HStock is a digital marketplace. The same digital asset must never have two blocking listings at the same time, across all sellers and admins.
+ApnaStore is a digital marketplace. The same digital asset must never have two blocking listings at the same time, across all sellers and admins.
 
 ## Business rule
 
@@ -88,7 +88,7 @@ Duplicate → **HTTP 409**
 ```json
 {
   "success": false,
-  "message": "This digital asset is already listed on HStock.",
+  "message": "This digital asset is already listed on ApnaStore.",
   "code": "ASSET_ALREADY_LISTED"
 }
 ```

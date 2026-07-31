@@ -62,7 +62,7 @@ const SellerCTA = () => (
             Turn your art into <span className="brand-text italic">income</span>
           </h2>
           <p className="mt-4 text-muted-foreground max-w-md leading-relaxed">
-            Open your own storefront on HStock and sell wall art, planners, cliparts, fonts and bundles to buyers around the world.
+            Open your own storefront on ApnaStore and sell wall art, planners, cliparts, fonts and bundles to buyers around the world.
           </p>
           <ul className="mt-6 space-y-3">
             {perks.map((p) => (

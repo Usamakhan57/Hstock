@@ -7,18 +7,18 @@ import Seo from '../components/Seo';
 import { useSellerAuth } from '../context/SellerAuthContext';
 
 const perks = [
-  { icon: DollarSign, title: 'Keep more of every sale', text: 'Transparent commission with fast, reliable payouts straight to your account.' },
-  { icon: Rocket, title: 'Reach active buyers', text: 'Your storefront is discoverable across search, categories, and curated collections.' },
-  { icon: ShieldCheck, title: 'Licensing handled for you', text: 'Personal, Commercial, and Extended license tiers are built into every listing.' },
-  { icon: TrendingUp, title: 'Real-time analytics', text: 'Track views, downloads, and earnings from your seller dashboard.' },
-  { icon: Palette, title: 'Sell what you love', text: 'Wall art, planners, cliparts, fonts, mockups — any digital asset finds a home.' },
-  { icon: Users, title: 'Grow a following', text: 'Build a store page buyers can browse, follow, and come back to.' },
+  { icon: DollarSign, title: 'Transparent earnings', text: 'Clear fees, escrow-backed checkout, and wallet payouts you can track in one place.' },
+  { icon: Rocket, title: 'Reach active buyers', text: 'Your storefront is discoverable across search, categories, and marketplace browse.' },
+  { icon: ShieldCheck, title: 'Protected commerce', text: 'Escrow flows and dispute tools help keep delivery and payment expectations clear.' },
+  { icon: TrendingUp, title: 'Seller analytics', text: 'Track views, orders, and earnings from your ApnaStore seller dashboard.' },
+  { icon: Palette, title: 'Sell digital assets', text: 'List accounts, domains, websites, SaaS, source code, apps, AI tools, and more.' },
+  { icon: Users, title: 'Build a store brand', text: 'Create a seller profile buyers can trust, revisit, and purchase from again.' },
 ];
 
 const steps = [
   { n: '01', t: 'Create your seller account', d: 'Sign up with your store name and email — takes under two minutes.' },
-  { n: '02', t: 'Upload your first products', d: 'Add files, previews, pricing, and pick your license tiers.' },
-  { n: '03', t: 'Get discovered & paid', d: 'Buyers find your work across HStock; you track earnings in your dashboard.' },
+  { n: '02', t: 'Publish production-ready listings', d: 'Add clear titles, pricing, delivery type, stock, and media buyers can trust.' },
+  { n: '03', t: 'Deliver and get paid', d: 'Fulfill orders, manage disputes, and track wallet earnings from your dashboard.' },
 ];
 
 const BecomeASellerPage = () => {
@@ -26,7 +26,7 @@ const BecomeASellerPage = () => {
 
   return (
     <div className="min-h-screen">
-      <Seo title="Become a Seller" description="Open your storefront on HStock and sell wall art, planners, cliparts, fonts and digital bundles to buyers worldwide." />
+      <Seo title="Become a Seller" description="Open your ApnaStore seller storefront and sell digital accounts, domains, SaaS, source code, and tools with escrow-backed checkout." />
       <Header />
 
       {/* Hero */}
@@ -35,13 +35,13 @@ const BecomeASellerPage = () => {
         <div className="absolute -top-40 -right-32 w-[42rem] h-[42rem] rounded-full brand-gradient opacity-20 blur-3xl" />
         <div className="mx-auto max-w-[90rem] px-5 lg:px-8 pt-16 lg:pt-24 pb-16 text-center">
           <span className="inline-flex items-center gap-2 text-xs font-semibold px-4 py-2 rounded-full bg-white/80 backdrop-blur border border-border soft-shadow">
-            Join thousands of independent creators
+            Sell on ApnaStore
           </span>
           <h1 className="mt-6 text-4xl md:text-6xl font-black tracking-tight leading-[1.05]">
-            Turn your creativity into <span className="brand-text italic">income</span>
+            Grow your digital business on <span className="brand-text italic">ApnaStore</span>
           </h1>
           <p className="mt-6 text-lg text-muted-foreground max-w-xl mx-auto leading-relaxed">
-            Sell wall art, planners, cliparts, fonts, and digital bundles to buyers around the world — on a marketplace built for creators.
+            List accounts, domains, websites, SaaS, source code, and tools for buyers who expect secure checkout and clear delivery.
           </p>
           <div className="mt-9 flex flex-wrap justify-center gap-3">
             <Link
@@ -62,7 +62,7 @@ const BecomeASellerPage = () => {
 
       {/* Perks */}
       <section className="mx-auto max-w-[90rem] px-5 lg:px-8 py-16">
-        <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight text-center">Why sell on HStock</h2>
+        <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight text-center">Why sell on ApnaStore</h2>
         <div className="mt-10 grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {perks.map((p) => (
             <div key={p.title} className="bg-white rounded-3xl p-6 border border-border soft-shadow">

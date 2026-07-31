@@ -62,7 +62,7 @@ const StaticPageForm = () => {
             <div>
               <label className="block text-sm font-medium mb-1.5">URL Slug</label>
               <input value={form.slug} onChange={set('slug')} className={inputClass} />
-              <p className="text-xs text-muted-foreground mt-1">Shown to visitors as hstock.store/{form.slug}</p>
+              <p className="text-xs text-muted-foreground mt-1">Shown to visitors as apnastore.org/{form.slug}</p>
             </div>
             <div>
               <label className="block text-sm font-medium mb-1.5">Body</label>

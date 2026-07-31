@@ -44,7 +44,7 @@ const DisputesPage = () => {
 
   return (
     <>
-      <Seo title="Dispute Center" description="Track and manage your HStock order disputes." noIndex />
+      <Seo title="Dispute Center" description="Track and manage your ApnaStore order disputes." noIndex />
       <AccountLayout title="Dispute Center" subtitle="Open cases, evidence, replacements, and secure chat.">
         <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center">
           <div className="flex flex-1 items-center gap-2 rounded-full border border-border bg-white px-4 py-2.5">

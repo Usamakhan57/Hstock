@@ -182,7 +182,6 @@ export function mapAdminProduct(product) {
     slug: product.slug || '',
     sku: product.sku || '',
     categoryId: idOf(category) || idOf(product.category),
-    collectionIds: product.collection ? [idOf(product.collection)] : [],
     brandId: idOf(product.brand),
     tags: Array.isArray(product.tags)
       ? product.tags.map((t) => (typeof t === 'string' ? t : t?.name)).filter(Boolean)

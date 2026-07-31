@@ -7,6 +7,28 @@ import { AppError } from '../utils/AppError.js';
 
 ensureUploadDirectories();
 
+const ALLOWED_MIME = new Set([
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/gif',
+  'application/pdf',
+  'text/plain',
+  'application/zip',
+  'application/x-zip-compressed',
+]);
+
+const ALLOWED_EXT = new Set([
+  '.jpg',
+  '.jpeg',
+  '.png',
+  '.webp',
+  '.gif',
+  '.pdf',
+  '.txt',
+  '.zip',
+]);
+
 function createStorage(subdir = 'temp') {
   return multer.diskStorage({
     destination(_req, _file, cb) {
@@ -22,8 +44,7 @@ function createStorage(subdir = 'temp') {
 }
 
 /**
- * Upload middleware placeholder using local disk storage.
- * Business upload endpoints are not exposed in Phase 1.
+ * Local disk upload middleware with MIME + extension allowlist.
  */
 export function createUploadMiddleware({
   subdir = 'temp',
@@ -38,6 +59,16 @@ export function createUploadMiddleware({
     fileFilter(_req, file, cb) {
       if (!file) {
         cb(new AppError('No file provided', 400, { code: 'NO_FILE' }));
+        return;
+      }
+      const ext = path.extname(file.originalname || '').toLowerCase();
+      const mimeOk = ALLOWED_MIME.has(String(file.mimetype || '').toLowerCase());
+      const extOk = ALLOWED_EXT.has(ext);
+      if (!mimeOk || !extOk) {
+        cb(new AppError('Unsupported file type', 400, {
+          code: 'INVALID_FILE_TYPE',
+          details: { mimetype: file.mimetype, extension: ext },
+        }));
         return;
       }
       cb(null, true);
@@ -56,4 +87,6 @@ export const uploadSingleTemp = createUploadMiddleware({
 export default {
   createUploadMiddleware,
   uploadSingleTemp,
+  ALLOWED_MIME,
+  ALLOWED_EXT,
 };

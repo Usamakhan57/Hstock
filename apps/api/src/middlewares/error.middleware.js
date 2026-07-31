@@ -55,8 +55,6 @@ export function errorHandler(err, req, res, _next) {
     code = 'CORS_DENIED';
   }
 
-  const isOperational = err instanceof AppError ? err.isOperational : statusCode < 500;
-
   if (statusCode >= 500) {
     logger.error(message, {
       code,
@@ -74,14 +72,15 @@ export function errorHandler(err, req, res, _next) {
     });
   }
 
+  // Never leak internal/provider details on 5xx in production
+  const hideDetails = env.isProduction && statusCode >= 500;
   return sendError(res, {
     statusCode,
-    message: statusCode >= 500 && env.isProduction && !isOperational
-      ? 'Internal server error'
-      : message,
-    code,
-    errors: env.isProduction && statusCode >= 500 ? null : (details ?? null),
-    details: env.isProduction && statusCode >= 500 ? undefined : details,
+    message: hideDetails ? 'Internal server error' : message,
+    code: hideDetails ? 'INTERNAL_ERROR' : code,
+    errors: hideDetails ? null : (details ?? null),
+    details: hideDetails ? undefined : details,
+    meta: hideDetails ? null : undefined,
   });
 }
 

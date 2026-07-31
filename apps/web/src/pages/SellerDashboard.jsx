@@ -285,7 +285,7 @@ const SellerDashboard = () => {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <Seo title="Seller Dashboard" description="Manage your HStock store, listings, and earnings." noIndex />
+      <Seo title="Seller Dashboard" description="Manage your ApnaStore store, listings, and earnings." noIndex />
 
       <div className="relative lg:flex">
         <aside className="hidden lg:flex lg:w-[320px] shrink-0 flex-col border-r border-border bg-white px-6 py-8 shadow-sm">
@@ -343,7 +343,7 @@ const SellerDashboard = () => {
             <div className="mb-10 flex flex-col gap-6 rounded-[2rem] border border-border bg-white p-8 shadow-sm">
               <div>
                 <p className="text-xs uppercase tracking-[0.3em] text-primary">Seller Dashboard</p>
-                <h1 className="mt-3 text-3xl font-black tracking-tight text-foreground">Manage your HStock seller portal</h1>
+                <h1 className="mt-3 text-3xl font-black tracking-tight text-foreground">Manage your ApnaStore seller portal</h1>
                 <p className="mt-3 max-w-2xl text-sm text-muted-foreground">
                   View performance, publish new listings, and manage orders, wallet payouts, and store settings from one unified seller workspace.
                 </p>

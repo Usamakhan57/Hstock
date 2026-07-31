@@ -54,7 +54,7 @@ const SellerLoginPage = () => {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <Seo title="Seller Sign In" description="Sign in to your HStock seller dashboard." noIndex />
+      <Seo title="Seller Sign In" description="Sign in to your ApnaStore seller dashboard." noIndex />
       <Header />
       <div className="flex-1 grid place-items-center px-5 py-16">
         <div className="w-full max-w-md">

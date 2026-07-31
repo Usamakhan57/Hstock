@@ -77,8 +77,6 @@ export function mapSellerProduct(product) {
       conversion: product.metrics?.conversion ?? 0,
       revenue: Number(product.metrics?.revenue || 0),
     },
-    bulkDiscounts: Array.isArray(product.bulkDiscounts) ? product.bulkDiscounts : [],
-    promotions: Array.isArray(product.promotions) ? product.promotions : [],
     uploadedCount: product.uploadedCount ?? 0,
     soldCount: product.soldCount ?? product.salesCount ?? 0,
     reservedCount: product.reservedCount ?? 0,
@@ -96,11 +94,8 @@ export function mapSellerProduct(product) {
     stock,
     stockType: product.stockType || 'limited',
     lowStockThreshold: product.lowStockThreshold ?? 5,
-    promoted: !!product.promoted || !!product.featured,
-    featured: !!product.featured,
     verification: 'standard',
     handover: product.deliveryType === 'manual' ? 'guided' : 'self-serve',
-    promotionLabel: product.featured ? 'Featured' : null,
     metrics: {
       views: product.metrics?.views ?? 0,
       conversion: product.metrics?.conversion ?? 0,
@@ -143,7 +138,6 @@ export function toBackendProductPayload(form, { publish = false } = {}) {
       ? 'unlimited'
       : 'limited',
     status,
-    featured: Boolean(form.featured || form.promoted),
     seoTitle: form.seoTitle || undefined,
     seoDescription: form.seoDescription || undefined,
     seoKeywords: Array.isArray(form.seoKeywords) ? form.seoKeywords : undefined,

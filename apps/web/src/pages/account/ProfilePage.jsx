@@ -98,7 +98,7 @@ const ProfilePage = () => {
 
   return (
     <>
-      <Seo title="My Profile" description="Manage your HStock account details." noIndex />
+      <Seo title="My Profile" description="Manage your ApnaStore account details." noIndex />
       <AccountLayout title="Profile" subtitle="Manage your personal account details.">
         {!user ? (
           <EmptyState title="You're not signed in" message="Sign in to view and edit your profile." actionLabel="Sign In" actionTo="/login" />

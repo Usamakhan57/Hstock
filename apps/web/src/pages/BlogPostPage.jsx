@@ -90,7 +90,7 @@ const BlogPostPage = () => {
     );
   }
 
-  const initials = (author?.name || 'HStock Team').split(' ').map((w) => w[0]).slice(0, 2).join('');
+  const initials = (author?.name || 'ApnaStore Team').split(' ').map((w) => w[0]).slice(0, 2).join('');
   const paragraphs = post.content.split('\n\n').filter(Boolean);
 
   return (
@@ -129,7 +129,7 @@ const BlogPostPage = () => {
             <span className="w-10 h-10 rounded-full brand-gradient text-white grid place-items-center text-xs font-bold shrink-0">{initials}</span>
           )}
           <div className="text-sm">
-            <p className="font-semibold">{author?.name || 'HStock Team'}</p>
+            <p className="font-semibold">{author?.name || 'ApnaStore Team'}</p>
             <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
               <span className="flex items-center gap-1"><Calendar className="w-3.5 h-3.5" /> {formatDate(post.publishedAt || post.createdAt)}</span>
               <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> {post.readingTime}</span>

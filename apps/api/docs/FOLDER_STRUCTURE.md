@@ -1,4 +1,4 @@
-# HStock API — Folder Structure (Phase 2)
+# ApnaStore API — Folder Structure (Phase 2)
 
 ```
 apps/api/

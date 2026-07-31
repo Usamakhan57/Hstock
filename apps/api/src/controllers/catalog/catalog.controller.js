@@ -15,7 +15,6 @@ function listHandler(listFn, message) {
 
 export const listCategories = listHandler(catalogService.listCategories, 'Categories');
 export const listBrands = listHandler(catalogService.listBrands, 'Brands');
-export const listCollections = listHandler(catalogService.listCollections, 'Collections');
 export const listTags = listHandler(catalogService.listTags, 'Tags');
 
 export const getCategory = asyncHandler(async (req, res) => {
@@ -56,26 +55,6 @@ export const updateBrand = asyncHandler(async (req, res) => {
 export const deleteBrand = asyncHandler(async (req, res) => {
   const data = await catalogService.deleteBrand(req.params.id, req.user.id);
   return sendSuccess(res, { message: 'Brand deleted', data });
-});
-
-export const getCollection = asyncHandler(async (req, res) => {
-  const data = await catalogService.getCollection(req.params.idOrSlug);
-  return sendSuccess(res, { message: 'Collection', data });
-});
-
-export const createCollection = asyncHandler(async (req, res) => {
-  const data = await catalogService.createCollection(req.body, req.user.id);
-  return sendSuccess(res, { statusCode: 201, message: 'Collection created', data });
-});
-
-export const updateCollection = asyncHandler(async (req, res) => {
-  const data = await catalogService.updateCollection(req.params.id, req.body, req.user.id);
-  return sendSuccess(res, { message: 'Collection updated', data });
-});
-
-export const deleteCollection = asyncHandler(async (req, res) => {
-  const data = await catalogService.deleteCollection(req.params.id, req.user.id);
-  return sendSuccess(res, { message: 'Collection deleted', data });
 });
 
 export const getTag = asyncHandler(async (req, res) => {

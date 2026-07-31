@@ -54,8 +54,8 @@ const SettingsPage = () => {
 
   return (
     <>
-      <Seo title="Account Settings" description="Manage your HStock notification and account preferences." noIndex />
-      <AccountLayout title="Settings" subtitle="Control how HStock communicates with you.">
+      <Seo title="Account Settings" description="Manage your ApnaStore notification and account preferences." noIndex />
+      <AccountLayout title="Settings" subtitle="Control how ApnaStore communicates with you.">
         <form onSubmit={save} className="bg-white rounded-3xl border border-border soft-shadow p-6 max-w-lg">
           <h3 className="font-bold text-sm mb-1">Notifications</h3>
           <Toggle

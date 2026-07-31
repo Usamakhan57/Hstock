@@ -4,13 +4,11 @@
  */
 import {
   fetchCategories,
-  fetchCollections,
   fetchProducts,
 } from './catalogApi';
 import { mapBackendSeller } from '../lib/mappers/catalogMappers';
 
 let categories = [];
-let collections = [];
 let products = [];
 let sellers = [];
 let hydrated = false;
@@ -65,24 +63,38 @@ export function subscribeCatalog(listener) {
   return () => listeners.delete(listener);
 }
 
+async function fetchAllCatalog(fetchPage, { limit = 100, maxPages = 50 } = {}) {
+  let page = 1;
+  const items = [];
+  while (page <= maxPages) {
+    // eslint-disable-next-line no-await-in-loop
+    const result = await fetchPage({ page, limit }).catch(() => ({ items: [], meta: null }));
+    const batch = result.items || [];
+    items.push(...batch);
+    const total = result.meta?.total;
+    if (total != null && items.length >= total) break;
+    if (batch.length < limit) break;
+    page += 1;
+  }
+  return items;
+}
+
 export async function hydrateCatalog({ force = false } = {}) {
-  if (hydrated && !force) return { categories, collections, products, sellers, version };
+  if (hydrated && !force) return { categories, products, sellers, version };
   if (hydratePromise && !force) return hydratePromise;
 
   hydratePromise = (async () => {
-    const [catRes, colRes, productRes] = await Promise.all([
-      fetchCategories({ limit: 100 }).catch(() => ({ items: [] })),
-      fetchCollections({ limit: 100 }).catch(() => ({ items: [] })),
-      fetchProducts({ limit: 100 }).catch(() => ({ items: [] })),
+    const [catItems, productItems] = await Promise.all([
+      fetchAllCatalog((params) => fetchCategories(params)),
+      fetchAllCatalog((params) => fetchProducts(params)),
     ]);
-    categories = catRes.items || [];
-    collections = colRes.items || [];
-    products = productRes.items || [];
+    categories = catItems;
+    products = productItems;
     sellers = deriveSellersFromProducts(products);
     hydrated = true;
     version += 1;
     notify();
-    return { categories, collections, products, sellers, version };
+    return { categories, products, sellers, version };
   })().finally(() => {
     hydratePromise = null;
   });
@@ -92,10 +104,6 @@ export async function hydrateCatalog({ force = false } = {}) {
 
 export function getCachedCategories() {
   return categories;
-}
-
-export function getCachedCollections() {
-  return collections;
 }
 
 export function getCachedProducts() {
@@ -117,7 +125,6 @@ export function getCatalogVersion() {
 export default {
   hydrateCatalog,
   getCachedCategories,
-  getCachedCollections,
   getCachedProducts,
   getCachedSellers,
   isCatalogHydrated,

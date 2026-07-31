@@ -13,16 +13,16 @@ const SYSTEM_DEFAULTS = Object.freeze({
 
 const PLATFORM_DEFAULTS = Object.freeze({
   key: 'default',
-  storeName: 'HStock',
-  storeEmail: 'support@hstock.store',
-  storeUrl: 'https://hstock.store',
+  storeName: 'ApnaStore',
+  storeEmail: 'support@apnastore.org',
+  storeUrl: 'https://apnastore.org',
   maintenanceMode: false,
   escrowAutoReleaseHours: 24,
   withdrawalAdminSlaHours: 24,
   minWithdrawalAmount: 10,
   maxWithdrawalAmount: 100000,
   orderPaymentLifetimeSeconds: 3600,
-  supportEmail: 'support@hstock.store',
+  supportEmail: 'support@apnastore.org',
 });
 
 const COMMISSION_DEFAULTS = Object.freeze({

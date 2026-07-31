@@ -64,24 +64,6 @@ export const brandUpdateSchema = {
   body: brandBodySchema.body.partial(),
 };
 
-export const collectionBodySchema = {
-  body: z.object({
-    name: z.string().min(2).max(160),
-    slug: z.string().min(2).max(160).optional(),
-    image: z.string().url().nullable().optional(),
-    description: z.string().max(5000).optional(),
-    status: statusEnum.optional(),
-    products: z.array(objectIdSchema).optional(),
-    featured: z.boolean().optional(),
-    displayOrder: z.number().int().optional(),
-  }),
-};
-
-export const collectionUpdateSchema = {
-  params: z.object({ id: objectIdSchema }),
-  body: collectionBodySchema.body.partial(),
-};
-
 export const tagBodySchema = {
   body: z.object({
     name: z.string().min(1).max(80),
@@ -104,8 +86,6 @@ export default {
   categoryUpdateSchema,
   brandBodySchema,
   brandUpdateSchema,
-  collectionBodySchema,
-  collectionUpdateSchema,
   tagBodySchema,
   tagUpdateSchema,
 };

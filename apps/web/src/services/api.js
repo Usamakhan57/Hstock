@@ -3,7 +3,7 @@
  * Product/category calls hit the production backend via catalogApi.
  * Newsletter remains a lightweight client stub until a backend endpoint exists.
  */
-import { productsApi, categoriesApi, collectionsApi } from './catalogApi';
+import { productsApi, categoriesApi } from './catalogApi';
 import { ordersApi } from './ordersApi';
 import { paymentsApi } from './paymentsApi';
 import { walletApi } from './walletApi';
@@ -15,7 +15,6 @@ import { sellerProductsApi } from './sellerProductsApi';
 export {
   productsApi,
   categoriesApi,
-  collectionsApi,
   ordersApi,
   paymentsApi,
   walletApi,
@@ -35,7 +34,6 @@ export const newsletterApi = {
 export default {
   productsApi,
   categoriesApi,
-  collectionsApi,
   ordersApi,
   paymentsApi,
   walletApi,

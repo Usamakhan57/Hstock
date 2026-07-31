@@ -1,34 +1,32 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import Seo from '../components/Seo';
 import Breadcrumbs from '../components/Breadcrumbs';
 
 const sections = [
-  { title: '1. Information We Collect', body: 'We collect information you provide directly, such as your name, email address, and billing details when you create an account or make a purchase. We also automatically collect limited technical data — like browser type and device information — to keep the site secure and improve performance.' },
-  { title: '2. How We Use Your Information', body: 'Your information is used to process orders, deliver digital downloads, provide customer support, and send order-related communications. With your consent, we may also send occasional product updates or promotions, which you can opt out of at any time.' },
-  { title: '3. Sharing of Information', body: 'We do not sell your personal information. We may share limited data with trusted service providers who help us operate the platform — such as payment processors and email delivery services — under confidentiality agreements.' },
-  { title: '4. Cookies', body: 'HStock uses cookies and similar technologies to keep you logged in, remember your wallet session, and understand how the site is used. You can control cookies through your browser settings, though some features may not work correctly if disabled.' },
-  { title: '5. Data Security', body: 'We use industry-standard measures, including encryption in transit, to protect your information. No online service can guarantee absolute security, but we work continuously to safeguard your data.' },
-  { title: '6. Your Rights', body: 'Depending on your location, you may have the right to access, correct, or delete your personal information, or to object to certain processing. To exercise these rights, contact us using the details on our Contact page.' },
-  { title: '7. Data Retention', body: 'We retain account and order information for as long as your account is active or as needed to comply with legal, tax, and accounting obligations.' },
-  { title: '8. Children\'s Privacy', body: 'HStock is not directed at children under 13, and we do not knowingly collect personal information from children.' },
-  { title: '9. Changes to This Policy', body: 'We may update this policy from time to time. Material changes will be communicated via email or a notice on the site before they take effect.' },
-  { title: '10. Contact Us', body: 'If you have questions about this policy or how your data is handled, please reach out through our Contact page and our team will respond promptly.' },
+  { title: '1. Information We Collect', body: 'We collect information you provide directly — such as name, email, store details, and support messages — when you create an account, place an order, or contact us. We also collect limited technical data (browser, device, and usage signals) needed to operate and secure ApnaStore.' },
+  { title: '2. How We Use Your Information', body: 'We use your information to operate the marketplace, process payments and escrow flows, deliver digital products, prevent fraud, provide support, and send transactional messages. Marketing emails are sent only where permitted, and you can opt out at any time.' },
+  { title: '3. Sharing of Information', body: 'We do not sell personal information. Limited data may be shared with trusted processors that help us run payments, email delivery, hosting, analytics, and security — under appropriate confidentiality and data-protection commitments.' },
+  { title: '4. Cookies', body: 'ApnaStore uses cookies and similar technologies for authentication, preferences, and performance. You can control cookies in your browser; some marketplace features may not work correctly if essential cookies are disabled.' },
+  { title: '5. Data Security', body: 'We use industry-standard safeguards, including encryption in transit and access controls. No online service can guarantee absolute security, but we continuously improve protections around accounts, wallets, and order data.' },
+  { title: '6. Your Rights', body: 'Depending on your location, you may have rights to access, correct, delete, or restrict processing of personal information. Contact support@apnastore.org or use the Contact page to submit a request.' },
+  { title: '7. Data Retention', body: 'We retain account, order, and dispute records for as long as needed to operate the service and meet legal, tax, accounting, and fraud-prevention obligations.' },
+  { title: '8. Children\'s Privacy', body: 'ApnaStore is not directed at children under 13, and we do not knowingly collect personal information from children.' },
+  { title: '9. Changes to This Policy', body: 'We may update this policy from time to time. Material changes will be communicated by email or a notice on apnastore.org before they take effect.' },
+  { title: '10. Contact Us', body: 'Questions about privacy can be sent to support@apnastore.org or through our Contact page.' },
 ];
 
 const PrivacyPolicyPage = () => (
   <div className="min-h-screen">
-    <Seo title="Privacy Policy" description="How HStock collects, uses, and protects your personal information." />
+    <Seo title="Privacy Policy" description="How ApnaStore collects, uses, and protects personal information on apnastore.org." />
     <Header />
     <div className="mx-auto max-w-3xl px-5 lg:px-8 pt-10 pb-24">
-        <Breadcrumbs items={[{ name: 'Privacy Policy' }]} />
+      <Breadcrumbs items={[{ name: 'Privacy Policy' }]} />
       <h1 className="text-4xl md:text-5xl font-black tracking-tight">Privacy <span className="brand-text">Policy</span></h1>
-      <p className="text-muted-foreground mt-3">Last updated: June 1, 2026</p>
+      <p className="text-muted-foreground mt-3">Last updated: July 31, 2026</p>
       <p className="mt-6 text-sm leading-relaxed text-foreground/85">
-        This Privacy Policy explains how HStock ("we", "our", "us") collects, uses, and protects your information when you use our marketplace.
-        By using HStock, you agree to the practices described here.
+        This Privacy Policy explains how ApnaStore ("we", "our", "us") collects, uses, and protects your information when you use our marketplace at apnastore.org.
       </p>
 
       <div className="mt-10 space-y-8">
