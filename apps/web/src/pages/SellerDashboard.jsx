@@ -25,7 +25,10 @@ import { loadStorefrontProducts } from '../services/productRepository';
 import { getSellerProducts } from './seller/api/sellerProducts';
 import { getSellerMockData } from './seller/data/sellerMockData';
 import { useSellerAuth } from '../context/SellerAuthContext';
-import { useStore } from '../context/StoreContext';
+import { ordersApi } from '../services/ordersApi';
+import { walletApi } from '../services/walletApi';
+import { withdrawalsApi } from '../services/withdrawalsApi';
+import { escrowApi } from '../services/escrowApi';
 
 import SellerOverviewTab from './seller/components/SellerOverviewTab';
 import SellerProductsTab from './seller/components/SellerProductsTab';
@@ -102,7 +105,6 @@ const allProducts = loadStorefrontProducts();
 
 const SellerDashboard = () => {
   const { seller, logout } = useSellerAuth();
-  const { orders: realOrders } = useStore();
   const navigate = useNavigate();
   const location = useLocation();
   const urlTab = location.pathname.split('/seller/')[1];
@@ -113,6 +115,14 @@ const SellerDashboard = () => {
 
   const [sellerProducts, setSellerProducts] = useState([]);
   const [dataLoading, setDataLoading] = useState(true);
+  const [commerce, setCommerce] = useState({
+    orders: [],
+    wallet: null,
+    transactions: [],
+    withdrawals: [],
+    escrow: [],
+  });
+  const [commerceTick, setCommerceTick] = useState(0);
 
   useEffect(() => {
     getSellerProducts().then((data) => {
@@ -122,6 +132,28 @@ const SellerDashboard = () => {
   }, []);
 
   useEffect(() => {
+    let alive = true;
+    (async () => {
+      const [ordersRes, walletRes, txRes, withdrawalsRes, escrowRes] = await Promise.all([
+        ordersApi.list({ page: 1, limit: 100, scope: 'seller' }).catch(() => ({ items: [] })),
+        walletApi.me().catch(() => null),
+        walletApi.transactions({ page: 1, limit: 50 }).catch(() => ({ items: [] })),
+        withdrawalsApi.list({ page: 1, limit: 50 }).catch(() => ({ items: [] })),
+        escrowApi.list({ page: 1, limit: 50 }).catch(() => ({ items: [] })),
+      ]);
+      if (!alive) return;
+      setCommerce({
+        orders: ordersRes.items || [],
+        wallet: walletRes,
+        transactions: txRes.items || [],
+        withdrawals: withdrawalsRes.items || [],
+        escrow: escrowRes.items || [],
+      });
+    })();
+    return () => { alive = false; };
+  }, [commerceTick]);
+
+  useEffect(() => {
     setTab(currentTab);
   }, [currentTab]);
 
@@ -129,6 +161,20 @@ const SellerDashboard = () => {
     () => getSellerMockData(sellerProducts.length > 0 ? sellerProducts : allProducts),
     [sellerProducts]
   );
+
+  const refreshCommerce = () => setCommerceTick((t) => t + 1);
+
+  const overviewOrders = commerce.orders.length
+    ? commerce.orders.map((o) => ({
+      id: o.id,
+      customer: 'Buyer',
+      product: o.product?.title,
+      productImg: o.product?.img,
+      amount: o.amount,
+      date: o.date,
+      status: o.status,
+    }))
+    : mock.orders;
 
   const changeTab = (key) => {
     setTab(key);
@@ -287,7 +333,7 @@ const SellerDashboard = () => {
                 {tab === 'overview' && (
                   <SellerOverviewTab
                     products={sellerProducts}
-                    orders={mock.orders}
+                    orders={overviewOrders}
                     reviews={mock.reviews}
                     salesChart={mock.salesChart}
                     bestSelling={mock.bestSelling}
@@ -295,18 +341,23 @@ const SellerDashboard = () => {
                   />
                 )}
                 {tab === 'products' && <SellerProductsTab />}
-                {tab === 'orders' && <SellerOrdersTab orders={mock.orders} />}
+                {tab === 'orders' && <SellerOrdersTab orders={commerce.orders} />}
                 {tab === 'escrow' && (
-                  <SellerEscrowTab orders={realOrders.filter((o) => o.product.artist === seller?.storeName)} />
+                  <SellerEscrowTab escrowItems={commerce.escrow} />
                 )}
                 {tab === 'downloads' && <SellerDownloadsTab downloads={mock.downloads} />}
                 {tab === 'earnings' && (
-                  <SellerEarningsTab transactions={mock.transactions} earningsChart={mock.earningsChart} withdrawals={mock.withdrawals} />
+                  <SellerEarningsTab
+                    wallet={commerce.wallet}
+                    transactions={commerce.transactions}
+                    withdrawals={commerce.withdrawals}
+                    onRefresh={refreshCommerce}
+                  />
                 )}
                 {tab === 'analytics' && (
-                  <SellerAnalyticsTab orders={mock.orders} salesChart={mock.salesChart} bestSelling={mock.bestSelling} topCategories={mock.topCategories} storeViews={1204} />
+                  <SellerAnalyticsTab orders={overviewOrders} salesChart={mock.salesChart} bestSelling={mock.bestSelling} topCategories={mock.topCategories} storeViews={1204} />
                 )}
-                {tab === 'messages' && <SellerMessagesTab storeName={seller?.storeName} />}
+                {tab === 'messages' && <SellerMessagesTab />}
                 {tab === 'reviews' && <SellerReviewsTab reviews={mock.reviews} />}
                 {tab === 'notifications' && <SellerNotificationsTab notifications={mock.notifications} />}
                 {tab === 'store' && (

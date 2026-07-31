@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Camera, Loader2 } from 'lucide-react';
 import Seo from '../../components/Seo';
 import AccountLayout from './AccountLayout';
@@ -15,7 +16,7 @@ const Field = ({ label, ...props }) => (
 );
 
 const ProfilePage = () => {
-  const { user, profiles, orders, wallet, refreshProfile } = useStore();
+  const { user, profiles, refreshProfile } = useStore();
   const { toast } = useToast();
   const [name, setName] = useState(user?.name || '');
   const [details, setDetails] = useState({
@@ -170,9 +171,9 @@ const ProfilePage = () => {
             </form>
             <div className="bg-white rounded-3xl border border-border soft-shadow p-6 space-y-4 h-fit">
               <h3 className="font-bold text-sm">Account overview</h3>
-              <div className="flex justify-between text-sm"><span className="text-muted-foreground">Orders placed</span><span className="font-semibold">{orders.length}</span></div>
-              <div className="flex justify-between text-sm"><span className="text-muted-foreground">Wallet balance</span><span className="font-semibold">${Number(wallet || 0).toFixed(2)}</span></div>
+              <div className="flex justify-between text-sm"><span className="text-muted-foreground">Email</span><span className="font-semibold truncate ml-4">{user.email}</span></div>
               <div className="flex justify-between text-sm"><span className="text-muted-foreground">Roles</span><span className="font-semibold">{(user.roles || []).join(', ') || 'buyer'}</span></div>
+              <Link to="/orders" className="inline-flex text-sm font-semibold text-primary hover:underline">View order history</Link>
             </div>
           </div>
         )}

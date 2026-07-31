@@ -3,22 +3,28 @@ import Seo from '../../components/Seo';
 import AccountLayout from './AccountLayout';
 import ProductCard from '../../components/ProductCard';
 import EmptyState from '../../components/EmptyState';
+import { NetworkErrorState } from '../../components/ErrorState';
+import { ProductGridSkeleton } from '../../components/Skeletons';
 import { buildRecentlyViewed } from '../../services/buyerDashboard';
-import { useStore } from '../../context/StoreContext';
+import { useFetch } from '../../hooks/useFetch';
+import { ordersApi } from '../../services/ordersApi';
 
 const TABS = ['Recently Viewed', 'Recently Downloaded'];
 
 const BrowsingHistoryPage = () => {
-  const { orders } = useStore();
   const [tab, setTab] = useState(TABS[0]);
   const recentlyViewed = useMemo(() => buildRecentlyViewed(), []);
-  const recentlyDownloaded = useMemo(
-    () => {
-      const seen = new Set();
-      return orders.map((o) => o.product).filter((i) => (seen.has(i.id) ? false : (seen.add(i.id), true)));
-    },
-    [orders]
+  const { data, loading, error, retry } = useFetch(
+    () => ordersApi.list({ page: 1, limit: 50, scope: 'buyer' }),
+    [],
   );
+
+  const recentlyDownloaded = useMemo(() => {
+    const seen = new Set();
+    return (data?.items || [])
+      .map((o) => o.product)
+      .filter((i) => i?.id && (seen.has(i.id) ? false : (seen.add(i.id), true)));
+  }, [data]);
 
   const list = tab === TABS[0] ? recentlyViewed : recentlyDownloaded;
 
@@ -32,7 +38,11 @@ const BrowsingHistoryPage = () => {
           ))}
         </div>
 
-        {list.length === 0 ? (
+        {tab === TABS[1] && loading ? (
+          <ProductGridSkeleton count={8} />
+        ) : tab === TABS[1] && error ? (
+          <NetworkErrorState onRetry={retry} message={error.message} />
+        ) : list.length === 0 ? (
           <EmptyState title="Nothing here yet" message={tab === TABS[0] ? 'Products you view will show up here.' : 'Products you download will show up here.'} actionLabel="Browse the Shop" actionTo="/shop" />
         ) : (
           <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
