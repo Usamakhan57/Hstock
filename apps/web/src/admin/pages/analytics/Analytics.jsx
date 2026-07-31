@@ -10,6 +10,7 @@ import { getOrders } from '../../api/orders';
 import { getProducts } from '../../api/products';
 import { getCategories } from '../../api/categories';
 import { getCustomers } from '../../api/customers';
+import { getAnalytics } from '../../api/adminOps';
 
 const fmtMoney = (n) => `$${Number(n || 0).toFixed(2)}`;
 const fmtMonth = (iso) => new Date(iso).toLocaleDateString(undefined, { month: 'short' });
@@ -24,38 +25,64 @@ const Analytics = () => {
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [customers, setCustomers] = useState([]);
+  const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([getOrders(), getProducts(), getCategories(), getCustomers()]).then(([o, p, c, cu]) => {
-      setOrders(o); setProducts(p); setCategories(c); setCustomers(cu);
+    Promise.all([
+      getOrders(),
+      getProducts(),
+      getCategories(),
+      getCustomers(),
+      getAnalytics({ days: 30 }).catch(() => null),
+    ]).then(([o, p, c, cu, a]) => {
+      setOrders(o); setProducts(p); setCategories(c); setCustomers(cu); setAnalytics(a);
       setLoading(false);
     });
   }, []);
 
-  const revenue = useMemo(() => orders.filter((o) => o.paymentStatus === 'paid').reduce((s, o) => s + o.total, 0), [orders]);
+  const revenue = useMemo(() => {
+    if (analytics?.paymentsByDay?.length) {
+      return analytics.paymentsByDay.reduce((s, row) => s + Number(row.total || 0), 0);
+    }
+    return orders.filter((o) => o.paymentStatus === 'paid').reduce((s, o) => s + o.total, 0);
+  }, [orders, analytics]);
   const aov = useMemo(() => (orders.length ? revenue / orders.length : 0), [orders, revenue]);
 
   const revenueByMonth = useMemo(() => {
+    if (analytics?.paymentsByDay?.length) {
+      return analytics.paymentsByDay.map((row) => ({
+        month: row.day?.slice(5) || row.day,
+        total: Math.round(Number(row.total || 0) * 100) / 100,
+      }));
+    }
     const byMonth = {};
     orders.forEach((o) => {
       const m = fmtMonth(o.createdAt);
       byMonth[m] = (byMonth[m] || 0) + o.total;
     });
     return Object.entries(byMonth).map(([month, total]) => ({ month, total: Math.round(total * 100) / 100 }));
-  }, [orders]);
+  }, [orders, analytics]);
 
   const ordersByStatus = useMemo(() => {
+    if (analytics?.ordersByStatus?.length) {
+      return analytics.ordersByStatus.map((row) => ({ status: row._id || 'unknown', count: row.count }));
+    }
     const counts = {};
     orders.forEach((o) => { counts[o.status] = (counts[o.status] || 0) + 1; });
     return Object.entries(counts).map(([status, count]) => ({ status, count }));
-  }, [orders]);
+  }, [orders, analytics]);
 
-  const topProducts = useMemo(
-    () => [...products].sort((a, b) => b.downloads - a.downloads).slice(0, 6)
-      .map((p) => ({ name: p.title.length > 18 ? `${p.title.slice(0, 18)}…` : p.title, downloads: p.downloads })),
-    [products],
-  );
+  const topProducts = useMemo(() => {
+    if (analytics?.topProducts?.length) {
+      return analytics.topProducts.map((p) => ({
+        name: (p.title || 'Product').length > 18 ? `${(p.title || 'Product').slice(0, 18)}…` : (p.title || 'Product'),
+        downloads: p.count || 0,
+      }));
+    }
+    return [...products].sort((a, b) => b.downloads - a.downloads).slice(0, 6)
+      .map((p) => ({ name: p.title.length > 18 ? `${p.title.slice(0, 18)}…` : p.title, downloads: p.downloads }));
+  }, [products, analytics]);
 
   const categoryPerformance = useMemo(() => {
     const revenueByCategory = {};

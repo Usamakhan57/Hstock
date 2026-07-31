@@ -15,6 +15,8 @@ import * as escrowService from './escrow.service.js';
 import { logActivity } from './activity.service.js';
 import { parsePagination, buildPaginationMeta } from '../utils/pagination.js';
 import { Payment } from '../models/index.js';
+import { emitDomainEvent } from '../events/bus.js';
+import { DOMAIN_EVENTS } from '../constants/events.js';
 
 export async function getPayment(id, actor) {
   const payment = await Payment.findById(id).lean();
@@ -135,6 +137,12 @@ export async function applyProviderPaymentUpdate({
       session,
     });
 
+    const paidOrder = await orderRepository.findOrderById(fresh.order, { session });
+    emitDomainEvent(DOMAIN_EVENTS.PAYMENT_SUCCESS, {
+      payment: fresh.toObject ? fresh.toObject() : fresh,
+      order: paidOrder?.toObject ? paidOrder.toObject() : paidOrder,
+    });
+
     return { payment: fresh, alreadyPaid: false };
   }
 
@@ -163,6 +171,18 @@ export async function applyProviderPaymentUpdate({
 
   if (session) await fresh.save({ session });
   else await fresh.save();
+
+  if (
+    previous !== PAYMENT_STATUS.FAILED
+    && fresh.status === PAYMENT_STATUS.FAILED
+  ) {
+    const failedOrder = await orderRepository.findOrderById(fresh.order, { session });
+    emitDomainEvent(DOMAIN_EVENTS.PAYMENT_FAILED, {
+      payment: fresh.toObject ? fresh.toObject() : fresh,
+      order: failedOrder?.toObject ? failedOrder.toObject() : failedOrder,
+      reason: fresh.failureReason,
+    });
+  }
 
   return { payment: fresh, alreadyPaid: previous === PAYMENT_STATUS.PAID };
 }

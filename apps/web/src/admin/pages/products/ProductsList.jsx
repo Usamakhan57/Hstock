@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Pencil, Trash2, Eye, Star, UploadCloud, EyeOff } from 'lucide-react';
+import { Plus, Pencil, Trash2, Eye, Star, UploadCloud, EyeOff, Check, X } from 'lucide-react';
 import PageHeader from '../../components/PageHeader';
 import DataTable from '../../components/DataTable';
 import StatusBadge from '../../components/StatusBadge';
 import ConfirmDeleteDialog from '../../components/ConfirmDeleteDialog';
-import { getProducts, deleteProduct, deleteProducts, updateProduct } from '../../api/products';
+import { getProducts, deleteProduct, deleteProducts, updateProduct, approveProduct, rejectProduct } from '../../api/products';
 import { getCategories } from '../../api/categories';
 import { useToast } from '../../../hooks/use-toast';
 
@@ -41,6 +41,12 @@ const ProductsList = () => {
   const toggleFeatured = async (row) => {
     await updateProduct(row.id, { featured: !row.featured });
     toast({ title: !row.featured ? 'Product featured' : 'Product unfeatured', description: row.title });
+    load();
+  };
+
+  const runModeration = async (fn, row, message) => {
+    await fn(row.id);
+    toast({ title: message, description: row.title });
     load();
   };
 
@@ -121,6 +127,10 @@ const ProductsList = () => {
           { key: 'status', label: 'Status', render: (row) => <StatusBadge status={row.status === 'active' ? 'published' : row.status} /> },
         ]}
         rowActions={(row) => [
+          ...(row.approvalStatus === 'pending' ? [
+            { label: 'Approve', icon: Check, onClick: () => runModeration(approveProduct, row, 'Product approved') },
+            { label: 'Reject', icon: X, onClick: () => runModeration(rejectProduct, row, 'Product rejected') },
+          ] : []),
           { label: 'Edit', icon: Pencil, onClick: () => navigate(`/admin/products/${row.id}/edit`) },
           { label: 'View on Store', icon: Eye, onClick: () => window.open(`/product/${row.id}`, '_blank') },
           { separator: true },

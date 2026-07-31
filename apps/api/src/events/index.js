@@ -1,23 +1,26 @@
-import { EventEmitter } from 'node:events';
 import { logger } from '../config/logger.js';
+import { eventBus, emitDomainEvent } from './bus.js';
+import { registerEventHandlers } from './handlers.js';
 
-/**
- * In-process domain event bus scaffold.
- * Phase 2+ will emit order.paid, escrow.released, withdrawal.pending, etc.
- */
-export const eventBus = new EventEmitter();
-eventBus.setMaxListeners(50);
+export { eventBus, emitDomainEvent };
+
+let initialized = false;
 
 export function initializeEvents() {
+  if (initialized) return eventBus;
+  initialized = true;
+
   eventBus.on('error', (error) => {
     logger.error('Event bus error', { message: error.message });
   });
 
-  logger.info('Event bus scaffold initialized');
+  registerEventHandlers(eventBus);
+  logger.info('Event bus initialized');
   return eventBus;
 }
 
 export default {
   eventBus,
   initializeEvents,
+  emitDomainEvent,
 };

@@ -15,18 +15,20 @@ import walletRoutes from './wallet.routes.js';
 import withdrawalsRoutes from './withdrawals.routes.js';
 import disputesRoutes from './disputes.routes.js';
 import refundsRoutes from './refunds.routes.js';
+import notificationsRoutes from './notifications.routes.js';
+import adminRoutes from './admin.routes.js';
 
 const router = Router();
 
 /**
- * API v1 — Phase 1 foundation + Phase 2 catalog + Commerce Core.
+ * API v1 — Auth, Catalog, Commerce Core, Notifications, Admin ops.
  */
 router.get('/', (_req, res) => {
   return sendSuccess(res, {
     message: 'HStock API v1',
     data: {
       version: 'v1',
-      phase: 'commerce-core',
+      phase: 'production',
       modules: [
         'auth',
         'users',
@@ -44,8 +46,11 @@ router.get('/', (_req, res) => {
         'disputes',
         'dispute-chat',
         'refunds',
+        'notifications',
+        'admin',
       ],
       health: '/health',
+      socket: '/socket.io',
     },
   });
 });
@@ -65,5 +70,7 @@ router.use('/wallet', walletRoutes);
 router.use('/withdrawals', withdrawalsRoutes);
 router.use('/disputes', disputesRoutes);
 router.use('/refunds', refundsRoutes);
+router.use('/notifications', notificationsRoutes);
+router.use('/admin', adminRoutes);
 
 export default router;

@@ -19,11 +19,13 @@ module.exports = {
       },
       env_production: {
         NODE_ENV: 'production',
+        ENABLE_JOBS: 'true',
       },
       error_file: 'logs/error/pm2-error.log',
       out_file: 'logs/app/pm2-out.log',
       merge_logs: true,
       time: true,
+      kill_timeout: 10000,
     },
   ],
 };

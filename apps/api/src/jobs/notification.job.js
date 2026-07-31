@@ -1,16 +1,21 @@
 import { logger } from '../config/logger.js';
+import { getQueue } from '../queues/index.js';
 
 /**
- * Notification job scaffold.
- * Phase 2+ will process queued notifications / emails.
+ * Periodic drain/health check for the notifications queue.
  */
 export function registerNotificationJob() {
-  logger.info('Notification job scaffold registered (disabled — no business logic in Phase 1)');
   return {
     name: 'notification-dispatch',
-    enabled: false,
+    enabled: true,
+    schedule: '*/2 * * * *',
     run: async () => {
-      logger.debug('Notification job noop — reserved for Phase 2+');
+      const queue = getQueue('notifications');
+      const size = queue?.size?.() ?? 0;
+      if (size > 0) {
+        logger.info('Notifications queue backlog', { size });
+        await queue.drain();
+      }
     },
   };
 }

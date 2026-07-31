@@ -6,6 +6,7 @@ import { initializeJobs } from './jobs/index.js';
 import { initializeQueues } from './queues/index.js';
 import { initializeEvents } from './events/index.js';
 import { ensureDefaultConfigs } from './services/config.service.js';
+import { initializeSocket, closeSocket } from './realtime/socket.server.js';
 import app from './app.js';
 
 let server;
@@ -18,6 +19,7 @@ async function bootstrap() {
   initializeJobs();
 
   server = http.createServer(app);
+  initializeSocket(server);
 
   server.listen(env.PORT, env.HOST, () => {
     logger.info(`${env.APP_NAME} listening`, {
@@ -26,6 +28,7 @@ async function bootstrap() {
       env: env.NODE_ENV,
       apiPrefix: env.API_PREFIX,
       health: `http://${env.HOST}:${env.PORT}/health`,
+      socket: `http://${env.HOST}:${env.PORT}/socket.io`,
     });
   });
 }
@@ -40,6 +43,7 @@ async function shutdown(signal) {
   forceTimer.unref();
 
   try {
+    await closeSocket();
     if (server) {
       await new Promise((resolve, reject) => {
         server.close((error) => (error ? reject(error) : resolve()));

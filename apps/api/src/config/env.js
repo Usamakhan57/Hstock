@@ -80,6 +80,9 @@ const envSchema = z.object({
   SMTP_USER: z.string().optional().default(''),
   SMTP_PASS: z.string().optional().default(''),
   EMAIL_FROM: z.string().optional().default('noreply@hstock.store'),
+
+  /** Optional Redis URL for multi-instance Socket.io / queue backends */
+  REDIS_URL: z.string().optional().default(''),
 });
 
 const parsed = envSchema.safeParse(process.env);

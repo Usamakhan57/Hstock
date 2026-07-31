@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { Menu, ChevronDown, Search, Bell, ExternalLink, Plus } from 'lucide-react';
 import { Sheet, SheetContent, SheetTitle } from '../../components/ui/sheet';
@@ -7,23 +7,30 @@ import { adminNavSections } from './nav';
 import './pva-header.css';
 import logo from '../assets/hstock-icon.png';
 import { useAdminAuth } from '../AdminAuthContext';
+import {
+  getNotifications,
+  getUnreadCount,
+  markNotificationRead,
+  markAllNotificationsRead,
+} from '../api/notifications';
 
-// Flattened list of every admin section, powering the "Menu" dropdown —
-// a 1:1 replacement for the original header's "Packages" category list
-// (13 items in, 13 admin sections out).
 const allNavItems = adminNavSections.flatMap((section) => section.items);
 
-// The 5 most-used sections get their own row (row2), mirroring the
-// original header's 5-link quick-access bar.
 const quickLinks = allNavItems.filter((item) =>
-  ['/admin', '/admin/products', '/admin/orders', '/admin/customers', '/admin/inventory'].includes(item.to)
+  ['/admin', '/admin/products', '/admin/orders', '/admin/customers', '/admin/inventory'].includes(item.to),
 );
 
-const MOCK_NOTIFICATIONS = [
-  { id: 1, text: 'New order #1010 placed by Sam Rivera', time: '5 minutes ago' },
-  { id: 2, text: '"Championship Sports Badges" is out of stock', time: '2 hours ago' },
-  { id: 3, text: 'New review pending approval on "Vintage Sports Tee Graphics"', time: 'Yesterday' },
-];
+const timeAgo = (iso) => {
+  const diff = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'Just now';
+  if (mins < 60) return `${mins} minute${mins === 1 ? '' : 's'} ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours} hour${hours === 1 ? '' : 's'} ago`;
+  const days = Math.floor(hours / 24);
+  if (days === 1) return 'Yesterday';
+  return `${days} days ago`;
+};
 
 const AdminHeader = () => {
   const navigate = useNavigate();
@@ -33,6 +40,8 @@ const AdminHeader = () => {
   const [accountOpen, setAccountOpen] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [search, setSearch] = useState('');
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   const categoriesRef = useRef(null);
   const notifRef = useRef(null);
@@ -40,7 +49,24 @@ const AdminHeader = () => {
 
   const closeAll = () => { setCategoriesOpen(false); setNotifOpen(false); setAccountOpen(false); };
 
-  // Click-outside-to-close, matching the original header's vanilla JS behavior.
+  const loadNotifications = useCallback(async () => {
+    try {
+      const [items, count] = await Promise.all([
+        getNotifications({ limit: 10 }),
+        getUnreadCount(),
+      ]);
+      setNotifications(items);
+      setUnreadCount(typeof count === 'number' ? count : items.filter((n) => !n.read).length);
+    } catch {
+      setNotifications([]);
+      setUnreadCount(0);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadNotifications();
+  }, [loadNotifications]);
+
   useEffect(() => {
     const onClick = (e) => {
       if (categoriesRef.current && !categoriesRef.current.contains(e.target)) setCategoriesOpen(false);
@@ -56,10 +82,38 @@ const AdminHeader = () => {
     };
   }, []);
 
+  const handleNotificationClick = async (notification) => {
+    if (!notification.read) {
+      try {
+        await markNotificationRead(notification.id);
+      } catch {
+        // keep UI responsive even if API fails
+      }
+      setNotifications((prev) => prev.map((n) => (n.id === notification.id ? { ...n, read: true } : n)));
+      setUnreadCount((c) => Math.max(0, c - 1));
+    }
+    if (notification.link) {
+      setNotifOpen(false);
+      if (notification.link.startsWith('http')) {
+        window.open(notification.link, '_blank', 'noopener,noreferrer');
+      } else {
+        navigate(notification.link);
+      }
+    }
+  };
+
+  const handleMarkAllRead = async () => {
+    try {
+      await markAllNotificationsRead();
+    } catch {
+      // ignore
+    }
+    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+    setUnreadCount(0);
+  };
+
   const submitSearch = (e) => {
     e.preventDefault();
-    // Placeholder global search — same scope as the admin's previous
-    // topbar search (no wired backend query yet).
   };
 
   return (
@@ -150,7 +204,7 @@ const AdminHeader = () => {
               aria-expanded={notifOpen}
             >
               <Bell strokeWidth={2} />
-              {MOCK_NOTIFICATIONS.length > 0 && <span className="pva-cart-badge">{MOCK_NOTIFICATIONS.length}</span>}
+              {unreadCount > 0 && <span className="pva-cart-badge">{unreadCount}</span>}
             </button>
 
             <div className={`pva-panel${notifOpen ? ' is-open' : ''}`}>
@@ -158,20 +212,29 @@ const AdminHeader = () => {
                 <span>Notifications</span>
                 <button type="button" aria-label="Close" onClick={() => setNotifOpen(false)}>&times;</button>
               </div>
-              {MOCK_NOTIFICATIONS.length === 0 ? (
+              {notifications.length === 0 ? (
                 <p className="pva-panel-empty">You're all caught up.</p>
               ) : (
-                <ul className="pva-notif-list">
-                  {MOCK_NOTIFICATIONS.map((n) => (
-                    <li key={n.id}>
-                      <span className="pva-notif-dot" />
-                      <span>
-                        {n.text}
-                        <span className="pva-notif-meta">{n.time}</span>
-                      </span>
-                    </li>
-                  ))}
-                </ul>
+                <>
+                  <ul className="pva-notif-list">
+                    {notifications.map((n) => (
+                      <li key={n.id}>
+                        <button type="button" className="w-full text-left" onClick={() => handleNotificationClick(n)}>
+                          <span className={`pva-notif-dot${n.read ? ' opacity-30' : ''}`} />
+                          <span>
+                            {n.title || n.body}
+                            <span className="pva-notif-meta">{timeAgo(n.date)}</span>
+                          </span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                  {unreadCount > 0 && (
+                    <div className="pva-panel-foot">
+                      <button type="button" onClick={handleMarkAllRead}>Mark all read</button>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </div>

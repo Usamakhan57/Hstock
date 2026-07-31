@@ -27,6 +27,24 @@ export const usersApi = {
       meta,
     }));
   },
+
+  adminList({ page = 1, limit = 50, role, status, search } = {}) {
+    const params = { page, limit };
+    if (role) params.role = role;
+    if (status) params.status = status;
+    if (search) params.search = search;
+    return get('/users', { params }).then(({ data, meta }) => ({
+      items: Array.isArray(data) ? data.map((u) => ({
+        ...u,
+        id: u.id || u._id,
+      })) : [],
+      meta,
+    }));
+  },
+
+  adminUpdate(id, payload) {
+    return patch(`/users/${id}`, payload).then(({ data }) => data);
+  },
 };
 
 export default usersApi;

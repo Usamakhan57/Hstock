@@ -92,7 +92,8 @@ export function initializeQueues() {
     logger.debug('Escrow queue item', { id: job.id });
   });
   queues.notifications.process(async (job) => {
-    logger.debug('Notifications queue item', { id: job.id });
+    const { processNotificationJob } = await import('../services/notification.service.js');
+    await processNotificationJob(job);
   });
 
   logger.info('In-process commerce queues initialized', {

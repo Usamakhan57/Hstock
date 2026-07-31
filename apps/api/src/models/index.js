@@ -34,3 +34,4 @@ export { default as DisputeTimeline } from './DisputeTimeline.model.js';
 export { default as Refund } from './Refund.model.js';
 export { default as WebhookEvent } from './WebhookEvent.model.js';
 export { default as JobRun } from './JobRun.model.js';
+export { default as Notification } from './Notification.model.js';

@@ -36,6 +36,8 @@ import {
 } from '../models/index.js';
 import * as disputeChatService from './disputeChat.service.js';
 import * as disputeTimelineService from './disputeTimeline.service.js';
+import { emitDomainEvent } from '../events/bus.js';
+import { DOMAIN_EVENTS } from '../constants/events.js';
 
 function isAdmin(actor) {
   return actor?.roles?.some((r) => [
@@ -287,6 +289,10 @@ export async function openDispute(payload, actor, requestMeta = {}) {
 
     const obj = dispute.toObject();
     obj.chat = chat._id;
+    emitDomainEvent(DOMAIN_EVENTS.DISPUTE_OPENED, {
+      dispute: obj,
+      order: order.toObject ? order.toObject() : order,
+    });
     return obj;
   });
 }
@@ -619,7 +625,13 @@ export async function resolveDispute(id, payload, actor) {
       session,
     });
 
-    return dispute.toObject();
+    const disputeObj = dispute.toObject();
+    emitDomainEvent(DOMAIN_EVENTS.DISPUTE_RESOLVED, {
+      dispute: disputeObj,
+      order: order?.toObject ? order.toObject() : order,
+      resolution,
+    });
+    return disputeObj;
   });
 }
 

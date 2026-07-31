@@ -48,6 +48,15 @@ import EmailTemplateForm from '../../admin/pages/cms/EmailTemplateForm';
 import GlobalSettingsCms from '../../admin/pages/cms/GlobalSettingsCms';
 import SocialSettingsCms from '../../admin/pages/cms/SocialSettingsCms';
 import ContactSettingsCms from '../../admin/pages/cms/ContactSettingsCms';
+import PaymentsList from '../../admin/pages/payments/PaymentsList';
+import EscrowList from '../../admin/pages/escrow/EscrowList';
+import WalletsList from '../../admin/pages/wallets/WalletsList';
+import WithdrawalsList from '../../admin/pages/withdrawals/WithdrawalsList';
+import DisputesList from '../../admin/pages/disputes/DisputesList';
+import DisputeDetail from '../../admin/pages/disputes/DisputeDetail';
+import OcrReviewQueue from '../../admin/pages/ocr/OcrReviewQueue';
+import ReplacementsList from '../../admin/pages/replacements/ReplacementsList';
+import SystemHealth from '../../admin/pages/system/SystemHealth';
 
 /**
  * Returns <Route> elements for the admin panel.
@@ -76,6 +85,15 @@ export function adminRoutes() {
         <Route path="customers/:id" element={<CustomerDetail />} />
         <Route path="sellers" element={<SellersList />} />
         <Route path="coupons" element={<CouponsList />} />
+        <Route path="payments" element={<PaymentsList />} />
+        <Route path="escrow" element={<EscrowList />} />
+        <Route path="wallets" element={<WalletsList />} />
+        <Route path="withdrawals" element={<WithdrawalsList />} />
+        <Route path="disputes" element={<DisputesList />} />
+        <Route path="disputes/:id" element={<DisputeDetail />} />
+        <Route path="ocr-review" element={<OcrReviewQueue />} />
+        <Route path="replacements" element={<ReplacementsList />} />
+        <Route path="system-health" element={<SystemHealth />} />
         <Route path="reviews" element={<ReviewsList />} />
         <Route path="media" element={<MediaLibrary />} />
         <Route path="banners" element={<BannersList />} />
