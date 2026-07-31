@@ -32,3 +32,8 @@ export {
   generateRefundNumber,
   generateTransferId,
 } from './id.helper.js';
+export {
+  normalizeForDetection,
+  detectBlockedContent,
+  validateChatAttachment,
+} from './contentFilter.helper.js';

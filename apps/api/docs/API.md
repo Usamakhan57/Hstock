@@ -95,6 +95,33 @@ Public list + get. Write endpoints require corresponding `*:write` permission (A
 | POST | `/products/:id/submit` | Owner/Admin | Submit for approval |
 | POST | `/products/:id/moderate` | `products:moderate` | Approve/reject/feature |
 
+## Commerce Core (orders / payments / escrow / wallet / disputes)
+
+See `docs/COMMERCE_CORE.md` for full commerce API surface.
+
+### Secure dispute chat
+
+Auto-created when a buyer opens a dispute. Private to buyer, seller, and assigned admin.
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/disputes/:id/chat` | Participant | Chat metadata |
+| GET | `/disputes/:id/chat/messages` | Participant | List messages |
+| POST | `/disputes/:id/chat/messages` | Participant | Send message (content-filtered) |
+| PATCH | `/disputes/:id/chat/messages/:messageId` | Author | Edit message (filtered) |
+| DELETE | `/disputes/:id/chat/messages/:messageId` | Author/Assigned admin | Soft delete |
+| POST | `/disputes/:id/chat/assign` | Admin/Support | Assign moderator |
+| GET | `/disputes/:id/chat/blocked-attempts` | Assigned admin | View blocked contact attempts |
+| GET | `/disputes/:id/chat/audit` | Assigned admin | Full chat audit trail |
+| GET | `/disputes/violations` | Staff | Violation counters |
+| POST | `/disputes/:id/messages` | Participant | Legacy path (same secure filter) |
+
+Blocked contact / off-platform content → **HTTP 400** `CONTACT_INFO_BLOCKED`:
+
+`For your security, sharing personal contact information or external links is not allowed.`
+
+Details: `docs/SECURE_DISPUTE_CHAT.md`.
+
 ## Roles & permissions
 
 Roles: `super_admin`, `admin`, `seller`, `buyer`, `editor`, `support`
@@ -107,4 +134,5 @@ Middleware:
 
 ## Out of scope (not implemented)
 
-Cryptomus, Escrow, Orders, Wallet balances, Withdrawals execution, Notifications, Reviews, Disputes, Admin Dashboard UI, Background business jobs.
+Notifications, Reviews, Admin Dashboard UI.
+

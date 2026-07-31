@@ -24,9 +24,10 @@ Production commerce layer for HStock Marketplace (`apps/api` only).
 - `GET /api/v1/orders` / `GET /api/v1/orders/:id`
 - `POST /api/v1/orders/:id/cancel`
 - `GET /api/v1/payments` / `GET /api/v1/payments/:id`
-- `POST /api/v1/disputes`
+- `POST /api/v1/disputes` (auto-creates secure dispute chat)
 - `GET /api/v1/disputes` / `GET /api/v1/disputes/:id`
-- `POST /api/v1/disputes/:id/messages`
+- `POST /api/v1/disputes/:id/messages` (secure content filter)
+- `GET/POST /api/v1/disputes/:id/chat*` — see `docs/SECURE_DISPUTE_CHAT.md`
 
 ### Seller
 - `GET /api/v1/orders?scope=seller`
@@ -46,6 +47,10 @@ Production commerce layer for HStock Marketplace (`apps/api` only).
 - `GET /api/v1/escrow` / `POST /api/v1/escrow/:id/release`
 - `POST /api/v1/withdrawals/:id/approve|reject|pay`
 - `POST /api/v1/disputes/:id/resolve`
+- `POST /api/v1/disputes/:id/chat/assign`
+- `GET /api/v1/disputes/:id/chat/blocked-attempts`
+- `GET /api/v1/disputes/:id/chat/audit`
+- `GET /api/v1/disputes/violations`
 - `POST /api/v1/refunds`
 - `GET /api/v1/refunds` / `GET /api/v1/refunds/:id`
 - `POST /api/v1/wallet/adjust`

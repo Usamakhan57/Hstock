@@ -16,6 +16,13 @@ import * as refundService from './refund.service.js';
 import { logActivity } from './activity.service.js';
 import { parsePagination, buildPaginationMeta } from '../utils/pagination.js';
 import { USER_ROLES } from '../constants/roles.js';
+import {
+  CONTACT_FILTER_CODE,
+  CONTACT_FILTER_MESSAGE,
+} from '../constants/disputeChat.js';
+import { detectBlockedContent } from '../helpers/contentFilter.helper.js';
+import { DisputeChatMessage } from '../models/index.js';
+import * as disputeChatService from './disputeChat.service.js';
 
 function isAdmin(actor) {
   return actor?.roles?.some((r) => [
@@ -26,9 +33,20 @@ function isAdmin(actor) {
 }
 
 /**
- * Buyer opens a dispute — freezes escrow (no auto-release).
+ * Buyer opens a dispute — freezes escrow (no auto-release)
+ * and auto-creates a private secure dispute chat.
  */
 export async function openDispute(payload, actor, requestMeta = {}) {
+  const contactScan = detectBlockedContent(
+    `${payload.reason || ''}\n${payload.description || ''}`,
+  );
+  if (contactScan.blocked) {
+    throw new AppError(CONTACT_FILTER_MESSAGE, 400, {
+      code: CONTACT_FILTER_CODE,
+      details: { rules: contactScan.rules },
+    });
+  }
+
   return withTransaction(async (session) => {
     const order = await orderRepository.findOrderById(payload.orderId, { session });
     if (!order) {
@@ -88,6 +106,34 @@ export async function openDispute(payload, actor, requestMeta = {}) {
       session,
     );
 
+    const chat = await disputeChatService.createDisputeChat(dispute, {
+      session,
+      actor,
+      requestMeta,
+    });
+
+    // Seed buyer's opening statement into the secure chat (already filtered above)
+    const opening = {
+      chat: chat._id,
+      dispute: dispute._id,
+      order: order._id,
+      author: actor.id,
+      role: 'buyer',
+      body: payload.description,
+      attachments: (payload.evidence || []).map((url) => ({ url, filename: null, extension: null })),
+    };
+    if (session) await DisputeChatMessage.create([opening], { session });
+    else await DisputeChatMessage.create(opening);
+
+    chat.messageCount = (chat.messageCount || 1) + 1;
+    chat.lastMessageAt = new Date();
+    if (session) await chat.save({ session });
+    else await chat.save();
+
+    dispute.chat = chat._id;
+    if (session) await dispute.save({ session });
+    else await dispute.save();
+
     await escrowService.markEscrowDisputed(escrow._id, dispute._id, session);
 
     order.status = ORDER_STATUS.DISPUTED;
@@ -102,11 +148,13 @@ export async function openDispute(payload, actor, requestMeta = {}) {
       resourceId: dispute._id,
       ip: requestMeta.ip,
       userAgent: requestMeta.userAgent,
-      meta: { orderId: order._id, reason: payload.reason },
+      meta: { orderId: order._id, reason: payload.reason, chatId: chat._id },
       session,
     });
 
-    return dispute.toObject();
+    const obj = dispute.toObject();
+    obj.chat = chat._id;
+    return obj;
   });
 }
 
@@ -145,33 +193,29 @@ export async function getDispute(id, actor) {
   return dispute;
 }
 
-export async function addDisputeMessage(id, payload, actor) {
-  const dispute = await disputeRepository.findDisputeById(id);
-  if (!dispute) {
-    throw new AppError('Dispute not found', 404, { code: 'DISPUTE_NOT_FOUND' });
-  }
-  if ([DISPUTE_STATUS.RESOLVED, DISPUTE_STATUS.CLOSED].includes(dispute.status)) {
-    throw new AppError('Dispute is closed', 400, { code: 'DISPUTE_CLOSED' });
-  }
-
-  let role = 'buyer';
-  if (isAdmin(actor)) role = 'admin';
-  else if (String(dispute.sellerUser) === String(actor.id)) role = 'seller';
-  else if (String(dispute.buyer) !== String(actor.id)) {
-    throw new AppError('Forbidden', 403, { code: 'FORBIDDEN' });
+/**
+ * Backward-compatible message endpoint — routes through secure dispute chat filter.
+ */
+export async function addDisputeMessage(id, payload, actor, requestMeta = {}) {
+  // Staff must be assigned before posting (except buyer/seller participants)
+  const chat = await disputeChatService.getChatByDisputeId(id);
+  if (!chat) {
+    throw new AppError('Dispute chat not found', 404, { code: 'CHAT_NOT_FOUND' });
   }
 
-  dispute.messages.push({
-    author: actor.id,
-    role,
-    body: payload.body,
-    attachments: payload.attachments || [],
-  });
-  if (dispute.status === DISPUTE_STATUS.OPEN && isAdmin(actor)) {
-    dispute.status = DISPUTE_STATUS.UNDER_REVIEW;
+  if (isAdmin(actor)) {
+    const actorId = String(actor.id);
+    const isAssigned = chat.assignedAdmin && String(chat.assignedAdmin) === actorId;
+    const isSuper = actor.roles?.includes(USER_ROLES.SUPER_ADMIN);
+    if (!isAssigned && !isSuper) {
+      // Auto-assign on first admin message for operational continuity
+      await disputeChatService.assignAdmin(id, actor, requestMeta);
+    }
   }
-  await dispute.save();
-  return dispute.toObject();
+
+  const message = await disputeChatService.sendMessage(id, payload, actor, requestMeta);
+  const dispute = await disputeRepository.findDisputeById(id, { lean: true });
+  return { dispute, message };
 }
 
 /**
@@ -288,6 +332,8 @@ export async function resolveDispute(id, payload, actor) {
     });
     if (session) await dispute.save({ session });
     else await dispute.save();
+
+    await disputeChatService.closeChatForDispute(dispute._id, { session });
 
     await logActivity({
       userId: actor.id,

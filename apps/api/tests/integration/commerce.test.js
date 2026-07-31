@@ -300,6 +300,7 @@ test('dispute freezes escrow and blocks release', async () => {
 
   assert.equal(dispute.status, 201, JSON.stringify(dispute.body));
   assert.equal(dispute.body.data.status, 'open');
+  assert.ok(dispute.body.data.chat, 'secure dispute chat should be auto-created');
 
   let blocked = false;
   try {

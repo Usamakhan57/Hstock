@@ -128,6 +128,25 @@ const disputeSchema = new mongoose.Schema(
       ref: 'User',
       default: null,
     },
+    /**
+     * Private secure dispute chat (auto-created on open).
+     */
+    chat: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'DisputeChat',
+      default: null,
+      index: true,
+    },
+    assignedAdmin: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+      index: true,
+    },
+    assignedAt: {
+      type: Date,
+      default: null,
+    },
     metadata: {
       type: mongoose.Schema.Types.Mixed,
       default: {},

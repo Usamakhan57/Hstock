@@ -150,6 +150,45 @@ export const disputeMessageSchema = {
   }),
 };
 
+export const disputeChatMessageIdSchema = {
+  params: z.object({
+    id: objectIdSchema,
+    messageId: objectIdSchema,
+  }),
+};
+
+export const editDisputeChatMessageSchema = {
+  params: z.object({
+    id: objectIdSchema,
+    messageId: objectIdSchema,
+  }),
+  body: z.object({
+    body: z.string().trim().min(1).max(5000),
+  }),
+};
+
+export const listDisputeChatMessagesSchema = {
+  params: z.object({ id: objectIdSchema }),
+  query: paginationSchema,
+};
+
+export const listDisputeChatBlockedSchema = {
+  params: z.object({ id: objectIdSchema }),
+  query: paginationSchema,
+};
+
+export const listDisputeChatAuditSchema = {
+  params: z.object({ id: objectIdSchema }),
+  query: paginationSchema,
+};
+
+export const listDisputeChatViolationsSchema = {
+  query: paginationSchema.extend({
+    userId: objectIdSchema.optional(),
+    adminNotified: z.enum(['true', 'false']).optional(),
+  }),
+};
+
 export const resolveDisputeSchema = {
   params: z.object({ id: objectIdSchema }),
   body: z.object({
@@ -223,6 +262,12 @@ export default {
   listDisputesSchema,
   disputeIdSchema,
   disputeMessageSchema,
+  disputeChatMessageIdSchema,
+  editDisputeChatMessageSchema,
+  listDisputeChatMessagesSchema,
+  listDisputeChatBlockedSchema,
+  listDisputeChatAuditSchema,
+  listDisputeChatViolationsSchema,
   resolveDisputeSchema,
   createRefundSchema,
   listRefundsSchema,

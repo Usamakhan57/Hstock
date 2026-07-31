@@ -31,4 +31,20 @@ export const authRateLimiter = rateLimit({
   },
 });
 
+/** Per-IP limiter for dispute chat message endpoints (spam protection). */
+export const disputeChatRateLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: env.isProduction ? 20 : 120,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    message: 'Too many chat messages, please try again later.',
+    data: null,
+    errors: null,
+    meta: null,
+    code: 'CHAT_RATE_LIMITED',
+  },
+});
+
 export default globalRateLimiter;

@@ -29,8 +29,17 @@ export const getDispute = asyncHandler(async (req, res) => {
 });
 
 export const addMessage = asyncHandler(async (req, res) => {
-  const data = await disputeService.addDisputeMessage(req.params.id, req.body, req.user);
-  return sendSuccess(res, { message: 'Message added', data });
+  const data = await disputeService.addDisputeMessage(
+    req.params.id,
+    req.body,
+    req.user,
+    { ip: req.ip, userAgent: req.get('user-agent') },
+  );
+  return sendSuccess(res, {
+    statusCode: 201,
+    message: 'Message added',
+    data,
+  });
 });
 
 export const resolveDispute = asyncHandler(async (req, res) => {
