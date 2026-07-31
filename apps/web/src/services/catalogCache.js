@@ -22,15 +22,32 @@ function deriveSellersFromProducts(productList) {
   const map = new Map();
   productList.forEach((p) => {
     const key = p.sellerId || p.artist;
-    if (!key || map.has(key)) return;
-    map.set(key, mapBackendSeller({
-      _id: p.sellerId,
-      storeName: p.artist,
-      storeSlug: p.sellerSlug || p.artistSlug,
-      status: 'approved',
-    }));
+    if (!key) return;
+    const existing = map.get(key);
+    const ratings = existing?._ratings || [];
+    if (p.rating != null && p.rating > 0) ratings.push(p.rating);
+    const productCount = (existing?.productCount || 0) + 1;
+    const sales = (existing?.totalSalesAmount || 0) + (p.salesCount || p.downloads || 0);
+    const avg = ratings.length
+      ? Math.round((ratings.reduce((s, r) => s + r, 0) / ratings.length) * 10) / 10
+      : null;
+    map.set(key, {
+      ...mapBackendSeller({
+        _id: p.sellerId,
+        storeName: p.artist,
+        storeSlug: p.sellerSlug || p.artistSlug,
+        status: p.verifiedSeller ? 'approved' : undefined,
+        verified: !!p.verifiedSeller,
+        metrics: {
+          productsCount: productCount,
+          totalSales: sales,
+          rating: avg,
+        },
+      }),
+      _ratings: ratings,
+    });
   });
-  return [...map.values()];
+  return [...map.values()].map(({ _ratings, ...seller }) => seller);
 }
 
 function notify() {

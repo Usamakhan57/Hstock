@@ -10,17 +10,17 @@ import ProductCard from '../components/ProductCard';
 import Seo from '../components/Seo';
 import Breadcrumbs from '../components/Breadcrumbs';
 import { ProductDetailSkeleton } from '../components/Skeletons';
+import { NetworkErrorState } from '../components/ErrorState';
 import RecentlyViewedSection from '../components/RecentlyViewedSection';
 import PurchaseModal from '../components/PurchaseModal';
 import ReportModal from '../components/ReportModal';
-import { sampleReviews, slugify } from '../data';
+import { slugify } from '../data';
 import { getStorefrontSellers } from '../services/sellerRepository';
 import { useStore } from '../context/StoreContext';
 import { useToast } from '../hooks/use-toast';
 import { productsApi } from '../services/api';
 import { useFetch } from '../hooks/useFetch';
 import { trackProductView, getRecentCategories } from '../services/recentlyViewed';
-import { isFollowingSeller, toggleFollowSeller } from '../services/buyerDashboard';
 import { getDeliveryTime, getStockStatus } from '../services/productMeta';
 import { SITE } from '../constants';
 
@@ -53,29 +53,43 @@ function normaliseProduct(p) {
 
   // Artist / seller
   const artistName = p.artist || p.brandName || p.brand || 'HStock Marketplace';
-  const knownArtist = getStorefrontSellers().find((a) => a.name === artistName);
-  const artistSlug = knownArtist?.slug || slugify(artistName);
+  const knownArtist = getStorefrontSellers().find((a) => a.name === artistName || a.slug === p.sellerSlug);
+  const artistSlug = p.sellerSlug || p.artistSlug || knownArtist?.slug || slugify(artistName);
+  const features = Array.isArray(p.features) && p.features.length
+    ? p.features
+    : (typeof p.whatsIncluded === 'string' && p.whatsIncluded
+      ? p.whatsIncluded.split('\n').map((s) => s.trim()).filter(Boolean)
+      : []);
+  const specifications = p.specifications && typeof p.specifications === 'object'
+    ? Object.entries(p.specifications).filter(([, v]) => v != null && v !== '')
+    : [];
 
   return {
     id: p.id,
     title: p.title || 'Untitled Product',
     slug: p.slug || slugify(p.title || String(p.id)),
     cat: p.cat || p.categoryId || 'Others',
+    catSlug: p.catSlug || null,
     description: p.description || 'No description available.',
     shortDescription: p.shortDescription || null,
     img: thumbnail || images[0] || '',
     images,
     price: p.price ?? 0,
     old: p.old ?? null,
-    rating: p.rating ?? 4.5,
+    rating: p.rating ?? null,
     reviewCount: p.reviewCount ?? 0,
     downloads: p.downloads ?? 0,
     views: p.views ?? null,
     artist: artistName,
     artistSlug,
     knownArtist: knownArtist || null,
+    verifiedSeller: !!p.verifiedSeller || !!knownArtist?.verified,
     whatsIncluded: typeof p.whatsIncluded === 'string' ? p.whatsIncluded : '',
+    features,
+    specifications,
     fileTypes: Array.isArray(p.fileTypes) ? p.fileTypes : [],
+    deliveryType: p.deliveryType || null,
+    assetPlatform: p.assetPlatform || null,
     dimensions: p.dimensions || null,
     resolution: p.resolution || null,
     orientation: p.orientation || null,
@@ -131,7 +145,7 @@ const ProductDetailPage = () => {
   const { user, toggleCompare, inCompare, compareList, MAX_COMPARE } = useStore();
   const [purchaseOpen, setPurchaseOpen] = useState(false);
 
-  const { data: rawProduct, loading } = useFetch(() => productsApi.get(id), [id]);
+  const { data: rawProduct, loading, error, retry } = useFetch(() => productsApi.get(id), [id]);
 
   const product = useMemo(() => normaliseProduct(rawProduct), [rawProduct]);
 
@@ -158,6 +172,11 @@ const ProductDetailPage = () => {
     [product?.id, product?.cat]
   );
 
+  const { data: similar = [] } = useFetch(
+    () => (product ? productsApi.similar(product, 4) : Promise.resolve([])),
+    [product?.id, product?.categoryId]
+  );
+
   const { data: recommended = [] } = useFetch(
     () => (product ? productsApi.recommended(getRecentCategories(), product.id, 6) : Promise.resolve([])),
     [product?.id]
@@ -175,6 +194,18 @@ const ProductDetailPage = () => {
         <Header />
         <main id="main-content" className="mx-auto max-w-[90rem] px-5 lg:px-8 pt-8 pb-24">
           <ProductDetailSkeleton />
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  if (error && error.status !== 404) {
+    return (
+      <div className="min-h-screen">
+        <Header />
+        <main id="main-content" className="mx-auto max-w-[90rem] px-5 lg:px-8 pt-8 pb-24">
+          <NetworkErrorState onRetry={retry} message={error.message || "We couldn't load this product right now."} />
         </main>
         <Footer />
       </div>
@@ -242,27 +273,6 @@ const ProductDetailPage = () => {
     }
   };
 
-  const productJsonLd = {
-    '@context': 'https://schema.org',
-    '@type': 'Product',
-    name: product.title,
-    image: product.images,
-    description: product.description,
-    brand: { '@type': 'Brand', name: product.artist },
-    aggregateRating: {
-      '@type': 'AggregateRating',
-      ratingValue: product.rating,
-      reviewCount: product.reviewCount,
-    },
-    offers: {
-      '@type': 'Offer',
-      url: `${SITE?.url || ''}/product/${product.id}`,
-      priceCurrency: 'USD',
-      price: displayPrice,
-      availability: 'https://schema.org/InStock',
-    },
-  };
-
   // Clamp activeImage to valid index range
   const clampedImage = Math.min(activeImage, product.images.length - 1);
   const currentImageSrc = product.images[clampedImage] || product.img || '';
@@ -271,6 +281,31 @@ const ProductDetailPage = () => {
   const lowStock = !product.unlimitedStock && product.stock != null && product.lowStockThreshold != null && product.stock <= product.lowStockThreshold;
   const outOfStock = !product.unlimitedStock && product.stock != null && product.stock <= 0;
   const stockStatus = getStockStatus(product);
+
+  const productJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Product',
+    name: product.title,
+    image: product.images,
+    description: product.description,
+    brand: { '@type': 'Brand', name: product.artist },
+    ...(product.rating != null ? {
+      aggregateRating: {
+        '@type': 'AggregateRating',
+        ratingValue: product.rating,
+        reviewCount: product.reviewCount || 0,
+      },
+    } : {}),
+    offers: {
+      '@type': 'Offer',
+      url: `${SITE?.url || ''}/product/${product.id}`,
+      priceCurrency: 'USD',
+      price: displayPrice,
+      availability: outOfStock
+        ? 'https://schema.org/OutOfStock'
+        : 'https://schema.org/InStock',
+    },
+  };
 
   return (
     <div className="min-h-screen">
@@ -332,15 +367,21 @@ const ProductDetailPage = () => {
           <div>
             <div className="flex flex-wrap items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
               <span>{product.cat}</span>
-              <span className="rounded-full bg-secondary px-2.5 py-1 text-secondary-foreground">Instant access</span>
+              <span className="rounded-full bg-secondary px-2.5 py-1 text-secondary-foreground">{getDeliveryTime(product)}</span>
+              {product.badge && <span className="rounded-full bg-primary/10 px-2.5 py-1 text-primary">{product.badge}</span>}
             </div>
 
             <h1 className="mt-3 text-3xl md:text-4xl lg:text-[2.6rem] font-black tracking-tight leading-[1.08]">{product.title}</h1>
 
             <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
               <span className="rounded-full bg-secondary px-2.5 py-1">by <Link to={`/seller/${product.artistSlug}`} className="font-semibold text-foreground hover:text-primary">{product.artist}</Link></span>
-              <span className="inline-flex items-center gap-1 rounded-full bg-secondary px-2.5 py-1"><Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" /> {product.rating}</span>
-              <span className="rounded-full bg-secondary px-2.5 py-1">{product.reviewCount} reviews</span>
+              {product.verifiedSeller && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-secondary px-2.5 py-1"><ShieldCheck className="w-3.5 h-3.5 text-primary" /> Verified</span>
+              )}
+              {product.rating != null && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-secondary px-2.5 py-1"><Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" /> {product.rating}</span>
+              )}
+              <span className="rounded-full bg-secondary px-2.5 py-1">{product.reviewCount || 0} reviews</span>
             </div>
 
             <p className="max-w-3xl mt-5 text-sm leading-7 text-foreground/80 line-clamp-3">{product.shortDescription || product.description}</p>
@@ -386,16 +427,21 @@ const ProductDetailPage = () => {
               </div>
 
               <div className="mt-5 rounded-2xl border border-border p-5">
-                <h3 className="font-bold text-sm mb-3">Instant delivery</h3>
-                <p className="text-sm text-muted-foreground">Your purchase unlocks the download immediately after checkout, with no shipping or carrier steps involved.</p>
+                <h3 className="font-bold text-sm mb-3">{getDeliveryTime(product)}</h3>
+                <p className="text-sm text-muted-foreground">Your purchase unlocks access after checkout, with seller handover protection where required.</p>
               </div>
 
               <div className="mt-6 space-y-4">
-                <button onClick={handleBuyNow} className="w-full inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-full brand-gradient text-white font-semibold hover:opacity-95 active:scale-[0.98] transition-all">
-                  <Zap className="w-4 h-4" /> Buy {quantity} — ${totalPrice.toFixed(2)}
+                <button
+                  type="button"
+                  onClick={handleBuyNow}
+                  disabled={outOfStock}
+                  className="w-full inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-full brand-gradient text-white font-semibold hover:opacity-95 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Zap className="w-4 h-4" /> {outOfStock ? 'Out of stock' : `Buy Now — $${totalPrice.toFixed(2)}`}
                 </button>
                 <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                  <ShieldCheck className="w-3.5 h-3.5 text-primary shrink-0" /> Secure wallet checkout with instant access confirmation.
+                  <ShieldCheck className="w-3.5 h-3.5 text-primary shrink-0" /> Secure purchase flow entry — payment comes next.
                 </p>
               </div>
             </div>
@@ -410,6 +456,44 @@ const ProductDetailPage = () => {
                   <p className="text-sm font-semibold mb-2">Description</p>
                   <p>{product.description}</p>
                 </div>
+
+                {product.features.length > 0 && (
+                  <div className="rounded-2xl border border-border bg-white/70 p-4">
+                    <p className="text-sm font-semibold mb-2">Features</p>
+                    <ul className="list-disc pl-5 space-y-1 text-sm text-muted-foreground">
+                      {product.features.map((feature) => (
+                        <li key={feature}>{feature}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {product.specifications.length > 0 && (
+                  <div className="rounded-2xl border border-border bg-white/70 p-4">
+                    <p className="text-sm font-semibold mb-2">Specifications</p>
+                    <dl className="grid gap-2 sm:grid-cols-2">
+                      {product.specifications.map(([key, value]) => (
+                        <div key={key} className="rounded-xl bg-secondary/50 px-3 py-2">
+                          <dt className="text-[11px] uppercase tracking-wider text-muted-foreground">{key}</dt>
+                          <dd className="text-sm font-medium text-foreground mt-0.5">{String(value)}</dd>
+                        </div>
+                      ))}
+                    </dl>
+                  </div>
+                )}
+
+                {(product.knownArtist || product.artist) && (
+                  <div className="rounded-2xl border border-border bg-white/70 p-4">
+                    <p className="text-sm font-semibold mb-2">Seller information</p>
+                    <p className="text-sm">
+                      <Link to={`/seller/${product.artistSlug}`} className="font-semibold text-primary hover:underline">{product.artist}</Link>
+                      {product.verifiedSeller ? ' · Verified seller' : ''}
+                    </p>
+                    {product.knownArtist?.bio && (
+                      <p className="mt-2 text-sm text-muted-foreground">{product.knownArtist.bio}</p>
+                    )}
+                  </div>
+                )}
 
                 {product.supportedSoftware.length > 0 && (
                   <div className="rounded-2xl border border-border bg-white/70 p-4">
@@ -436,6 +520,25 @@ const ProductDetailPage = () => {
           </div>
         </div>
 
+        {/* Rating summary — review list API is not available yet */}
+        <div className="mt-20">
+          <h2 className="text-2xl font-bold mb-6">Reviews & rating</h2>
+          <div className="bg-white rounded-3xl border border-border soft-shadow p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <span className="text-3xl font-bold">{product.rating != null ? product.rating : '—'}</span>
+              <div>
+                <RatingStars value={product.rating ?? 0} />
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {product.reviewCount > 0
+                    ? `Based on ${product.reviewCount} review${product.reviewCount === 1 ? '' : 's'}`
+                    : 'No reviews yet'}
+                </p>
+              </div>
+            </div>
+            <p className="text-sm text-muted-foreground">Detailed reviews will appear here once available.</p>
+          </div>
+        </div>
+
         {/* Related products */}
         {Array.isArray(related) && related.length > 0 && (
           <div className="mt-20">
@@ -446,7 +549,22 @@ const ProductDetailPage = () => {
           </div>
         )}
 
-        {/* Recommended for you (category-weighted mock logic) */}
+        {/* Similar products */}
+        {(() => {
+          const similarOnly = (Array.isArray(similar) ? similar : [])
+            .filter((p) => !(Array.isArray(related) && related.some((r) => String(r.id) === String(p.id))));
+          if (!similarOnly.length) return null;
+          return (
+            <div className="mt-20">
+              <h2 className="text-2xl font-bold mb-6">Similar Products</h2>
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
+                {similarOnly.map((p) => <ProductCard key={p.id} p={p} />)}
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* Recommended for you */}
         {Array.isArray(recommended) && recommended.length > 0 && (
           <div className="mt-20">
             <h2 className="text-2xl font-bold mb-6">Recommended For You</h2>

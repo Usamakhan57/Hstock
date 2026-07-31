@@ -22,12 +22,17 @@ const INSTANT_DELIVERY_LABEL = 'Instant Delivery';
 /** Returns a short delivery-time label for a product, based on its category. */
 export function getDeliveryTime(product) {
   if (!product) return INSTANT_DELIVERY_LABEL;
+  if (product.deliveryType === 'manual' || product.deliveryType === 'handover') return MANUAL_DELIVERY_LABEL;
+  if (product.deliveryType === 'instant' || product.deliveryType === 'automatic') return INSTANT_DELIVERY_LABEL;
   return MANUAL_HANDOVER_CATEGORIES.has(product.cat) ? MANUAL_DELIVERY_LABEL : INSTANT_DELIVERY_LABEL;
 }
 
 /** True for listings that go through a manual seller handover (vs. instant digital unlock). */
 export function isManualHandover(product) {
-  return !!product && MANUAL_HANDOVER_CATEGORIES.has(product.cat);
+  if (!product) return false;
+  if (product.deliveryType === 'manual' || product.deliveryType === 'handover') return true;
+  if (product.deliveryType === 'instant' || product.deliveryType === 'automatic') return false;
+  return MANUAL_HANDOVER_CATEGORIES.has(product.cat);
 }
 
 /**

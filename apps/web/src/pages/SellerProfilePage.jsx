@@ -9,9 +9,13 @@ import ProductCard from '../components/ProductCard';
 import ReportModal from '../components/ReportModal';
 import { ProductGridSkeleton } from '../components/Skeletons';
 import { NetworkErrorState } from '../components/ErrorState';
-import { getSellerBySlug, getSellerProducts, loadSellers } from '../services/sellerRepository';
+import {
+  getSellerBySlug,
+  getSellerProducts,
+  loadSellers,
+  enrichSellerFromProducts,
+} from '../services/sellerRepository';
 import { isFollowingSeller, toggleFollowSeller } from '../services/buyerDashboard';
-import { sampleReviews } from '../data';
 import { useToast } from '../hooks/use-toast';
 import { useStore } from '../context/StoreContext';
 
@@ -35,14 +39,18 @@ const SellerProfilePage = () => {
         await loadSellers();
         if (!alive) return;
         const seller = getSellerBySlug(slug);
-        setArtist(seller);
-        setFollowing(seller ? isFollowingSeller(seller.slug) : false);
-        if (seller) {
-          const products = await getSellerProducts(seller.slug);
-          if (alive) setItems(products);
-        } else if (alive) {
-          setItems([]);
+        if (!seller) {
+          if (alive) {
+            setArtist(null);
+            setItems([]);
+          }
+          return;
         }
+        const products = await getSellerProducts(seller.slug);
+        if (!alive) return;
+        setArtist(enrichSellerFromProducts(seller, products));
+        setFollowing(isFollowingSeller(seller.slug));
+        setItems(products);
       } catch (err) {
         if (alive) setError(err);
       } finally {
@@ -81,7 +89,7 @@ const SellerProfilePage = () => {
     return (
       <div className="min-h-screen flex flex-col">
         <Seo title="Seller Not Found" description="This seller profile may have been removed or the link is incorrect." noIndex />
-    <Header />
+        <Header />
         <div className="flex-1 grid place-items-center px-5 py-24 text-center">
           <div>
             <h1 className="text-2xl font-bold mb-2">Seller not found</h1>
@@ -110,12 +118,26 @@ const SellerProfilePage = () => {
         {/* Store banner + logo */}
         <div className="rounded-3xl overflow-hidden border border-border soft-shadow">
           <div className="relative h-32 sm:h-40 brand-gradient overflow-hidden" aria-hidden="true">
-            <div className="absolute inset-0 opacity-25" style={{ background: 'radial-gradient(circle at 15% 30%, #fff, transparent 55%)' }} />
-            <div className="absolute inset-0 opacity-20" style={{ background: 'radial-gradient(circle at 85% 80%, #fff, transparent 45%)' }} />
+            {artist.banner ? (
+              <img src={artist.banner} alt="" className="absolute inset-0 h-full w-full object-cover" />
+            ) : (
+              <>
+                <div className="absolute inset-0 opacity-25" style={{ background: 'radial-gradient(circle at 15% 30%, #fff, transparent 55%)' }} />
+                <div className="absolute inset-0 opacity-20" style={{ background: 'radial-gradient(circle at 85% 80%, #fff, transparent 45%)' }} />
+              </>
+            )}
           </div>
           <div className="bg-white p-6 sm:p-8 pt-0">
             <div className="flex flex-col sm:flex-row items-start sm:items-end gap-5 -mt-10">
-              <span className="w-20 h-20 rounded-2xl brand-gradient text-white grid place-items-center text-2xl font-bold shrink-0 border-4 border-white soft-shadow">{artist.initials}</span>
+              {artist.avatar || artist.logo ? (
+                <img
+                  src={artist.avatar || artist.logo}
+                  alt={artist.name}
+                  className="w-20 h-20 rounded-2xl object-cover shrink-0 border-4 border-white soft-shadow"
+                />
+              ) : (
+                <span className="w-20 h-20 rounded-2xl brand-gradient text-white grid place-items-center text-2xl font-bold shrink-0 border-4 border-white soft-shadow">{artist.initials}</span>
+              )}
               <div className="flex-1 pt-2 sm:pt-0">
                 <div className="flex items-center gap-2 flex-wrap">
                   <h1 className="text-2xl font-black tracking-tight">{artist.name}</h1>
@@ -123,7 +145,7 @@ const SellerProfilePage = () => {
                     <span className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full bg-secondary text-secondary-foreground"><ShieldCheck className="w-3.5 h-3.5 text-primary" /> Verified Seller</span>
                   )}
                 </div>
-                <p className="text-sm text-muted-foreground mt-2 max-w-xl leading-relaxed">{artist.bio}</p>
+                <p className="text-sm text-muted-foreground mt-2 max-w-xl leading-relaxed">{artist.bio || artist.specialty || 'Digital products from a trusted HStock seller.'}</p>
               </div>
               <div className="flex items-center gap-2 shrink-0">
                 <button
@@ -151,12 +173,12 @@ const SellerProfilePage = () => {
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 mt-6">
           <div className="bg-white rounded-2xl border border-border soft-shadow hover:soft-shadow-lg transition-shadow p-5 text-center">
             <span className="grid place-items-center w-9 h-9 rounded-xl bg-amber-100 mx-auto mb-2"><Star className="w-4.5 h-4.5 fill-amber-400 text-amber-500" /></span>
-            <p className="text-lg font-black">{artist.rating || '—'}</p>
+            <p className="text-lg font-black">{artist.rating != null ? artist.rating : '—'}</p>
             <p className="text-xs text-muted-foreground mt-0.5">Rating</p>
           </div>
           <div className="bg-white rounded-2xl border border-border soft-shadow hover:soft-shadow-lg transition-shadow p-5 text-center">
             <span className="grid place-items-center w-9 h-9 rounded-xl bg-primary/10 text-primary mx-auto mb-2"><DollarSign className="w-4.5 h-4.5" /></span>
-            <p className="text-lg font-black">${Math.round(artist.totalSalesAmount || 0).toLocaleString()}</p>
+            <p className="text-lg font-black">{Math.round(artist.totalSalesAmount || 0).toLocaleString()}</p>
             <p className="text-xs text-muted-foreground mt-0.5">Total Sales</p>
           </div>
           <div className="bg-white rounded-2xl border border-border soft-shadow hover:soft-shadow-lg transition-shadow p-5 text-center">
@@ -190,41 +212,23 @@ const SellerProfilePage = () => {
           )}
         </div>
 
-        {/* Reviews */}
+        {/* Reviews — backend review list not available; show rating summary only */}
         <div className="mt-14">
           <span className="inline-flex items-center text-[11px] font-bold uppercase tracking-wider text-primary bg-primary/[0.08] px-3 py-1 rounded-full mb-3">Feedback</span>
           <h2 className="text-2xl font-bold mb-6">Reviews for {artist.name}</h2>
           <div className="bg-white rounded-3xl border border-border soft-shadow p-6">
             <div className="flex items-center gap-3 mb-6">
-              <span className="text-3xl font-bold">{artist.rating || '—'}</span>
+              <span className="text-3xl font-bold">{artist.rating != null ? artist.rating : '—'}</span>
               <div>
-                <div className="flex items-center gap-0.5" aria-label={`Rated ${artist.rating} out of 5`}>
+                <div className="flex items-center gap-0.5" aria-label={`Rated ${artist.rating ?? 0} out of 5`}>
                   {[1, 2, 3, 4, 5].map((n) => (
                     <Star key={n} className={`w-4 h-4 ${n <= Math.round(artist.rating ?? 0) ? 'fill-amber-400 text-amber-400' : 'text-border'}`} />
                   ))}
                 </div>
-                <p className="text-xs text-muted-foreground mt-0.5">Based on reviews across {items.length} listing{items.length === 1 ? '' : 's'}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Based on ratings across {items.length} listing{items.length === 1 ? '' : 's'}</p>
               </div>
             </div>
-            {sampleReviews.length > 0 ? (
-              <ul className="space-y-5">
-                {sampleReviews.map((r) => (
-                  <li key={r.name + r.date} className="pb-5 border-b border-border last:border-0">
-                    <div className="flex items-center justify-between mb-1.5">
-                      <span className="font-semibold text-sm">{r.name}</span>
-                      <div className="flex items-center gap-0.5">
-                        {[1, 2, 3, 4, 5].map((n) => (
-                          <Star key={n} className={`w-3.5 h-3.5 ${n <= r.rating ? 'fill-amber-400 text-amber-400' : 'text-border'}`} />
-                        ))}
-                      </div>
-                    </div>
-                    <p className="text-sm text-foreground/80">{r.text}</p>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-sm text-muted-foreground">No reviews yet.</p>
-            )}
+            <p className="text-sm text-muted-foreground">No written reviews yet.</p>
           </div>
         </div>
       </div>

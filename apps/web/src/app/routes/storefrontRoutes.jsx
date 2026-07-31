@@ -6,6 +6,7 @@ import ProductDetailPage from '../../pages/ProductDetailPage';
 import CategoriesPage from '../../pages/CategoriesPage';
 import CategoryPage from '../../pages/CategoryPage';
 import CollectionsPage from '../../pages/CollectionsPage';
+import CollectionPage from '../../pages/CollectionPage';
 import BlogPage from '../../pages/BlogPage';
 import BlogPostPage from '../../pages/BlogPostPage';
 import AboutPage from '../../pages/AboutPage';
@@ -71,6 +72,7 @@ export function storefrontRoutes() {
       <Route path="/categories" element={<CategoriesPage />} />
       <Route path="/category/:slug" element={<CategoryPage />} />
       <Route path="/collections" element={<CollectionsPage />} />
+      <Route path="/collection/:slug" element={<CollectionPage />} />
       <Route path="/blog" element={<BlogPage />} />
       <Route path="/blog/:slug" element={<BlogPostPage />} />
       <Route path="/about" element={<AboutPage />} />

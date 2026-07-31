@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Search } from 'lucide-react';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
@@ -12,41 +12,17 @@ import { NetworkErrorState } from '../components/ErrorState';
 import { ProductGridSkeleton } from '../components/Skeletons';
 import NotFoundPage from './NotFoundPage';
 import { useFetch } from '../hooks/useFetch';
+import { useDebouncedValue } from '../hooks/useDebouncedValue';
 import { productsApi } from '../services/api';
-import {
-  getCategoryBySlug, getStorefrontCategories, getRootStorefrontCategories, getCategoryAncestors,
-} from '../services/categoryRepository';
-import { getProductCountByCategoryId } from '../services/productRepository';
-import { getDescendants, getRolledUpCount } from '../services/categoryTree';
+import { getCollectionBySlug } from '../services/collectionRepository';
 import { DEFAULT_FILTERS, SORT_OPTIONS, PAGE_SIZE } from '../constants';
 import { useStore } from '../context/StoreContext';
-import { useDebouncedValue } from '../hooks/useDebouncedValue';
 
-const CategoryPage = () => {
+const CollectionPage = () => {
   const { slug } = useParams();
-  const navigate = useNavigate();
   const { catalogReady, catalogVersion } = useStore();
 
-  const category = useMemo(() => getCategoryBySlug(slug), [slug, catalogVersion]);
-  const allCategories = useMemo(() => getStorefrontCategories(), [catalogVersion]);
-  const rootCategories = useMemo(() => getRootStorefrontCategories(), [catalogVersion]);
-  const ancestors = useMemo(() => (category ? getCategoryAncestors(category.id) : []), [category]);
-
-  // A category page shows products from itself AND every nested
-  // subcategory — a parent like "Digital Products" aggregates Wall Arts,
-  // Cliparts, PNG Bundles, etc. instead of showing zero direct matches.
-  const categoryNames = useMemo(() => {
-    if (!category) return [];
-    const descendants = getDescendants(allCategories, category.id);
-    return [category.name, ...descendants.map((d) => d.name)];
-  }, [category, allCategories]);
-
-  const count = useMemo(() => {
-    if (!category) return 0;
-    const counts = getProductCountByCategoryId();
-    const node = { id: category.id, children: getDescendants(allCategories, category.id).map((d) => ({ id: d.id, children: [] })) };
-    return getRolledUpCount(node, counts);
-  }, [category, allCategories]);
+  const collection = useMemo(() => getCollectionBySlug(slug), [slug, catalogVersion]);
 
   const [filters, setFilters] = useState({ ...DEFAULT_FILTERS });
   const [query, setQuery] = useState('');
@@ -54,22 +30,29 @@ const CategoryPage = () => {
   const [sort, setSort] = useState('Most Popular');
   const [page, setPage] = useState(1);
 
-  useEffect(() => { setPage(1); setQuery(''); setSort('Most Popular'); setFilters({ ...DEFAULT_FILTERS }); }, [slug]);
+  useEffect(() => {
+    setPage(1);
+    setQuery('');
+    setSort('Most Popular');
+    setFilters({ ...DEFAULT_FILTERS });
+  }, [slug]);
+
   useEffect(() => { setPage(1); }, [filters, debouncedQuery, sort]);
 
-  // Use categoryNames (self + descendants) for client filtering. Do not pass
-  // categoryId alone — parent pages must include nested subcategory products.
-  const activeFilters = useMemo(() => ({ ...filters, categoryNames }), [filters, categoryNames]);
+  const activeFilters = useMemo(() => ({
+    ...filters,
+    collectionId: collection?.id || null,
+  }), [filters, collection?.id]);
 
   const { data: list, loading, error, retry } = useFetch(
-    () => productsApi.list({ filters: activeFilters, sort, query: debouncedQuery }),
-    [activeFilters, sort, debouncedQuery]
+    () => (collection ? productsApi.list({ filters: activeFilters, sort, query: debouncedQuery }) : Promise.resolve([])),
+    [activeFilters, sort, debouncedQuery, collection?.id]
   );
 
   const totalPages = Math.max(1, Math.ceil((list?.length || 0) / PAGE_SIZE));
   const paged = (list || []).slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
-  if (!catalogReady && !category) {
+  if (!catalogReady && !collection) {
     return (
       <div className="min-h-screen">
         <Header />
@@ -81,56 +64,30 @@ const CategoryPage = () => {
     );
   }
 
-  if (!category) return <NotFoundPage />;
-
-  const Icon = category.icon;
-  const rootAncestorId = ancestors[0]?.id || category.id;
-
-  const categorySlot = (
-    <div className="pb-4 mb-4 border-b border-border">
-      <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3">Jump to category</p>
-      <div className="flex flex-wrap gap-1.5">
-        <button onClick={() => navigate('/shop')} className="text-sm px-3.5 py-1.5 rounded-full bg-secondary/70 hover:bg-secondary text-foreground/80 transition-colors">
-          All
-        </button>
-        {rootCategories.map((c) => (
-          <button
-            key={c.id}
-            onClick={() => navigate(`/category/${c.slug}`)}
-            className={`text-sm px-3.5 py-1.5 rounded-full whitespace-nowrap transition-colors ${c.id === rootAncestorId ? 'brand-gradient text-white font-semibold' : 'bg-secondary/70 hover:bg-secondary text-foreground/80'}`}
-          >
-            {c.name}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
+  if (!collection) return <NotFoundPage />;
 
   return (
     <div className="min-h-screen">
-      <Seo title={category.seoTitle || category.name} description={category.metaDescription || `${category.description} ${count.toLocaleString()}+ items, hand-picked and ready to download.`} image={category.ogImage} />
+      <Seo
+        title={collection.title}
+        description={collection.description || `Browse the ${collection.title} collection on HStock.`}
+        image={collection.cover || collection.image}
+      />
       <Header />
-      <div className="mx-auto max-w-[90rem] px-5 lg:px-8 pt-10">
+      <div className="mx-auto max-w-[90rem] px-5 lg:px-8 pt-10 pb-24">
         <Breadcrumbs items={[
-          { name: 'Categories', to: '/categories' },
-          ...ancestors.map((a) => ({ name: a.name, to: `/category/${a.slug}` })),
-          { name: category.name },
+          { name: 'Collections', to: '/collections' },
+          { name: collection.title },
         ]} />
 
-        <div className="flex items-center gap-4">
-          <span className="grid place-items-center w-14 h-14 rounded-2xl shrink-0" style={{ background: `${category.color}18`, color: category.color }}>
-            <Icon className="w-7 h-7" strokeWidth={1.8} />
-          </span>
-          <div>
-            <h1 className="text-4xl md:text-5xl font-black tracking-tight">{category.name}</h1>
-            <p className="text-muted-foreground mt-1">{count.toLocaleString()}+ items in this category</p>
-          </div>
-        </div>
-        <p className="text-muted-foreground mt-4 max-w-2xl">{category.description || `Browse our curated ${category.name.toLowerCase()} collection.`}</p>
+        <h1 className="text-4xl md:text-5xl font-black tracking-tight">{collection.title}</h1>
+        <p className="text-muted-foreground mt-3 max-w-2xl">
+          {collection.description || `Hand-picked products in the ${collection.title} collection.`}
+        </p>
 
         <div className="mt-8 flex flex-col lg:flex-row gap-8">
           <aside className="lg:w-80 shrink-0">
-            <FilterSidebar filters={filters} onChange={setFilters} categorySlot={categorySlot} resultCount={list?.length} />
+            <FilterSidebar filters={filters} onChange={setFilters} resultCount={list?.length} />
           </aside>
 
           <div className="flex-1 min-w-0">
@@ -140,13 +97,18 @@ const CategoryPage = () => {
                 <input
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  placeholder={`Search in ${category.name}…`}
+                  placeholder={`Search in ${collection.title}…`}
                   aria-label="Search products"
                   className="bg-transparent outline-none text-sm w-full"
                 />
               </div>
               <div className="relative">
-                <select value={sort} onChange={(e) => setSort(e.target.value)} aria-label="Sort by" className="appearance-none bg-white rounded-full pl-4 pr-10 py-2.5 border border-border text-sm font-medium outline-none cursor-pointer w-full sm:w-auto">
+                <select
+                  value={sort}
+                  onChange={(e) => setSort(e.target.value)}
+                  aria-label="Sort by"
+                  className="appearance-none bg-white rounded-full pl-4 pr-10 py-2.5 border border-border text-sm font-medium outline-none cursor-pointer w-full sm:w-auto"
+                >
                   {SORT_OPTIONS.map((s) => <option key={s}>{s}</option>)}
                 </select>
               </div>
@@ -155,11 +117,11 @@ const CategoryPage = () => {
             {loading ? (
               <ProductGridSkeleton count={8} />
             ) : error ? (
-              <NetworkErrorState onRetry={retry} message="We couldn't load this category right now. Please try again." />
+              <NetworkErrorState onRetry={retry} message="We couldn't load this collection right now. Please try again." />
             ) : !list || list.length === 0 ? (
               <EmptyState
                 title="No products found"
-                message={`Try a different search term or filter, or check back soon — new ${category.name.toLowerCase()} assets are added regularly.`}
+                message="Try a different search term or filter, or check back soon for new listings in this collection."
                 secondaryLabel="Reset filters"
                 onSecondary={() => { setFilters({ ...DEFAULT_FILTERS }); setQuery(''); setSort('Most Popular'); }}
               />
@@ -209,4 +171,4 @@ const CategoryPage = () => {
   );
 };
 
-export default CategoryPage;
+export default CollectionPage;

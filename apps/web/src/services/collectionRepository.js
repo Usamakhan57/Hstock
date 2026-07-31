@@ -4,6 +4,9 @@
 import { getCachedCollections, hydrateCatalog } from './catalogCache';
 
 function mapCollection(c) {
+  const productIds = Array.isArray(c.productIds)
+    ? c.productIds
+    : (Array.isArray(c.products) ? c.products : []);
   return {
     id: c.id || c._id,
     slug: c.slug,
@@ -12,8 +15,8 @@ function mapCollection(c) {
     description: c.description || '',
     cover: c.coverImage || c.image || c.cover || '',
     image: c.image || c.coverImage || c.cover || '',
-    productIds: Array.isArray(c.productIds) ? c.productIds : [],
-    productCount: c.productCount ?? 0,
+    productIds,
+    productCount: c.productCount ?? productIds.length,
     featured: !!c.featured,
   };
 }

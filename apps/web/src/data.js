@@ -51,12 +51,3 @@ export const licenseCatalog = {
     restrictions: ['No reselling the raw files themselves'],
   },
 };
-
-/** Sample reviews shown on the product detail page — same shape a real
- *  review submission would produce, so wiring a review form to this
- *  array later is a drop-in change. */
-export const sampleReviews = [
-  { name: 'Jordan K.', rating: 5, date: '2025-06-02', text: 'Exactly what I needed for my shop mockups. Files were clean and easy to edit.' },
-  { name: 'Sam R.', rating: 4, date: '2025-05-18', text: 'Great quality, wish there were a couple more color variations but still worth it.' },
-  { name: 'Taylor M.', rating: 5, date: '2025-04-30', text: 'Instant download worked perfectly and the commercial license PDF was included right away.' },
-];

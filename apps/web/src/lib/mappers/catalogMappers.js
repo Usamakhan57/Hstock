@@ -21,6 +21,12 @@ function slugOf(value) {
   return value.slug || null;
 }
 
+function productIdsOf(collection) {
+  const raw = collection?.products || collection?.productIds || [];
+  if (!Array.isArray(raw)) return [];
+  return raw.map(idOf).filter(Boolean);
+}
+
 export function mapBackendCategory(category) {
   if (!category) return null;
   return {
@@ -34,6 +40,8 @@ export function mapBackendCategory(category) {
     image: category.image || category.icon || null,
     icon: category.icon || null,
     featured: !!category.featured,
+    showOnHomepage: !!category.showOnHomepage,
+    showInHeader: !!category.showInHeader,
     status: category.status || 'active',
     productCount: category.productCount ?? 0,
     children: Array.isArray(category.children)
@@ -44,6 +52,7 @@ export function mapBackendCategory(category) {
 
 export function mapBackendCollection(collection) {
   if (!collection) return null;
+  const productIds = productIdsOf(collection);
   return {
     id: idOf(collection),
     _id: idOf(collection),
@@ -53,7 +62,9 @@ export function mapBackendCollection(collection) {
     image: collection.image || collection.coverImage || null,
     coverImage: collection.coverImage || collection.image || null,
     featured: !!collection.featured,
-    productCount: collection.productCount ?? 0,
+    productIds,
+    products: productIds,
+    productCount: collection.productCount ?? productIds.length,
   };
 }
 
@@ -78,6 +89,30 @@ export function mapBackendProduct(product) {
 
   const cat = nameOf(category, product.cat || 'Digital Assets');
   const catSlug = slugOf(category) || product.catSlug || null;
+  const sellerVerified = seller?.verified === true
+    || seller?.status === 'approved'
+    || !!product.verifiedSeller;
+
+  const features = Array.isArray(product.features)
+    ? product.features
+    : (Array.isArray(product.whatsIncluded)
+      ? product.whatsIncluded
+      : (typeof product.whatsIncluded === 'string' && product.whatsIncluded
+        ? product.whatsIncluded.split('\n').map((s) => s.trim()).filter(Boolean)
+        : []));
+
+  const specifications = product.specifications && typeof product.specifications === 'object'
+    ? product.specifications
+    : {
+        productType: product.productType || null,
+        assetPlatform: product.assetPlatform || null,
+        licenseType: product.licenseType || null,
+        deliveryType: product.deliveryType || null,
+        fileSize: product.digital?.fileSize || product.fileSize || null,
+        fileType: product.digital?.fileType || null,
+        stockType: product.stockType || null,
+        sku: product.sku || null,
+      };
 
   return {
     id: idOf(product),
@@ -92,9 +127,10 @@ export function mapBackendProduct(product) {
     img,
     images: gallery.length ? gallery : [img].filter(Boolean),
     badge: product.featured ? 'Featured' : (product.badge || null),
-    rating: product.rating ?? 4.5,
-    reviewCount: product.reviewCount ?? 0,
+    rating: product.rating != null ? Number(product.rating) : null,
+    reviewCount: product.reviewCount != null ? Number(product.reviewCount) : 0,
     downloads: product.salesCount ?? product.downloads ?? 0,
+    salesCount: product.salesCount ?? product.downloads ?? 0,
     promoted: !!product.promoted,
     featured: !!product.featured,
     promotionLabel: product.promotionLabel || null,
@@ -102,40 +138,51 @@ export function mapBackendProduct(product) {
     artistSlug: seller?.storeSlug || slugOf(seller) || slugOf(brand) || null,
     sellerSlug: seller?.storeSlug || slugOf(seller) || null,
     sellerId: idOf(seller),
+    verifiedSeller: sellerVerified,
     brandId: idOf(brand),
     collectionId: idOf(product.collection),
+    collectionSlug: slugOf(product.collection),
     fileTypes: Array.isArray(product.fileTypes) && product.fileTypes.length
       ? product.fileTypes
-      : [product.productType || 'Digital Download'],
+      : [product.productType || 'Digital Download'].filter(Boolean),
     dimensions: product.dimensions || null,
     version: product.version || null,
     description: product.description || '',
     shortDescription: product.shortDescription || '',
     whatsIncluded: product.whatsIncluded || '',
+    features,
+    specifications,
     licenseIds: Array.isArray(product.licenseIds) && product.licenseIds.length
       ? product.licenseIds
       : ['personal', 'commercial'],
     licenses: Array.isArray(product.licenses) ? product.licenses : [],
     faqs: Array.isArray(product.faqs) ? product.faqs : (Array.isArray(product.faq) ? product.faq : []),
     productType: product.productType || 'digital',
+    deliveryType: product.deliveryType || null,
     shipping: product.shipping || null,
     sku: product.sku || null,
     stock: product.stock ?? null,
     unlimitedStock: product.stockType === 'unlimited',
-    fileSize: product.fileSize || null,
+    stockType: product.stockType || null,
+    fileSize: product.digital?.fileSize || product.fileSize || null,
     liveDemoUrl: product.liveDemoUrl || null,
     digital: product.digital || null,
     createdAt: product.createdAt || null,
     updatedAt: product.updatedAt || null,
+    publishedAt: product.publishedAt || null,
     status: product.status,
     approvalStatus: product.approvalStatus,
     assetIdentifier: product.assetIdentifier || null,
     assetPlatform: product.assetPlatform || null,
+    tags: Array.isArray(product.tags)
+      ? product.tags.map((t) => (typeof t === 'string' ? t : t?.name)).filter(Boolean)
+      : [],
   };
 }
 
 export function mapBackendSeller(seller) {
   if (!seller) return null;
+  const metrics = seller.metrics || {};
   return {
     id: idOf(seller),
     _id: idOf(seller),
@@ -144,9 +191,18 @@ export function mapBackendSeller(seller) {
     bio: seller.bio || '',
     avatar: seller.avatar || seller.logo || null,
     logo: seller.logo || seller.avatar || null,
-    verified: seller.status === 'approved' || !!seller.verified,
+    banner: seller.banner || null,
+    verified: seller.verified === true || seller.status === 'approved',
     specialty: seller.specialty || '',
-    productCount: seller.productCount ?? 0,
+    productCount: metrics.productsCount ?? seller.productCount ?? 0,
+    rating: metrics.rating ?? seller.rating ?? null,
+    totalSalesAmount: metrics.totalSales ?? seller.totalSalesAmount ?? 0,
+    responseTime: metrics.responseTime || seller.responseTime || seller.defaultProcessingTime || null,
+    joined: seller.joinedAt
+      ? new Date(seller.joinedAt).getFullYear().toString()
+      : (seller.joined || null),
+    website: seller.website || null,
+    country: seller.country || null,
   };
 }
 

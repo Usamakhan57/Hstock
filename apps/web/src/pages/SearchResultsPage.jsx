@@ -36,13 +36,17 @@ const SearchResultsPage = () => {
 
   const results = searchData?.products || [];
 
-  const matchedCategories = useMemo(() => searchCategories(q), [q, catalogVersion]);
+  const matchedCategories = useMemo(() => {
+    if (searchData?.categories?.length) return searchData.categories;
+    return searchCategories(q);
+  }, [q, catalogVersion, searchData]);
 
   const matchedArtists = useMemo(() => {
+    if (searchData?.artists?.length) return searchData.artists;
     const needle = q.trim().toLowerCase();
     if (!needle) return [];
     return getStorefrontSellers().filter((a) => a.name.toLowerCase().includes(needle));
-  }, [q, catalogVersion]);
+  }, [q, catalogVersion, searchData]);
 
   const goSearch = (term) => navigate(term.trim() ? `/search?q=${encodeURIComponent(term.trim())}` : '/search');
 

@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Seo from '../../components/Seo';
 import AccountLayout from './AccountLayout';
 import { useToast } from '../../hooks/use-toast';
+import { useStore } from '../../context/StoreContext';
+import { usersApi } from '../../services/usersApi';
 
 const Toggle = ({ checked, onChange, label, description }) => (
   <label className="flex items-start justify-between gap-4 py-3.5 border-b border-border last:border-0 cursor-pointer">
@@ -19,11 +21,35 @@ const Toggle = ({ checked, onChange, label, description }) => (
 
 const SettingsPage = () => {
   const { toast } = useToast();
+  const { profiles, refreshProfile } = useStore();
+  const [saving, setSaving] = useState(false);
   const [prefs, setPrefs] = useState({ marketing: true, orderUpdates: true, newArrivals: false });
 
-  const save = (e) => {
+  useEffect(() => {
+    const preferences = profiles?.buyer?.preferences || {};
+    setPrefs({
+      marketing: preferences.marketing ?? true,
+      orderUpdates: preferences.orderUpdates ?? true,
+      newArrivals: preferences.newArrivals ?? false,
+    });
+  }, [profiles]);
+
+  const save = async (e) => {
     e.preventDefault();
-    toast({ title: 'Settings saved', description: 'Your notification preferences were updated.' });
+    setSaving(true);
+    try {
+      await usersApi.updateBuyerProfile({ preferences: prefs });
+      await refreshProfile?.();
+      toast({ title: 'Settings saved', description: 'Your notification preferences were updated.' });
+    } catch (err) {
+      toast({
+        title: 'Could not save settings',
+        description: err.message || 'Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -50,8 +76,8 @@ const SettingsPage = () => {
             label="Marketing emails"
             description="Occasional deals, promotions, and creator spotlights."
           />
-          <button type="submit" className="mt-6 brand-gradient text-white font-semibold px-6 py-2.5 rounded-full hover:opacity-95 transition-all">
-            Save preferences
+          <button type="submit" disabled={saving} className="mt-6 brand-gradient text-white font-semibold px-6 py-2.5 rounded-full hover:opacity-95 transition-all disabled:opacity-60">
+            {saving ? 'Saving…' : 'Save preferences'}
           </button>
         </form>
       </AccountLayout>

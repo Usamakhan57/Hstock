@@ -34,13 +34,20 @@ export const ENDPOINTS = {
 };
 
 export const SORT_OPTIONS = [
-  'Popular',
+  'Most Popular',
   'Newest',
-  'Date Added',
+  'Oldest',
   'Price: Low to High',
   'Price: High to Low',
-  'Top Rated',
+  'Best Rated',
 ];
+
+/** Legacy sort labels → current SORT_OPTIONS (backward compatible). */
+export const SORT_ALIASES = {
+  Popular: 'Most Popular',
+  'Top Rated': 'Best Rated',
+  'Date Added': 'Newest',
+};
 
 export const PRICE_RANGES = [
   { id: 'any', label: 'Any price', min: 0, max: Infinity },
@@ -52,6 +59,7 @@ export const PRICE_RANGES = [
 
 export const RATING_FILTERS = [
   { id: 0, label: 'Any rating' },
+  { id: 4, label: '4.0 & up' },
   { id: 4.5, label: '4.5 & up' },
   { id: 4.8, label: '4.8 & up' },
 ];
@@ -64,13 +72,23 @@ export const LICENSE_FILTERS = [
   { id: 'extended', label: 'Extended' },
 ];
 
+export const AVAILABILITY_FILTERS = [
+  { id: 'any', label: 'Any availability' },
+  { id: 'in_stock', label: 'In stock' },
+  { id: 'out_of_stock', label: 'Out of stock' },
+];
+
 export const DEFAULT_FILTERS = {
   category: 'All',
+  categoryId: null,
+  collectionId: null,
+  sellerId: null,
   price: 'any',
   rating: 0,
   fileTypes: [],
   licenses: [],
   deliveryTime: 'any',
+  availability: 'any',
   verifiedOnly: false,
   promotedOnly: false,
 };

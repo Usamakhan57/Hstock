@@ -84,12 +84,12 @@ const ProductCard = ({ p }) => {
         </Link>
 
         <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
-          <Link to={`/seller/${slugify(p.artist)}`} className="font-semibold transition-colors hover:text-primary">{p.artist}</Link>
+          <Link to={`/seller/${p.sellerSlug || p.artistSlug || slugify(p.artist)}`} className="font-semibold transition-colors hover:text-primary">{p.artist}</Link>
           {sellerVerified && <BadgeCheck className="h-3.5 w-3.5 shrink-0 text-primary" aria-label="Verified seller" />}
         </div>
 
         <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
-          <span className="inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-1"><Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" aria-hidden="true" /> {p.rating}</span>
+          {p.rating != null && <span className="inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-1"><Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" aria-hidden="true" /> {p.rating}</span>}
           <span className="inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-1">Instant access</span>
           {p.promoted ? <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-1 text-amber-700"><Sparkles className="h-3 w-3" /> Promoted</span> : null}
         </div>
