@@ -1,0 +1,118 @@
+import React, { useState } from 'react';
+import { Users, Package, CalendarDays } from 'lucide-react';
+import ImageUploadInput from '../../../admin/components/ImageUploadInput';
+import { inputClass, textareaClass } from '../../../admin/components/FormSheet';
+import { useToast } from '../../../hooks/use-toast';
+
+const SellerProfileTab = ({ seller, productsCount, joinedDate }) => {
+  const { toast } = useToast();
+  const [form, setForm] = useState({
+    avatar: '', cover: '',
+    name: seller?.name || '', bio: '',
+    website: '', instagram: '', twitter: '',
+  });
+
+  const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    toast({ title: 'Profile saved', description: 'Your public seller profile was updated.' });
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="grid lg:grid-cols-3 gap-6">
+      <div className="lg:col-span-2 space-y-6">
+        <div className="bg-white rounded-3xl border border-border soft-shadow overflow-hidden">
+          <div className="h-36 bg-secondary relative">
+            {form.cover ? (
+              <img src={form.cover} alt="" className="w-full h-full object-cover" />
+            ) : (
+              <div className="w-full h-full bg-gradient-to-r from-primary/20 to-accent/20" />
+            )}
+          </div>
+          <div className="p-6 pt-0 -mt-10">
+            <div className="w-20 h-20 rounded-2xl border-4 border-white bg-white overflow-hidden soft-shadow">
+              {form.avatar ? (
+                <img src={form.avatar} alt="" className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full brand-gradient grid place-items-center text-white font-bold">
+                  {(form.name || seller?.name || 'S').slice(0, 1).toUpperCase()}
+                </div>
+              )}
+            </div>
+            <div className="grid sm:grid-cols-2 gap-4 mt-5">
+              <div>
+                <label className="block text-sm font-medium mb-1.5">Profile Image</label>
+                <ImageUploadInput value={form.avatar} onChange={(v) => setForm((f) => ({ ...f, avatar: v }))} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1.5">Cover Image</label>
+                <ImageUploadInput value={form.cover} onChange={(v) => setForm((f) => ({ ...f, cover: v }))} />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-3xl border border-border soft-shadow p-6 space-y-4">
+          <h3 className="font-bold">About</h3>
+          <div>
+            <label className="block text-sm font-medium mb-1.5">Name</label>
+            <input value={form.name} onChange={set('name')} className={inputClass} />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1.5">Bio</label>
+            <textarea value={form.bio} onChange={set('bio')} className={textareaClass} placeholder="Tell buyers about yourself and your work…" />
+          </div>
+        </div>
+
+        <div className="bg-white rounded-3xl border border-border soft-shadow p-6 space-y-4">
+          <h3 className="font-bold">Social Links</h3>
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-1.5">Website</label>
+              <input value={form.website} onChange={set('website')} className={inputClass} placeholder="https://…" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1.5">Instagram</label>
+              <input value={form.instagram} onChange={set('instagram')} className={inputClass} placeholder="https://instagram.com/…" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1.5">Twitter</label>
+              <input value={form.twitter} onChange={set('twitter')} className={inputClass} placeholder="https://twitter.com/…" />
+            </div>
+          </div>
+        </div>
+
+        <button type="submit" className="px-6 py-3 rounded-full brand-gradient text-white text-sm font-semibold soft-shadow hover:opacity-95 transition-all">
+          Save Profile
+        </button>
+      </div>
+
+      <div className="space-y-4">
+        <div className="bg-white rounded-3xl border border-border soft-shadow p-5 flex items-center gap-3">
+          <span className="w-10 h-10 rounded-xl bg-secondary grid place-items-center shrink-0"><Package className="w-4.5 h-4.5 text-primary" /></span>
+          <div>
+            <p className="text-xs text-muted-foreground">Products</p>
+            <p className="font-bold">{productsCount}</p>
+          </div>
+        </div>
+        <div className="bg-white rounded-3xl border border-border soft-shadow p-5 flex items-center gap-3">
+          <span className="w-10 h-10 rounded-xl bg-secondary grid place-items-center shrink-0"><Users className="w-4.5 h-4.5 text-primary" /></span>
+          <div>
+            <p className="text-xs text-muted-foreground">Followers</p>
+            <p className="font-bold">248</p>
+          </div>
+        </div>
+        <div className="bg-white rounded-3xl border border-border soft-shadow p-5 flex items-center gap-3">
+          <span className="w-10 h-10 rounded-xl bg-secondary grid place-items-center shrink-0"><CalendarDays className="w-4.5 h-4.5 text-primary" /></span>
+          <div>
+            <p className="text-xs text-muted-foreground">Joined</p>
+            <p className="font-bold">{joinedDate}</p>
+          </div>
+        </div>
+      </div>
+    </form>
+  );
+};
+
+export default SellerProfileTab;

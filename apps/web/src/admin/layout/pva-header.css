@@ -1,0 +1,368 @@
+/**
+ * Ported from the provided PVAFarm header design, kept as close to
+ * verbatim as possible per the brief: same --pva-* tokens, spacing,
+ * radius, shadows, Poppins font, hover/transition timings, and
+ * breakpoints (980px / 680px). Only the parts that depended on
+ * WordPress/WooCommerce/FiboSearch markup were swapped for plain
+ * equivalents, since this is a React admin panel with none of those.
+ */
+
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap');
+
+.pva-header * { box-sizing: border-box; }
+.pva-header {
+  --pva-pink: #FF1F8F;
+  --pva-magenta: #C4148C;
+  --pva-purple: #6E1E8C;
+  --pva-ink: #1C1030;
+  --pva-grey: #6B6478;
+  --pva-line: #EFE7F3;
+  font-family: 'Poppins', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: #ffffff;
+  border-bottom: 1px solid var(--pva-line);
+  position: sticky;
+  top: 0;
+  z-index: 40;
+}
+.pva-header a { text-decoration: none; color: inherit; }
+
+/* ---------- Row 1 ---------- */
+.pva-row1 {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 8px 24px;
+}
+.pva-logo { display: flex; align-items: center; gap: 0; padding: 0; margin: 0; flex-shrink: 0; }
+.pva-logo a { display: flex; align-items: center; padding: 0; margin: 0; }
+.pva-logo img { height: 46px; width: auto; display: block; padding: 0; margin: 0; }
+
+/* Mobile sidebar-open trigger — this class existed in the original CSS
+   (unused there) and is now actually wired up to open the admin's left
+   nav Sheet on small screens. */
+.pva-menu-toggle {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 15px;
+  color: var(--pva-ink);
+  border: none;
+  background: none;
+  cursor: pointer;
+  flex-shrink: 0;
+  padding: 8px;
+}
+.pva-menu-toggle svg { width: 22px; height: 22px; }
+
+.pva-categories {
+  position: relative;
+  flex-shrink: 0;
+}
+.pva-categories-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 15px;
+  color: var(--pva-ink);
+  cursor: pointer;
+  white-space: nowrap;
+  padding: 8px 0;
+  border: none;
+  background: none;
+}
+.pva-categories-btn svg.icon-menu { width: 18px; height: 18px; }
+.pva-categories-btn svg.icon-chevron { width: 14px; height: 14px; transition: transform .2s ease; }
+.pva-categories:hover .icon-chevron,
+.pva-categories.is-open .icon-chevron { transform: rotate(180deg); }
+
+.pva-categories-drop {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 0;
+  width: 260px;
+  max-height: 70vh;
+  overflow-y: auto;
+  background: #fff;
+  border: 1px solid var(--pva-line);
+  border-radius: 14px;
+  box-shadow: 0 20px 40px -16px rgba(28,16,48,0.22);
+  padding: 10px;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(6px);
+  transition: all .18s ease;
+  z-index: 50;
+}
+.pva-categories:hover .pva-categories-drop,
+.pva-categories.is-open .pva-categories-drop {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+.pva-categories-drop a {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--pva-ink);
+  padding: 10px 12px;
+  border-radius: 8px;
+  transition: background .15s ease, color .15s ease;
+}
+.pva-categories-drop a:hover,
+.pva-categories-drop a.is-active {
+  background: #FBF0F8;
+  color: var(--pva-magenta);
+}
+.pva-categories-drop svg { width: 16px; height: 16px; flex-shrink: 0; opacity: .8; }
+
+.pva-search {
+  flex: 1;
+  position: relative;
+  min-width: 0;
+}
+.pva-search-pill {
+  height: 44px;
+  display: flex;
+  align-items: center;
+  border-radius: 999px;
+  border: 1.5px solid var(--pva-ink);
+  background: #fff;
+  box-shadow: none;
+  overflow: hidden;
+  transition: border-color .15s ease;
+  position: relative;
+}
+.pva-search-pill:focus-within { border-color: var(--pva-magenta); }
+.pva-search-icon {
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 18px;
+  height: 18px;
+  color: var(--pva-ink);
+  pointer-events: none;
+}
+.pva-search-input {
+  height: 100%;
+  width: 100%;
+  background: transparent;
+  padding: 0 20px 0 46px;
+  margin: 0;
+  font-family: inherit;
+  font-size: 14.5px;
+  color: var(--pva-ink);
+  border: none;
+  box-shadow: none;
+  outline: none;
+}
+.pva-search-input::placeholder { color: #8A8394; }
+
+/* ---------- Dropdown panel (Notifications / Account) ---------- */
+.pva-panel-wrap { position: relative; }
+.pva-panel {
+  position: absolute;
+  top: calc(100% + 14px);
+  right: -10px;
+  width: 320px;
+  background: #fff;
+  border: 1px solid var(--pva-line);
+  border-radius: 16px;
+  box-shadow: 0 24px 48px -18px rgba(28,16,48,0.28);
+  padding: 18px;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(8px);
+  transition: all .18s ease;
+  z-index: 60;
+}
+.pva-panel.is-open { opacity: 1; visibility: visible; transform: translateY(0); }
+.pva-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--pva-ink);
+  margin-bottom: 12px;
+}
+.pva-panel-head button {
+  border: none;
+  background: none;
+  font-size: 20px;
+  line-height: 1;
+  color: var(--pva-grey);
+  cursor: pointer;
+}
+.pva-panel-empty { font-size: 13.5px; color: var(--pva-grey); padding: 6px 0 2px; }
+
+.pva-notif-list { list-style: none; margin: 0 0 4px; padding: 0; max-height: 280px; overflow-y: auto; }
+.pva-notif-list li {
+  display: flex;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--pva-line);
+  font-size: 13.5px;
+  color: var(--pva-ink);
+}
+.pva-notif-list li:last-child { border-bottom: none; }
+.pva-notif-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--pva-pink), var(--pva-magenta));
+  flex-shrink: 0; margin-top: 5px;
+}
+.pva-notif-meta { font-size: 12px; color: var(--pva-grey); margin-top: 2px; }
+
+.pva-account-name { font-weight: 700; font-size: 15px; color: var(--pva-ink); margin-bottom: 2px; }
+.pva-account-email { font-size: 12.5px; color: var(--pva-grey); margin-bottom: 14px; }
+.pva-account-links { display: flex; flex-direction: column; gap: 2px; }
+.pva-account-links a,
+.pva-account-links button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--pva-ink);
+  padding: 10px 10px;
+  border-radius: 8px;
+  border: none;
+  background: none;
+  cursor: pointer;
+}
+.pva-account-links a:hover,
+.pva-account-links button:hover { background: #FBF0F8; color: var(--pva-magenta); }
+.pva-account-links .is-danger:hover { background: #FDEDF1; color: #C81E4A; }
+
+.pva-actions {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  flex-shrink: 0;
+}
+.pva-signin {
+  font-weight: 600;
+  font-size: 15px;
+  color: var(--pva-ink);
+  border: none;
+  background: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.pva-signin-avatar {
+  width: 26px; height: 26px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--pva-pink), var(--pva-magenta));
+  color: #fff; font-size: 10.5px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+}
+.pva-icon-btn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  color: var(--pva-ink);
+  cursor: pointer;
+  border: none;
+  background: none;
+}
+.pva-icon-btn svg { width: 100%; height: 100%; }
+.pva-cart-badge {
+  position: absolute;
+  top: -8px;
+  right: -9px;
+  background: linear-gradient(135deg, var(--pva-pink), var(--pva-magenta));
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.pva-get-btn {
+  background: linear-gradient(135deg, var(--pva-pink), var(--pva-magenta));
+  color: #fff !important;
+  font-weight: 600;
+  font-size: 14px;
+  padding: 10px 22px;
+  border-radius: 999px;
+  white-space: nowrap;
+  border: none;
+  cursor: pointer;
+}
+
+/* ---------- Row 2 : quick-access nav ---------- */
+.pva-row2 { border-top: 1px solid var(--pva-line); }
+.pva-nav {
+  width: 100%;
+  margin: 0 auto;
+  padding: 14px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 34px;
+  flex-wrap: wrap;
+}
+.pva-nav a {
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--pva-ink);
+  position: relative;
+  padding-bottom: 3px;
+  transition: color .2s ease;
+}
+.pva-nav a:hover,
+.pva-nav a.is-active { color: var(--pva-magenta); }
+.pva-nav a:hover::after,
+.pva-nav a.is-active::after {
+  content: '';
+  position: absolute;
+  left: 0; right: 0; bottom: -3px;
+  height: 2px;
+  background: linear-gradient(135deg, var(--pva-pink), var(--pva-purple));
+  border-radius: 2px;
+}
+
+@media (max-width: 980px) {
+  .pva-categories-btn span { display: none; }
+  .pva-get-btn span { display: none; }
+  .pva-nav { gap: 20px; overflow-x: auto; flex-wrap: nowrap; justify-content: flex-start; }
+}
+@media (max-width: 680px) {
+  .pva-row1 {
+    display: grid;
+    grid-template-columns: auto auto 1fr auto;
+    grid-template-areas:
+      "toggle logo   logo   actions"
+      "cats   search search search";
+    align-items: center;
+    column-gap: 12px;
+    row-gap: 14px;
+    padding: 8px 16px;
+  }
+  .pva-menu-toggle { display: flex; grid-area: toggle; }
+  .pva-logo { grid-area: logo; }
+  .pva-actions { grid-area: actions; gap: 16px; }
+  .pva-categories { grid-area: cats; }
+  .pva-search { grid-area: search; }
+  .pva-logo img { height: 32px; }
+  .pva-categories-btn { padding: 0; }
+  .pva-categories-btn svg.icon-chevron { display: none; }
+  .pva-search-pill { height: 40px; }
+  .pva-search-input { padding: 0 16px 0 40px; font-size: 14px; }
+  .pva-signin span:not(.pva-signin-avatar) { display: none; }
+  .pva-panel { width: 88vw; right: -60px; }
+  .pva-row2 { display: none; }
+}
