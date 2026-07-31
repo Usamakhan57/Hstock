@@ -17,7 +17,7 @@ const SellerSidebar = ({ open, closing, onClose, seller, walletBalance, notifica
     { label: 'Dashboard', to: '/seller/dashboard', icon: LayoutDashboard },
     { label: 'Products', to: '/seller/products', icon: Package },
     { label: 'Orders', to: '/seller/orders', icon: ShoppingCart },
-    { label: 'Disputes', to: '/seller/escrow', icon: ShieldCheck },
+    { label: 'Disputes', to: '/seller/messages', icon: ShieldCheck },
     { label: 'Withdrawals', to: '/seller/earnings', icon: Wallet },
     { label: 'Referral & Rewards', to: '/seller/notifications', icon: Bell },
     { label: 'Settings', to: '/seller/settings', icon: Settings },
@@ -42,7 +42,7 @@ const SellerSidebar = ({ open, closing, onClose, seller, walletBalance, notifica
 
       if (event.key !== 'Tab' || !panelRef.current) return;
 
-      const focusable = panelRef.current.querySelectorAll<HTMLElement>('a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])');
+      const focusable = panelRef.current.querySelectorAll('a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])');
       if (!focusable.length) {
         event.preventDefault();
         return;

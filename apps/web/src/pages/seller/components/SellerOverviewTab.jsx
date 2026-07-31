@@ -76,20 +76,24 @@ const SellerOverviewTab = ({ products, orders, reviews, salesChart, bestSelling,
             <Link to="/seller/orders" className="text-xs font-semibold text-primary">View all</Link>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <tbody className="divide-y divide-border">
-                {recentOrders.map((o) => (
-                  <tr key={o.id}>
-                    <td className="px-5 py-3">
-                      <p className="font-medium">{o.product}</p>
-                      <p className="text-xs text-muted-foreground">{o.customer} · {fmtDate(o.date)}</p>
-                    </td>
-                    <td className="px-5 py-3 text-right font-semibold">${o.amount.toFixed(2)}</td>
-                    <td className="px-5 py-3 text-right"><StatusBadge status={o.status} /></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            {recentOrders.length === 0 ? (
+              <p className="px-5 py-8 text-sm text-muted-foreground">No orders yet.</p>
+            ) : (
+              <table className="w-full text-sm">
+                <tbody className="divide-y divide-border">
+                  {recentOrders.map((o) => (
+                    <tr key={o.id}>
+                      <td className="px-5 py-3">
+                        <p className="font-medium">{o.product}</p>
+                        <p className="text-xs text-muted-foreground">{o.customer} · {fmtDate(o.date)}</p>
+                      </td>
+                      <td className="px-5 py-3 text-right font-semibold">${Number(o.amount || 0).toFixed(2)}</td>
+                      <td className="px-5 py-3 text-right"><StatusBadge status={o.status} /></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
         </div>
 
@@ -98,17 +102,21 @@ const SellerOverviewTab = ({ products, orders, reviews, salesChart, bestSelling,
             <h3 className="font-bold">Latest reviews</h3>
             <Link to="/seller/reviews" className="text-xs font-semibold text-primary">View all</Link>
           </div>
-          <ul className="space-y-4">
-            {latestReviews.map((r) => (
-              <li key={r.id}>
-                <div className="flex items-center justify-between gap-2">
-                  <span className="min-w-0 flex-1 truncate text-sm font-medium">{r.product}</span>
-                  <RatingStars value={r.rating} />
-                </div>
-                <p className="mt-1 text-sm text-muted-foreground">"{r.text}"</p>
-              </li>
-            ))}
-          </ul>
+          {latestReviews.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No reviews yet. Reviews will appear here when buyers leave feedback.</p>
+          ) : (
+            <ul className="space-y-4">
+              {latestReviews.map((r) => (
+                <li key={r.id}>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="min-w-0 flex-1 truncate text-sm font-medium">{r.product}</span>
+                    <RatingStars value={r.rating} />
+                  </div>
+                  <p className="mt-1 text-sm text-muted-foreground">"{r.text}"</p>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       </div>
     </div>

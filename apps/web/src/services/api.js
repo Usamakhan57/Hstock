@@ -9,6 +9,8 @@ import { paymentsApi } from './paymentsApi';
 import { walletApi } from './walletApi';
 import { withdrawalsApi } from './withdrawalsApi';
 import { escrowApi } from './escrowApi';
+import { disputesApi } from './disputesApi';
+import { sellerProductsApi } from './sellerProductsApi';
 
 export {
   productsApi,
@@ -19,6 +21,8 @@ export {
   walletApi,
   withdrawalsApi,
   escrowApi,
+  disputesApi,
+  sellerProductsApi,
 };
 
 export const newsletterApi = {
@@ -37,5 +41,7 @@ export default {
   walletApi,
   withdrawalsApi,
   escrowApi,
+  disputesApi,
+  sellerProductsApi,
   newsletterApi,
 };

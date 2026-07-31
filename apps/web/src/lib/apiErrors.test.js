@@ -6,6 +6,7 @@ describe('apiErrors', () => {
     expect(messageForStatus(401)).toMatch(/sign in/i);
     expect(messageForStatus(403)).toMatch(/permission/i);
     expect(messageForStatus(404)).toMatch(/not found/i);
+    expect(messageForStatus(409)).toMatch(/conflict/i);
     expect(messageForStatus(422)).toMatch(/form/i);
     expect(messageForStatus(429)).toMatch(/too many/i);
     expect(messageForStatus(500)).toMatch(/wrong/i);

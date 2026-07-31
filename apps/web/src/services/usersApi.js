@@ -20,6 +20,13 @@ export const usersApi = {
   changePassword({ currentPassword, newPassword }) {
     return post('/users/me/change-password', { currentPassword, newPassword }).then(({ data }) => data);
   },
+
+  activity({ page = 1, limit = 30 } = {}) {
+    return get('/users/me/activity', { params: { page, limit } }).then(({ data, meta }) => ({
+      items: Array.isArray(data) ? data : [],
+      meta,
+    }));
+  },
 };
 
 export default usersApi;

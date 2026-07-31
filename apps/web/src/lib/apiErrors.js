@@ -26,6 +26,8 @@ export function messageForStatus(status, fallback) {
       return 'You do not have permission to perform this action.';
     case 404:
       return 'The requested resource was not found.';
+    case 409:
+      return 'This action conflicts with the current state. Refresh and try again.';
     case 422:
       return 'Please check the form and try again.';
     case 429:

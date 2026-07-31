@@ -54,6 +54,10 @@ import InvoicesPage from '../../pages/account/InvoicesPage';
 import CouponsPage from '../../pages/account/CouponsPage';
 import FollowingPage from '../../pages/account/FollowingPage';
 import BrowsingHistoryPage from '../../pages/account/BrowsingHistoryPage';
+import DisputesPage from '../../pages/account/DisputesPage';
+import DisputeDetailPage from '../../pages/account/DisputeDetailPage';
+import OpenDisputePage from '../../pages/account/OpenDisputePage';
+import SellerDisputeDetail from '../../pages/seller/components/SellerDisputeDetail';
 
 /**
  * Returns an array of <Route> elements for the storefront.
@@ -95,6 +99,9 @@ export function storefrontRoutes() {
       <Route path="/dashboard" element={<RequireCustomerAuth><DashboardPage /></RequireCustomerAuth>} />
       <Route path="/orders" element={<RequireCustomerAuth><AccountOrdersPage /></RequireCustomerAuth>} />
       <Route path="/orders/:id" element={<RequireCustomerAuth><AccountOrderDetailPage /></RequireCustomerAuth>} />
+      <Route path="/orders/:orderId/dispute" element={<RequireCustomerAuth><OpenDisputePage /></RequireCustomerAuth>} />
+      <Route path="/disputes" element={<RequireCustomerAuth><DisputesPage /></RequireCustomerAuth>} />
+      <Route path="/disputes/:id" element={<RequireCustomerAuth><DisputeDetailPage /></RequireCustomerAuth>} />
       <Route path="/wallet" element={<RequireCustomerAuth><AccountWalletPage /></RequireCustomerAuth>} />
       <Route path="/downloads" element={<RequireCustomerAuth><AccountDownloadsPage /></RequireCustomerAuth>} />
       <Route path="/settings" element={<RequireCustomerAuth><AccountSettingsPage /></RequireCustomerAuth>} />
@@ -126,6 +133,8 @@ export function storefrontRoutes() {
       <Route path="/seller/earnings" element={<RequireSellerAuth><SellerDashboard /></RequireSellerAuth>} />
       <Route path="/seller/analytics" element={<RequireSellerAuth><SellerDashboard /></RequireSellerAuth>} />
       <Route path="/seller/messages" element={<RequireSellerAuth><SellerDashboard /></RequireSellerAuth>} />
+      <Route path="/seller/disputes" element={<RequireSellerAuth><SellerDashboard /></RequireSellerAuth>} />
+      <Route path="/seller/disputes/:id" element={<RequireSellerAuth><SellerDisputeDetail /></RequireSellerAuth>} />
       <Route path="/seller/reviews" element={<RequireSellerAuth><SellerDashboard /></RequireSellerAuth>} />
       <Route path="/seller/notifications" element={<RequireSellerAuth><SellerDashboard /></RequireSellerAuth>} />
       <Route path="/seller/store" element={<RequireSellerAuth><SellerDashboard /></RequireSellerAuth>} />
