@@ -12,7 +12,13 @@ import { env } from '../config/env.js';
 
 async function seedAdmin() {
   const email = process.env.SEED_ADMIN_EMAIL || 'admin@hstock.store';
-  const password = process.env.SEED_ADMIN_PASSWORD || 'Admin123!ChangeMe';
+  const password = process.env.SEED_ADMIN_PASSWORD;
+
+  if (!password || password.length < 8) {
+    throw new Error(
+      'SEED_ADMIN_PASSWORD is required (min 8 chars). No default password is hardcoded.',
+    );
+  }
 
   let user = await User.findOne({ email });
   if (!user) {

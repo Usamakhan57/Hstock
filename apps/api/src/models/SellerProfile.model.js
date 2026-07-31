@@ -65,6 +65,8 @@ const sellerProfileSchema = new mongoose.Schema(
       lowercase: true,
       trim: true,
       default: null,
+      sparse: true,
+      unique: true,
     },
     phone: {
       type: String,
