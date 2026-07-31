@@ -1,6 +1,6 @@
-import hstockLogo from './assets/hstock-logo.png';
+import apnaStoreLogo from './assets/apnastore-logo.png';
 
-export const LOGO = hstockLogo;
+export const LOGO = apnaStoreLogo;
 
 // Turns a category name into a URL-safe slug, e.g. "T-Shirt Design" -> "t-shirt-design"
 export const slugify = (name) =>

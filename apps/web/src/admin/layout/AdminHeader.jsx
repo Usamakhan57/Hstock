@@ -5,7 +5,7 @@ import { Sheet, SheetContent, SheetTitle } from '../../components/ui/sheet';
 import { AdminSidebarContent } from './AdminSidebar';
 import { adminNavSections } from './nav';
 import './pva-header.css';
-import logo from '../assets/hstock-icon.png';
+import logo from '../assets/apnastore-icon.png';
 import { useAdminAuth } from '../AdminAuthContext';
 import {
   getNotifications,

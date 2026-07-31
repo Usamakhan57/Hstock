@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, ShieldCheck } from 'lucide-react';
 import { useAdminAuth } from '../AdminAuthContext';
-import logo from '../assets/hstock-logo.png';
+import logo from '../assets/apnastore-logo.png';
 
 const AdminLoginPage = () => {
   const { login, isAuthenticated } = useAdminAuth();
