@@ -130,10 +130,36 @@ export const reviewFlaggedAttachment = asyncHandler(async (req, res) => {
   });
 });
 
+export const sendCredentials = asyncHandler(async (req, res) => {
+  const data = await disputeChatService.sendCredentials(
+    req.params.id,
+    req.body,
+    req.user,
+    requestMeta(req),
+  );
+  return sendSuccess(res, {
+    statusCode: 201,
+    message: 'Credentials shared securely',
+    data,
+  });
+});
+
+export const revealCredentials = asyncHandler(async (req, res) => {
+  const data = await disputeChatService.revealCredentials(
+    req.params.id,
+    req.params.messageId,
+    req.user,
+    requestMeta(req),
+  );
+  return sendSuccess(res, { message: 'Credentials revealed', data });
+});
+
 export default {
   getChat,
   listMessages,
   sendMessage,
+  sendCredentials,
+  revealCredentials,
   editMessage,
   deleteMessage,
   assignAdmin,

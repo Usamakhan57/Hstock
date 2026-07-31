@@ -14,6 +14,7 @@ import {
 export const buyNowSchema = {
   body: z.object({
     productId: objectIdSchema,
+    quantity: z.number().int().min(1).max(500).optional(),
     toCurrency: z.string().trim().min(2).max(20).optional(),
     network: z.string().trim().min(2).max(30).optional(),
     urlReturn: z.string().url().optional(),
@@ -126,6 +127,83 @@ export const openDisputeSchema = {
     reason: z.string().trim().min(3).max(500),
     description: z.string().trim().min(10).max(10000),
     evidence: z.array(z.string().url()).max(20).optional(),
+    disputedQuantity: z.number().int().min(1).max(500).optional(),
+    disputedAccountIds: z.array(objectIdSchema).max(500).optional(),
+  }),
+};
+
+const sensitiveCredentialsSchema = z.object({
+  username: z.string().trim().max(200).optional(),
+  email: z.string().trim().max(320).optional(),
+  password: z.string().max(500).optional(),
+  otp: z.string().trim().max(100).optional(),
+  recoveryCode: z.string().trim().max(500).optional(),
+  backupCode: z.string().trim().max(500).optional(),
+  twoFactorRecoveryCode: z.string().trim().max(500).optional(),
+  secretKey: z.string().trim().max(500).optional(),
+  licenseKey: z.string().trim().max(500).optional(),
+  apiKey: z.string().trim().max(500).optional(),
+  recoveryEmail: z.string().trim().max(320).optional(),
+  recoveryPhone: z.string().trim().max(40).optional(),
+}).strict();
+
+export const sendChatCredentialsSchema = {
+  params: z.object({ id: objectIdSchema }),
+  body: z.object({
+    body: z.string().trim().min(1).max(5000).optional().default('Shared secure credentials'),
+    credentials: sensitiveCredentialsSchema.refine(
+      (obj) => Object.keys(obj).length > 0,
+      { message: 'At least one credential field is required' },
+    ),
+  }),
+};
+
+export const revealCredentialsSchema = {
+  params: z.object({
+    id: objectIdSchema,
+    messageId: objectIdSchema,
+  }),
+};
+
+export const sendReplacementSchema = {
+  params: z.object({ id: objectIdSchema }),
+  body: z.object({
+    notes: z.string().trim().max(5000).optional(),
+    accounts: z.array(z.object({
+      accountIdentifier: z.string().trim().min(1).max(200),
+      notes: z.string().trim().max(2000).optional(),
+      username: z.string().trim().max(200).optional(),
+      email: z.string().trim().max(320).optional(),
+      password: z.string().max(500).optional(),
+      recoveryEmail: z.string().trim().max(320).optional(),
+      recoveryPhone: z.string().trim().max(40).optional(),
+      otp: z.string().trim().max(100).optional(),
+      recoveryCode: z.string().trim().max(500).optional(),
+      backupCode: z.string().trim().max(500).optional(),
+      twoFactorRecoveryCode: z.string().trim().max(500).optional(),
+      secretKey: z.string().trim().max(500).optional(),
+      licenseKey: z.string().trim().max(500).optional(),
+      apiKey: z.string().trim().max(500).optional(),
+    }).strict()).min(1).max(100),
+  }),
+};
+
+export const respondReplacementSchema = {
+  params: z.object({
+    id: objectIdSchema,
+    replacementId: objectIdSchema,
+  }),
+  body: z.object({
+    decision: z.enum(['accepted', 'rejected']),
+    note: z.string().trim().max(5000).optional(),
+  }),
+};
+
+export const revealReplacementCredentialsSchema = {
+  params: z.object({
+    id: objectIdSchema,
+    replacementId: objectIdSchema,
+    accountId: objectIdSchema,
   }),
 };
 
@@ -287,6 +365,11 @@ export default {
   listDisputeChatViolationsSchema,
   listFlaggedAttachmentsSchema,
   reviewFlaggedAttachmentSchema,
+  sendChatCredentialsSchema,
+  revealCredentialsSchema,
+  sendReplacementSchema,
+  respondReplacementSchema,
+  revealReplacementCredentialsSchema,
   resolveDisputeSchema,
   createRefundSchema,
   listRefundsSchema,

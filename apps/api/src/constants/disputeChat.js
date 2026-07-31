@@ -1,5 +1,6 @@
 export const DISPUTE_CHAT_STATUS = Object.freeze({
   OPEN: 'open',
+  READ_ONLY: 'read_only',
   CLOSED: 'closed',
 });
 
@@ -36,6 +37,10 @@ export const DISPUTE_CHAT_AUDIT_ACTIONS = Object.freeze({
   ATTACHMENT_REJECTED: 'attachment_rejected',
   ATTACHMENT_FLAGGED: 'attachment_flagged',
   ATTACHMENT_REVIEWED: 'attachment_reviewed',
+  CREDENTIAL_SHARED: 'credential_shared',
+  CREDENTIAL_REVEALED: 'credential_revealed',
+  CREDENTIAL_EXPIRED: 'credential_expired',
+  REPLACEMENT_SENT: 'replacement_sent',
 });
 
 /** Image types eligible for OCR evidence scanning. */

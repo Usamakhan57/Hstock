@@ -9,7 +9,9 @@ export const openDispute = asyncHandler(async (req, res) => {
   });
   return sendSuccess(res, {
     statusCode: 201,
-    message: 'Dispute opened — escrow frozen',
+    message: data.isPartial
+      ? 'Partial dispute opened — only disputed quantity held in escrow'
+      : 'Dispute opened — escrow frozen',
     data,
   });
 });

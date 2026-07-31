@@ -2,12 +2,17 @@ import { AppError } from '../utils/AppError.js';
 import { withTransaction } from '../utils/transaction.js';
 import { roundMoney } from '../helpers/money.helper.js';
 import { generateDisputeNumber } from '../helpers/id.helper.js';
+import { env } from '../config/env.js';
 import {
   DISPUTE_STATUS,
   DISPUTE_RESOLUTION,
   ORDER_STATUS,
   ESCROW_STATUS,
 } from '../constants/statuses.js';
+import {
+  DISPUTE_TIMELINE_EVENTS,
+  ORDER_ACCOUNT_STATUS,
+} from '../constants/disputeFinal.js';
 import * as disputeRepository from '../repositories/dispute.repository.js';
 import * as orderRepository from '../repositories/order.repository.js';
 import * as escrowRepository from '../repositories/escrow.repository.js';
@@ -21,8 +26,16 @@ import {
   CONTACT_FILTER_MESSAGE,
 } from '../constants/disputeChat.js';
 import { detectBlockedContent } from '../helpers/contentFilter.helper.js';
-import { DisputeChatMessage } from '../models/index.js';
+import {
+  Dispute,
+  DisputeChatMessage,
+  DisputeChatViolation,
+  DisputeReplacement,
+  Escrow,
+  Order,
+} from '../models/index.js';
 import * as disputeChatService from './disputeChat.service.js';
+import * as disputeTimelineService from './disputeTimeline.service.js';
 
 function isAdmin(actor) {
   return actor?.roles?.some((r) => [
@@ -32,9 +45,14 @@ function isAdmin(actor) {
   ].includes(r));
 }
 
+function isSuperAdmin(actor) {
+  return actor?.roles?.includes(USER_ROLES.SUPER_ADMIN);
+}
+
 /**
- * Buyer opens a dispute — freezes escrow (no auto-release)
- * and auto-creates a private secure dispute chat.
+ * Buyer opens a dispute — supports partial quantity.
+ * Only disputed amount is held; undisputed continues normal escrow flow.
+ * Auto-creates private secure dispute chat.
  */
 export async function openDispute(payload, actor, requestMeta = {}) {
   const contactScan = detectBlockedContent(
@@ -82,6 +100,49 @@ export async function openDispute(payload, actor, requestMeta = {}) {
       throw new AppError('Escrow is already closed', 400, { code: 'ESCROW_CLOSED' });
     }
 
+    const orderQuantity = order.quantity || 1;
+    let disputedAccountIds = payload.disputedAccountIds || [];
+    let disputedQuantity = payload.disputedQuantity;
+
+    if (disputedAccountIds.length) {
+      const validIds = new Set((order.accounts || []).map((a) => String(a._id)));
+      for (const id of disputedAccountIds) {
+        if (!validIds.has(String(id))) {
+          throw new AppError('Invalid disputed account id', 400, {
+            code: 'INVALID_ACCOUNT_ID',
+          });
+        }
+      }
+      disputedQuantity = disputedAccountIds.length;
+    }
+
+    if (!disputedQuantity) disputedQuantity = orderQuantity;
+    disputedQuantity = Number(disputedQuantity);
+
+    if (!(disputedQuantity >= 1) || disputedQuantity > orderQuantity) {
+      throw new AppError('Invalid disputed quantity', 400, {
+        code: 'INVALID_DISPUTED_QUANTITY',
+        details: { orderQuantity, disputedQuantity },
+      });
+    }
+
+    const isPartial = disputedQuantity < orderQuantity;
+    const unitPrice = roundMoney(order.unitPrice);
+    const disputedAmount = roundMoney(unitPrice * disputedQuantity);
+    const expireAt = new Date(
+      Date.now() + (env.DISPUTE_CREDENTIAL_TTL_DAYS || 30) * 24 * 60 * 60 * 1000,
+    );
+
+    if (disputedAccountIds.length && order.accounts?.length) {
+      for (const account of order.accounts) {
+        if (disputedAccountIds.some((id) => String(id) === String(account._id))) {
+          account.status = ORDER_ACCOUNT_STATUS.DISPUTED;
+        }
+      }
+      if (session) await order.save({ session });
+      else await order.save();
+    }
+
     const dispute = await disputeRepository.createDispute(
       {
         disputeNumber: generateDisputeNumber(),
@@ -94,6 +155,19 @@ export async function openDispute(payload, actor, requestMeta = {}) {
         description: payload.description,
         evidence: payload.evidence || [],
         status: DISPUTE_STATUS.OPEN,
+        orderQuantity,
+        disputedQuantity,
+        resolvedQuantity: 0,
+        replacementQuantity: 0,
+        refundQuantity: 0,
+        releasedQuantity: 0,
+        heldQuantity: disputedQuantity,
+        remainingQuantity: disputedQuantity,
+        unitPrice,
+        disputedAmount,
+        disputedAccountIds,
+        isPartial,
+        credentialsExpireAt: expireAt,
         messages: [
           {
             author: actor.id,
@@ -111,8 +185,10 @@ export async function openDispute(payload, actor, requestMeta = {}) {
       actor,
       requestMeta,
     });
+    chat.credentialsExpireAt = expireAt;
+    if (session) await chat.save({ session });
+    else await chat.save();
 
-    // Seed buyer's opening statement into the secure chat (already filtered above)
     const opening = {
       chat: chat._id,
       dispute: dispute._id,
@@ -120,7 +196,11 @@ export async function openDispute(payload, actor, requestMeta = {}) {
       author: actor.id,
       role: 'buyer',
       body: payload.description,
-      attachments: (payload.evidence || []).map((url) => ({ url, filename: null, extension: null })),
+      attachments: (payload.evidence || []).map((url) => ({
+        url,
+        filename: null,
+        extension: null,
+      })),
     };
     if (session) await DisputeChatMessage.create([opening], { session });
     else await DisputeChatMessage.create(opening);
@@ -134,12 +214,58 @@ export async function openDispute(payload, actor, requestMeta = {}) {
     if (session) await dispute.save({ session });
     else await dispute.save();
 
-    await escrowService.markEscrowDisputed(escrow._id, dispute._id, session);
+    await escrowService.markEscrowDisputed(escrow._id, dispute._id, session, {
+      disputedAmount,
+      isPartial,
+    });
 
     order.status = ORDER_STATUS.DISPUTED;
     order.dispute = dispute._id;
     if (session) await order.save({ session });
     else await order.save();
+
+    await disputeTimelineService.appendTimelineEvent({
+      disputeId: dispute._id,
+      orderId: order._id,
+      event: DISPUTE_TIMELINE_EVENTS.DISPUTE_CREATED,
+      actor,
+      role: 'buyer',
+      message: 'Dispute opened',
+      meta: { reason: payload.reason, isPartial },
+      session,
+    });
+    await disputeTimelineService.appendTimelineEvent({
+      disputeId: dispute._id,
+      orderId: order._id,
+      event: DISPUTE_TIMELINE_EVENTS.QUANTITY_SELECTED,
+      actor,
+      role: 'buyer',
+      message: `Disputed quantity ${disputedQuantity} of ${orderQuantity}`,
+      meta: { disputedQuantity, orderQuantity, disputedAmount },
+      session,
+    });
+    await disputeTimelineService.appendTimelineEvent({
+      disputeId: dispute._id,
+      orderId: order._id,
+      event: DISPUTE_TIMELINE_EVENTS.CHAT_STARTED,
+      actor,
+      role: 'system',
+      message: 'Secure dispute chat created',
+      meta: { chatId: chat._id },
+      session,
+    });
+    if (payload.evidence?.length) {
+      await disputeTimelineService.appendTimelineEvent({
+        disputeId: dispute._id,
+        orderId: order._id,
+        event: DISPUTE_TIMELINE_EVENTS.EVIDENCE_UPLOADED,
+        actor,
+        role: 'buyer',
+        message: 'Initial evidence attached',
+        meta: { count: payload.evidence.length },
+        session,
+      });
+    }
 
     await logActivity({
       userId: actor.id,
@@ -148,7 +274,14 @@ export async function openDispute(payload, actor, requestMeta = {}) {
       resourceId: dispute._id,
       ip: requestMeta.ip,
       userAgent: requestMeta.userAgent,
-      meta: { orderId: order._id, reason: payload.reason, chatId: chat._id },
+      meta: {
+        orderId: order._id,
+        reason: payload.reason,
+        chatId: chat._id,
+        disputedQuantity,
+        disputedAmount,
+        isPartial,
+      },
       session,
     });
 
@@ -194,10 +327,75 @@ export async function getDispute(id, actor) {
 }
 
 /**
+ * Admin dashboard payload for a dispute.
+ */
+export async function getDisputeDashboard(id, actor) {
+  if (!isAdmin(actor) && !isSuperAdmin(actor)) {
+    // buyer/seller can view summary for their dispute
+    const dispute = await getDispute(id, actor);
+    return buildDashboard(dispute);
+  }
+  const dispute = await Dispute.findById(id).lean();
+  if (!dispute) throw new AppError('Dispute not found', 404, { code: 'DISPUTE_NOT_FOUND' });
+  return buildDashboard(dispute);
+}
+
+async function buildDashboard(dispute) {
+  const [escrow, order, replacements, violation, timeline] = await Promise.all([
+    Escrow.findById(dispute.escrow).lean(),
+    Order.findById(dispute.order).lean(),
+    DisputeReplacement.find({ dispute: dispute._id }).sort({ version: 1 }).lean(),
+    DisputeChatViolation.findOne({ user: dispute.buyer }).lean(),
+    disputeTimelineService.listTimeline(dispute._id),
+  ]);
+
+  return {
+    disputeId: dispute._id,
+    disputeNumber: dispute.disputeNumber,
+    status: dispute.status,
+    isPartial: dispute.isPartial,
+    orderQuantity: dispute.orderQuantity,
+    disputedQuantity: dispute.disputedQuantity,
+    resolvedQuantity: dispute.resolvedQuantity,
+    replacementQuantity: dispute.replacementQuantity,
+    refundQuantity: dispute.refundQuantity,
+    releasedQuantity: dispute.releasedQuantity,
+    heldQuantity: dispute.heldQuantity,
+    remainingQuantity: dispute.remainingQuantity,
+    unitPrice: dispute.unitPrice,
+    disputedAmount: dispute.disputedAmount,
+    amounts: {
+      orderTotal: order?.totalAmount ?? null,
+      disputed: dispute.disputedAmount,
+      held: escrow?.heldAmount ?? dispute.disputedAmount,
+      released: escrow?.releasedAmount ?? 0,
+      refunded: escrow?.refundedAmount ?? dispute.refundAmount ?? 0,
+      undisputed: escrow?.undisputedAmount ?? 0,
+    },
+    ocrFlagCount: dispute.ocrFlagCount || 0,
+    violationCount: violation?.count || dispute.violationCountSnapshot || 0,
+    replacementHistory: replacements.map((r) => ({
+      id: r._id,
+      version: r.version,
+      status: r.status,
+      accountCount: r.accountCount,
+      createdAt: r.createdAt,
+      respondedAt: r.respondedAt,
+    })),
+    timeline,
+    assignedAdmin: dispute.assignedAdmin,
+  };
+}
+
+export async function getDisputeTimeline(id, actor) {
+  await getDispute(id, actor);
+  return disputeTimelineService.listTimeline(id);
+}
+
+/**
  * Backward-compatible message endpoint — routes through secure dispute chat filter.
  */
 export async function addDisputeMessage(id, payload, actor, requestMeta = {}) {
-  // Staff must be assigned before posting (except buyer/seller participants)
   const chat = await disputeChatService.getChatByDisputeId(id);
   if (!chat) {
     throw new AppError('Dispute chat not found', 404, { code: 'CHAT_NOT_FOUND' });
@@ -208,7 +406,6 @@ export async function addDisputeMessage(id, payload, actor, requestMeta = {}) {
     const isAssigned = chat.assignedAdmin && String(chat.assignedAdmin) === actorId;
     const isSuper = actor.roles?.includes(USER_ROLES.SUPER_ADMIN);
     if (!isAssigned && !isSuper) {
-      // Auto-assign on first admin message for operational continuity
       await disputeChatService.assignAdmin(id, actor, requestMeta);
     }
   }
@@ -219,10 +416,7 @@ export async function addDisputeMessage(id, payload, actor, requestMeta = {}) {
 }
 
 /**
- * Admin resolves dispute:
- * - seller_wins / release → release escrow to seller
- * - buyer_wins → full escrow refund
- * - partial_refund → refund amount, release remainder to seller
+ * Admin resolves dispute (full or partial refund / seller wins).
  */
 export async function resolveDispute(id, payload, actor) {
   if (!actor?.roles?.some((r) => [USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN].includes(r))) {
@@ -252,36 +446,74 @@ export async function resolveDispute(id, payload, actor) {
     let refundAmount = null;
 
     if (resolution === DISPUTE_RESOLUTION.SELLER_WINS || resolution === DISPUTE_RESOLUTION.RELEASE) {
-      // Clear dispute block then force release
-      escrow.dispute = dispute._id;
-      escrow.status = ESCROW_STATUS.LOCKED;
-      if (session) await escrow.save({ session });
-      else await escrow.save();
-
-      await escrowService.releaseEscrow(escrow._id, {
+      await escrowService.releaseDisputedEscrowPortion(escrow._id, {
         reason: `dispute_${resolution}`,
         actor,
         session,
-        force: true,
-      });
-    } else if (resolution === DISPUTE_RESOLUTION.BUYER_WINS) {
-      refundAmount = escrow.amount;
-      await refundService.createEscrowRefund({
-        order,
-        escrow,
         dispute,
-        amount: refundAmount,
-        type: 'full',
-        reason: payload.note || 'Dispute resolved — buyer wins',
+      });
+      dispute.releasedQuantity = dispute.disputedQuantity;
+      dispute.heldQuantity = 0;
+      dispute.remainingQuantity = 0;
+      dispute.resolvedQuantity = dispute.disputedQuantity;
+    } else if (resolution === DISPUTE_RESOLUTION.BUYER_WINS) {
+      // Release any undisputed portion to seller first — never refund unaffected accounts.
+      await escrowService.releaseUndisputedEscrowPortion(escrow._id, {
+        reason: 'undisputed_on_buyer_wins',
         actor,
         session,
       });
+      const heldEscrow = await escrowRepository.findEscrowById(dispute.escrow, { session });
+
+      refundAmount = roundMoney(
+        heldEscrow.heldAmount || dispute.disputedAmount || heldEscrow.amount,
+      );
+      const refundType = refundAmount >= roundMoney(heldEscrow.amount)
+        && !(heldEscrow.releasedAmount > 0)
+        ? 'full'
+        : 'partial';
+      await refundService.createEscrowRefund({
+        order,
+        escrow: heldEscrow,
+        dispute,
+        amount: refundAmount,
+        type: refundType,
+        reason: payload.note || 'Dispute resolved — buyer wins (disputed portion)',
+        actor,
+        session,
+      });
+      heldEscrow.refundedAmount = roundMoney((heldEscrow.refundedAmount || 0) + refundAmount);
+      heldEscrow.heldAmount = 0;
+      heldEscrow.disputedAmount = 0;
+      if (refundType === 'full') {
+        heldEscrow.status = ESCROW_STATUS.REFUNDED;
+        heldEscrow.refundedAt = new Date();
+        order.status = ORDER_STATUS.REFUNDED;
+      } else {
+        heldEscrow.status = ESCROW_STATUS.RELEASED;
+        heldEscrow.releasedAt = new Date();
+        order.status = ORDER_STATUS.COMPLETED;
+      }
+      if (session) {
+        await heldEscrow.save({ session });
+        await order.save({ session });
+      } else {
+        await heldEscrow.save();
+        await order.save();
+      }
+
+      dispute.refundQuantity = dispute.disputedQuantity;
+      dispute.refundAmount = refundAmount;
+      dispute.heldQuantity = 0;
+      dispute.remainingQuantity = 0;
+      dispute.resolvedQuantity = dispute.disputedQuantity;
     } else if (resolution === DISPUTE_RESOLUTION.PARTIAL_REFUND) {
       refundAmount = roundMoney(payload.refundAmount);
-      const originalEscrowAmount = escrow.amount;
-      if (!(refundAmount > 0) || refundAmount >= originalEscrowAmount) {
-        throw new AppError('Partial refund amount must be > 0 and < escrow amount', 400, {
+      const maxRefund = roundMoney(escrow.heldAmount || dispute.disputedAmount);
+      if (!(refundAmount > 0) || refundAmount > maxRefund) {
+        throw new AppError('Partial refund must be > 0 and <= disputed held amount', 400, {
           code: 'INVALID_REFUND_AMOUNT',
+          details: { maxRefund },
         });
       }
 
@@ -291,38 +523,45 @@ export async function resolveDispute(id, payload, actor) {
         dispute,
         amount: refundAmount,
         type: 'partial',
-        reason: payload.note || 'Dispute resolved — partial refund',
+        reason: payload.note || 'Dispute resolved — partial refund of disputed items',
         actor,
         session,
       });
 
-      const updatedEscrow = await escrowRepository.findEscrowById(dispute.escrow, { session });
-      const remainder = roundMoney(updatedEscrow.amount);
-      if (remainder > 0) {
-        updatedEscrow.commissionAmount = roundMoney(
-          (remainder * updatedEscrow.commissionPercent) / 100,
-        );
-        updatedEscrow.sellerAmount = roundMoney(
-          remainder - updatedEscrow.commissionAmount,
-        );
-        updatedEscrow.status = ESCROW_STATUS.LOCKED;
-        updatedEscrow.dispute = null;
-        if (session) await updatedEscrow.save({ session });
-        else await updatedEscrow.save();
+      const remainderHeld = roundMoney(maxRefund - refundAmount);
+      escrow.refundedAmount = roundMoney((escrow.refundedAmount || 0) + refundAmount);
+      escrow.heldAmount = remainderHeld;
+      escrow.disputedAmount = remainderHeld;
+      if (session) await escrow.save({ session });
+      else await escrow.save();
 
-        await escrowService.releaseEscrow(updatedEscrow._id, {
-          reason: 'dispute_partial_refund_remainder',
+      if (remainderHeld > 0) {
+        await escrowService.releaseDisputedEscrowPortion(escrow._id, {
+          reason: 'dispute_partial_refund_remainder_to_seller',
           actor,
           session,
-          force: true,
+          dispute,
         });
       }
+
+      const refundQty = Math.max(
+        1,
+        Math.min(
+          dispute.disputedQuantity,
+          Math.round(refundAmount / (dispute.unitPrice || refundAmount)),
+        ),
+      );
+      dispute.refundQuantity = refundQty;
+      dispute.refundAmount = refundAmount;
+      dispute.releasedQuantity = Math.max(0, dispute.disputedQuantity - refundQty);
+      dispute.heldQuantity = 0;
+      dispute.remainingQuantity = 0;
+      dispute.resolvedQuantity = dispute.disputedQuantity;
     }
 
     dispute.status = DISPUTE_STATUS.RESOLVED;
     dispute.resolution = resolution;
     dispute.resolutionNote = payload.note || null;
-    dispute.refundAmount = refundAmount;
     dispute.resolvedAt = new Date();
     dispute.resolvedBy = actor.id;
     dispute.messages.push({
@@ -333,7 +572,43 @@ export async function resolveDispute(id, payload, actor) {
     if (session) await dispute.save({ session });
     else await dispute.save();
 
-    await disputeChatService.closeChatForDispute(dispute._id, { session });
+    await disputeChatService.setChatReadOnly(dispute._id, {
+      session,
+      expireCredentials: true,
+    });
+
+    await disputeTimelineService.appendTimelineEvent({
+      disputeId: dispute._id,
+      orderId: dispute.order,
+      event: DISPUTE_TIMELINE_EVENTS.ADMIN_DECISION,
+      actor,
+      role: 'admin',
+      message: `Admin resolved dispute: ${resolution}`,
+      meta: { resolution, refundAmount },
+      session,
+    });
+    if (refundAmount) {
+      await disputeTimelineService.appendTimelineEvent({
+        disputeId: dispute._id,
+        orderId: dispute.order,
+        event: DISPUTE_TIMELINE_EVENTS.REFUND_APPROVED,
+        actor,
+        role: 'admin',
+        message: `Refund approved: ${refundAmount}`,
+        meta: { refundAmount },
+        session,
+      });
+    }
+    await disputeTimelineService.appendTimelineEvent({
+      disputeId: dispute._id,
+      orderId: dispute.order,
+      event: DISPUTE_TIMELINE_EVENTS.DISPUTE_CLOSED,
+      actor,
+      role: 'admin',
+      message: 'Dispute closed',
+      meta: { resolution },
+      session,
+    });
 
     await logActivity({
       userId: actor.id,
@@ -352,6 +627,8 @@ export default {
   openDispute,
   listDisputes,
   getDispute,
+  getDisputeDashboard,
+  getDisputeTimeline,
   addDisputeMessage,
   resolveDispute,
 };

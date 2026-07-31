@@ -88,6 +88,15 @@ const disputeChatSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    readOnlyAt: {
+      type: Date,
+      default: null,
+    },
+    credentialsExpireAt: {
+      type: Date,
+      default: null,
+      index: true,
+    },
   },
   { timestamps: true },
 );

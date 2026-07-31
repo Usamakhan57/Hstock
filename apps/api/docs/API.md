@@ -99,15 +99,22 @@ Public list + get. Write endpoints require corresponding `*:write` permission (A
 
 See `docs/COMMERCE_CORE.md` for full commerce API surface.
 
-### Secure dispute chat
-
-Auto-created when a buyer opens a dispute. Private to buyer, seller, and assigned admin.
+### Disputes (final system)
 
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
+| POST | `/disputes` | Buyer | Open dispute (`disputedQuantity` / `disputedAccountIds` optional) |
+| GET | `/disputes/:id/dashboard` | Party/Admin | Quantities, amounts, OCR flags, replacements, timeline |
+| GET | `/disputes/:id/timeline` | Party/Admin | Ordered dispute timeline |
+| GET | `/disputes/:id/replacements` | Party | Versioned replacement history |
+| POST | `/disputes/:id/replacements` | Seller | Send replacement account(s) (encrypted) |
+| POST | `/disputes/:id/replacements/:replacementId/respond` | Buyer | `accepted` / `rejected` |
+| POST | `/disputes/:id/replacements/:replacementId/accounts/:accountId/reveal` | Party | Reveal replacement credentials |
 | GET | `/disputes/:id/chat` | Participant | Chat metadata |
-| GET | `/disputes/:id/chat/messages` | Participant | List messages |
+| GET | `/disputes/:id/chat/messages` | Participant | List messages (credentials masked) |
 | POST | `/disputes/:id/chat/messages` | Participant | Send message (content-filtered) |
+| POST | `/disputes/:id/chat/credentials` | Participant | Share encrypted credentials |
+| POST | `/disputes/:id/chat/messages/:messageId/reveal` | Participant | Reveal credentials (audited) |
 | PATCH | `/disputes/:id/chat/messages/:messageId` | Author | Edit message (filtered) |
 | DELETE | `/disputes/:id/chat/messages/:messageId` | Author/Assigned admin | Soft delete |
 | POST | `/disputes/:id/chat/assign` | Admin/Support | Assign moderator |
@@ -117,6 +124,7 @@ Auto-created when a buyer opens a dispute. Private to buyer, seller, and assigne
 | GET | `/disputes/:id/chat/audit` | Assigned admin | Full chat audit trail |
 | GET | `/disputes/violations` | Staff | Violation counters |
 | POST | `/disputes/:id/messages` | Participant | Legacy path (same secure filter) |
+| POST | `/disputes/:id/resolve` | Admin | Resolve (partial escrow/refund aware) |
 
 Blocked **text** contact / off-platform content → **HTTP 400** `CONTACT_INFO_BLOCKED`:
 
@@ -124,7 +132,7 @@ Blocked **text** contact / off-platform content → **HTTP 400** `CONTACT_INFO_B
 
 Evidence **screenshots are never auto-blocked**. OCR may flag them for admin review with a moderator warning badge.
 
-Details: `docs/SECURE_DISPUTE_CHAT.md`.
+Details: `docs/DISPUTE_SYSTEM.md`, `docs/SECURE_DISPUTE_CHAT.md`, `docs/ESCROW_PARTIAL.md`.
 
 ## Roles & permissions
 

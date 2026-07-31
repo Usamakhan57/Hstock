@@ -5,6 +5,7 @@ import {
   DisputeChatBlockedAttempt,
   DisputeChatAuditLog,
   DisputeChatViolation,
+  DisputeReplacement,
 } from '../models/index.js';
 import { AppError } from '../utils/AppError.js';
 import { parsePagination, buildPaginationMeta } from '../utils/pagination.js';
@@ -23,14 +24,22 @@ import {
   DISPUTE_CHAT_STATUS,
   DISPUTE_CHAT_VIOLATION_THRESHOLDS,
 } from '../constants/disputeChat.js';
+import { DISPUTE_TIMELINE_EVENTS } from '../constants/disputeFinal.js';
 import { DISPUTE_STATUS } from '../constants/statuses.js';
+import { env } from '../config/env.js';
 import {
   detectBlockedContent,
   detectOcrSensitiveContent,
   validateChatAttachment,
 } from '../helpers/contentFilter.helper.js';
+import {
+  encryptSensitiveObject,
+  decryptSensitiveObject,
+  redactForLogs,
+} from '../utils/credentials.crypto.js';
 import { logActivity } from './activity.service.js';
 import { extractTextFromImage } from './ocr.service.js';
+import * as disputeTimelineService from './disputeTimeline.service.js';
 
 function isSuperAdmin(actor) {
   return actor?.roles?.includes(USER_ROLES.SUPER_ADMIN);
@@ -295,15 +304,23 @@ function canViewModeratorSignals(chat, actor) {
 
 /**
  * Buyer/seller see images; OCR findings + warning badges are moderator-only.
+ * Encrypted credential blobs are never returned — only masked previews.
  */
 function presentMessageForActor(message, chat, actor) {
   const plain = typeof message.toObject === 'function' ? message.toObject() : { ...message };
+  const base = {
+    ...plain,
+    credentialsEncrypted: undefined,
+    credentials: undefined,
+    credentialsMasked: plain.hasCredentials ? (plain.credentialsMasked || {}) : undefined,
+  };
+
   if (canViewModeratorSignals(chat, actor)) {
-    return plain;
+    return base;
   }
 
   return {
-    ...plain,
+    ...base,
     moderatorWarningBadge: undefined,
     hasFlaggedAttachments: undefined,
     attachments: (plain.attachments || []).map((attachment) => ({
@@ -313,6 +330,18 @@ function presentMessageForActor(message, chat, actor) {
       extension: attachment.extension,
     })),
   };
+}
+
+function assertChatWritable(chat, dispute) {
+  if (!chat) {
+    throw new AppError('Dispute chat not found', 404, { code: 'CHAT_NOT_FOUND' });
+  }
+  if ([DISPUTE_CHAT_STATUS.READ_ONLY, DISPUTE_CHAT_STATUS.CLOSED].includes(chat.status)) {
+    throw new AppError('Dispute chat is read-only', 400, { code: 'CHAT_READ_ONLY' });
+  }
+  if (dispute && [DISPUTE_STATUS.RESOLVED, DISPUTE_STATUS.CLOSED].includes(dispute.status)) {
+    throw new AppError('Dispute is closed', 400, { code: 'DISPUTE_CLOSED' });
+  }
 }
 
 async function recordViolation({
@@ -483,17 +512,11 @@ export async function sendMessage(disputeId, payload, actor, requestMeta = {}) {
   const chat = await DisputeChat.findOne({ dispute: disputeId });
   const role = assertChatAccess(chat, actor);
 
-  if (chat.status === DISPUTE_CHAT_STATUS.CLOSED) {
-    throw new AppError('Dispute chat is closed', 400, { code: 'CHAT_CLOSED' });
-  }
-
   const dispute = await Dispute.findById(chat.dispute);
   if (!dispute) {
     throw new AppError('Dispute not found', 404, { code: 'DISPUTE_NOT_FOUND' });
   }
-  if ([DISPUTE_STATUS.RESOLVED, DISPUTE_STATUS.CLOSED].includes(dispute.status)) {
-    throw new AppError('Dispute is closed', 400, { code: 'DISPUTE_CLOSED' });
-  }
+  assertChatWritable(chat, dispute);
 
   if (role !== DISPUTE_CHAT_ROLES.ADMIN) {
     await assertNotMuted(chat, actor);
@@ -596,6 +619,10 @@ export async function sendMessage(disputeId, payload, actor, requestMeta = {}) {
   });
 
   if (hasFlaggedAttachments) {
+    const flaggedCount = attachments.filter((a) => a.flaggedForReview).length;
+    dispute.ocrFlagCount = (dispute.ocrFlagCount || 0) + flaggedCount;
+    await dispute.save();
+
     await writeAudit({
       chat,
       dispute: chat.dispute,
@@ -611,6 +638,42 @@ export async function sendMessage(disputeId, payload, actor, requestMeta = {}) {
       ip: requestMeta.ip,
       userAgent: requestMeta.userAgent,
     });
+
+    await disputeTimelineService.appendTimelineEvent({
+      disputeId: dispute._id,
+      orderId: chat.order,
+      event: DISPUTE_TIMELINE_EVENTS.OCR_FLAGGED,
+      actor,
+      role,
+      message: 'Evidence screenshot flagged for admin OCR review',
+      meta: {
+        messageId: message._id,
+        count: flaggedCount,
+        findings: attachments
+          .filter((a) => a.flaggedForReview)
+          .flatMap((a) => a.ocrFindings || []),
+      },
+    });
+
+    await disputeTimelineService.appendTimelineEvent({
+      disputeId: dispute._id,
+      orderId: chat.order,
+      event: DISPUTE_TIMELINE_EVENTS.EVIDENCE_UPLOADED,
+      actor,
+      role,
+      message: 'Evidence uploaded with OCR review flags',
+      meta: { messageId: message._id, flagged: true },
+    });
+  } else if (attachments.length) {
+    await disputeTimelineService.appendTimelineEvent({
+      disputeId: dispute._id,
+      orderId: chat.order,
+      event: DISPUTE_TIMELINE_EVENTS.EVIDENCE_UPLOADED,
+      actor,
+      role,
+      message: 'Evidence uploaded',
+      meta: { messageId: message._id, count: attachments.length },
+    });
   }
 
   return presentMessageForActor(message, chat, actor);
@@ -619,6 +682,7 @@ export async function sendMessage(disputeId, payload, actor, requestMeta = {}) {
 export async function editMessage(disputeId, messageId, payload, actor, requestMeta = {}) {
   const chat = await DisputeChat.findOne({ dispute: disputeId });
   assertChatAccess(chat, actor);
+  assertChatWritable(chat);
   await assertNotMuted(chat, actor);
 
   const message = await DisputeChatMessage.findOne({
@@ -679,6 +743,7 @@ export async function editMessage(disputeId, messageId, payload, actor, requestM
 export async function deleteMessage(disputeId, messageId, actor, requestMeta = {}) {
   const chat = await DisputeChat.findOne({ dispute: disputeId });
   assertChatAccess(chat, actor);
+  assertChatWritable(chat);
 
   const message = await DisputeChatMessage.findOne({
     _id: messageId,
@@ -850,6 +915,226 @@ export async function closeChatForDispute(disputeId, { session = null } = {}) {
   return chat;
 }
 
+/**
+ * Mark chat read-only when dispute is resolved/closed.
+ * Optionally schedule credential expiry (default 30 days from open/resolve).
+ */
+export async function setChatReadOnly(disputeId, {
+  session = null,
+  expireCredentials = false,
+} = {}) {
+  const chat = await DisputeChat.findOne({ dispute: disputeId }).session(session || null);
+  if (!chat) return null;
+
+  chat.status = DISPUTE_CHAT_STATUS.READ_ONLY;
+  chat.readOnlyAt = new Date();
+  if (expireCredentials && !chat.credentialsExpireAt) {
+    chat.credentialsExpireAt = new Date(
+      Date.now() + (env.DISPUTE_CREDENTIAL_TTL_DAYS || 30) * 24 * 60 * 60 * 1000,
+    );
+  }
+  if (session) await chat.save({ session });
+  else await chat.save();
+
+  await disputeTimelineService.appendTimelineEvent({
+    disputeId,
+    orderId: chat.order,
+    event: DISPUTE_TIMELINE_EVENTS.CHAT_READ_ONLY,
+    actor: null,
+    role: 'system',
+    message: 'Dispute chat set to read-only',
+    meta: { credentialsExpireAt: chat.credentialsExpireAt },
+    session,
+  });
+
+  return chat;
+}
+
+/**
+ * Share structured credentials (username/password/OTP/keys) — encrypted at rest, masked in chat.
+ * Free-text contact channels remain blocked; this is the only supported credential path.
+ */
+export async function sendCredentials(disputeId, payload, actor, requestMeta = {}) {
+  const chat = await DisputeChat.findOne({ dispute: disputeId });
+  const role = assertChatAccess(chat, actor);
+  const dispute = await Dispute.findById(chat.dispute);
+  if (!dispute) throw new AppError('Dispute not found', 404, { code: 'DISPUTE_NOT_FOUND' });
+  assertChatWritable(chat, dispute);
+
+  if (role !== DISPUTE_CHAT_ROLES.ADMIN) {
+    await assertNotMuted(chat, actor);
+  }
+  await assertRateLimit(chat, actor);
+
+  const body = String(payload.body || 'Shared secure credentials').trim();
+  const noteScan = detectBlockedContent(body);
+  if (noteScan.blocked) {
+    throw new AppError(CONTACT_FILTER_MESSAGE, 400, {
+      code: CONTACT_FILTER_CODE,
+      details: { rules: noteScan.rules },
+    });
+  }
+
+  const { encrypted, masked } = encryptSensitiveObject(payload.credentials || {});
+  if (!Object.keys(encrypted).length) {
+    throw new AppError('At least one credential field is required', 400, {
+      code: 'VALIDATION_ERROR',
+    });
+  }
+
+  const expireAt = chat.credentialsExpireAt || new Date(
+    Date.now() + (env.DISPUTE_CREDENTIAL_TTL_DAYS || 30) * 24 * 60 * 60 * 1000,
+  );
+
+  const message = await DisputeChatMessage.create({
+    chat: chat._id,
+    dispute: chat.dispute,
+    order: chat.order,
+    author: actorId(actor),
+    role,
+    body,
+    attachments: [],
+    hasCredentials: true,
+    credentialsEncrypted: encrypted,
+    credentialsMasked: masked,
+    credentialsExpireAt: expireAt,
+  });
+
+  chat.messageCount = (chat.messageCount || 0) + 1;
+  chat.lastMessageAt = new Date();
+  if (!chat.credentialsExpireAt) chat.credentialsExpireAt = expireAt;
+  await chat.save();
+
+  await writeAudit({
+    chat,
+    dispute: chat.dispute,
+    order: chat.order,
+    actor,
+    action: DISPUTE_CHAT_AUDIT_ACTIONS.CREDENTIAL_SHARED,
+    message,
+    meta: redactForLogs({ fields: Object.keys(masked) }),
+    ip: requestMeta.ip,
+    userAgent: requestMeta.userAgent,
+  });
+
+  return presentMessageForActor(message, chat, actor);
+}
+
+/**
+ * Reveal encrypted credentials for authorized participants only. Fully audited.
+ */
+export async function revealCredentials(disputeId, messageId, actor, requestMeta = {}) {
+  const chat = await DisputeChat.findOne({ dispute: disputeId });
+  assertChatAccess(chat, actor);
+
+  const message = await DisputeChatMessage.findOne({
+    _id: messageId,
+    chat: chat._id,
+    status: DISPUTE_CHAT_MESSAGE_STATUS.VISIBLE,
+  });
+  if (!message) {
+    throw new AppError('Message not found', 404, { code: 'MESSAGE_NOT_FOUND' });
+  }
+  if (!message.hasCredentials) {
+    throw new AppError('Message has no credentials', 400, { code: 'NO_CREDENTIALS' });
+  }
+  if (
+    message.credentialsExpired
+    || (message.credentialsExpireAt && message.credentialsExpireAt < new Date())
+  ) {
+    throw new AppError('Credentials have expired', 410, { code: 'CREDENTIALS_EXPIRED' });
+  }
+
+  const revealed = decryptSensitiveObject(message.credentialsEncrypted || {});
+
+  await writeAudit({
+    chat,
+    dispute: chat.dispute,
+    order: chat.order,
+    actor,
+    action: DISPUTE_CHAT_AUDIT_ACTIONS.CREDENTIAL_REVEALED,
+    message,
+    meta: { fields: Object.keys(revealed), source: 'chat_message' },
+    ip: requestMeta.ip,
+    userAgent: requestMeta.userAgent,
+  });
+
+  await disputeTimelineService.appendTimelineEvent({
+    disputeId: chat.dispute,
+    orderId: chat.order,
+    event: DISPUTE_TIMELINE_EVENTS.CREDENTIAL_REVEALED,
+    actor,
+    role: resolveParticipantRole(chat, actor) || 'participant',
+    message: 'Credentials revealed',
+    meta: { messageId, fields: Object.keys(revealed) },
+  });
+
+  return {
+    messageId: message._id,
+    credentials: revealed,
+    masked: message.credentialsMasked,
+  };
+}
+
+/**
+ * Expire encrypted credential blobs after TTL. Audit logs remain.
+ */
+export async function expireDueCredentials({ limit = 500 } = {}) {
+  const now = new Date();
+  const messages = await DisputeChatMessage.find({
+    hasCredentials: true,
+    credentialsExpired: false,
+    credentialsExpireAt: { $lte: now },
+  }).limit(limit);
+
+  let expiredMessages = 0;
+  for (const message of messages) {
+    message.credentialsExpired = true;
+    message.credentialsEncrypted = null;
+    await message.save();
+    expiredMessages += 1;
+    await writeAudit({
+      chat: message.chat,
+      dispute: message.dispute,
+      order: message.order,
+      actor: null,
+      action: DISPUTE_CHAT_AUDIT_ACTIONS.CREDENTIAL_EXPIRED,
+      message,
+      meta: { source: 'ttl_job' },
+    });
+  }
+
+  const replacements = await DisputeReplacement.find({
+    credentialsExpired: false,
+    credentialsExpireAt: { $lte: now },
+  }).limit(limit);
+
+  let expiredReplacements = 0;
+  for (const replacement of replacements) {
+    for (const account of replacement.accounts || []) {
+      account.encrypted = {
+        username: null,
+        email: null,
+        password: null,
+        otp: null,
+        recoveryCode: null,
+        backupCode: null,
+        twoFactorRecoveryCode: null,
+        secretKey: null,
+        licenseKey: null,
+        apiKey: null,
+        recoveryEmail: null,
+        recoveryPhone: null,
+      };
+    }
+    replacement.credentialsExpired = true;
+    await replacement.save();
+    expiredReplacements += 1;
+  }
+
+  return { expiredMessages, expiredReplacements };
+}
+
 function assertModeratorAccess(chat, actor) {
   if (!chat) {
     throw new AppError('Dispute chat not found', 404, { code: 'CHAT_NOT_FOUND' });
@@ -988,6 +1273,8 @@ export default {
   getDisputeChat,
   listMessages,
   sendMessage,
+  sendCredentials,
+  revealCredentials,
   editMessage,
   deleteMessage,
   assignAdmin,
@@ -997,5 +1284,7 @@ export default {
   listFlaggedAttachments,
   reviewFlaggedAttachment,
   closeChatForDispute,
+  setChatReadOnly,
+  expireDueCredentials,
   assertChatAccess,
 };

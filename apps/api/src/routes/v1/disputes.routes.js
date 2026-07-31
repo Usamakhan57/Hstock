@@ -22,9 +22,15 @@ import {
   listDisputeChatViolationsSchema,
   listFlaggedAttachmentsSchema,
   reviewFlaggedAttachmentSchema,
+  sendChatCredentialsSchema,
+  revealCredentialsSchema,
+  sendReplacementSchema,
+  respondReplacementSchema,
+  revealReplacementCredentialsSchema,
 } from '../../validators/commerce.validator.js';
 import * as disputesController from '../../controllers/disputes/disputes.controller.js';
 import * as disputeChatController from '../../controllers/disputes/disputeChat.controller.js';
+import * as disputeReplacementController from '../../controllers/disputes/disputeReplacement.controller.js';
 
 const router = Router();
 
@@ -62,6 +68,22 @@ router.get(
   disputesController.getDispute,
 );
 
+router.get(
+  '/:id/dashboard',
+  requireAuth,
+  requirePermission(PERMISSIONS.DISPUTES_READ),
+  validate(disputeIdSchema),
+  disputeReplacementController.getDashboard,
+);
+
+router.get(
+  '/:id/timeline',
+  requireAuth,
+  requirePermission(PERMISSIONS.DISPUTES_READ),
+  validate(disputeIdSchema),
+  disputeReplacementController.getTimeline,
+);
+
 // Legacy-compatible message endpoint (secure filter applied)
 router.post(
   '/:id/messages',
@@ -79,6 +101,43 @@ router.post(
   requirePermission(PERMISSIONS.DISPUTES_MANAGE),
   validate(resolveDisputeSchema),
   disputesController.resolveDispute,
+);
+
+// ---- Replacement accounts ----
+
+router.get(
+  '/:id/replacements',
+  requireAuth,
+  requirePermission(PERMISSIONS.DISPUTES_READ),
+  validate(disputeIdSchema),
+  disputeReplacementController.listReplacements,
+);
+
+router.post(
+  '/:id/replacements',
+  requireAuth,
+  requireRole(USER_ROLES.SELLER, USER_ROLES.SUPER_ADMIN),
+  requirePermission(PERMISSIONS.DISPUTES_WRITE),
+  disputeChatRateLimiter,
+  validate(sendReplacementSchema),
+  disputeReplacementController.sendReplacement,
+);
+
+router.post(
+  '/:id/replacements/:replacementId/respond',
+  requireAuth,
+  requireRole(USER_ROLES.BUYER, USER_ROLES.SUPER_ADMIN),
+  requirePermission(PERMISSIONS.DISPUTES_WRITE),
+  validate(respondReplacementSchema),
+  disputeReplacementController.respondToReplacement,
+);
+
+router.post(
+  '/:id/replacements/:replacementId/accounts/:accountId/reveal',
+  requireAuth,
+  requirePermission(PERMISSIONS.DISPUTES_READ),
+  validate(revealReplacementCredentialsSchema),
+  disputeReplacementController.revealReplacementCredentials,
 );
 
 // ---- Secure dispute chat ----
@@ -106,6 +165,23 @@ router.post(
   disputeChatRateLimiter,
   validate(disputeMessageSchema),
   disputeChatController.sendMessage,
+);
+
+router.post(
+  '/:id/chat/credentials',
+  requireAuth,
+  requirePermission(PERMISSIONS.DISPUTES_WRITE),
+  disputeChatRateLimiter,
+  validate(sendChatCredentialsSchema),
+  disputeChatController.sendCredentials,
+);
+
+router.post(
+  '/:id/chat/messages/:messageId/reveal',
+  requireAuth,
+  requirePermission(PERMISSIONS.DISPUTES_READ),
+  validate(revealCredentialsSchema),
+  disputeChatController.revealCredentials,
 );
 
 router.patch(

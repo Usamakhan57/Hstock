@@ -127,6 +127,28 @@ const disputeChatMessageSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    /** Encrypted structured credentials (password/OTP/keys) — masked by default */
+    hasCredentials: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+    credentialsEncrypted: {
+      type: mongoose.Schema.Types.Mixed,
+      default: null,
+    },
+    credentialsMasked: {
+      type: mongoose.Schema.Types.Mixed,
+      default: null,
+    },
+    credentialsExpireAt: {
+      type: Date,
+      default: null,
+    },
+    credentialsExpired: {
+      type: Boolean,
+      default: false,
+    },
     status: {
       type: String,
       enum: DISPUTE_CHAT_MESSAGE_STATUS_VALUES,

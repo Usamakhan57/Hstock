@@ -28,6 +28,8 @@ export { default as DisputeChatMessage } from './DisputeChatMessage.model.js';
 export { default as DisputeChatBlockedAttempt } from './DisputeChatBlockedAttempt.model.js';
 export { default as DisputeChatAuditLog } from './DisputeChatAuditLog.model.js';
 export { default as DisputeChatViolation } from './DisputeChatViolation.model.js';
+export { default as DisputeReplacement } from './DisputeReplacement.model.js';
+export { default as DisputeTimeline } from './DisputeTimeline.model.js';
 export { default as Refund } from './Refund.model.js';
 export { default as WebhookEvent } from './WebhookEvent.model.js';
 export { default as JobRun } from './JobRun.model.js';

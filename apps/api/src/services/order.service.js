@@ -77,7 +77,9 @@ export async function buyNow(payload, actor, requestMeta = {}) {
     throw new AppError('You cannot buy your own product', 400, { code: 'SELF_PURCHASE' });
   }
 
-  if (product.stockType === STOCK_TYPES.LIMITED && product.stock < 1) {
+  const quantity = Math.max(1, Math.min(500, Number(payload.quantity) || 1));
+
+  if (product.stockType === STOCK_TYPES.LIMITED && product.stock < quantity) {
     throw new AppError('Product is out of stock', 400, { code: 'OUT_OF_STOCK' });
   }
 
@@ -86,7 +88,8 @@ export async function buyNow(payload, actor, requestMeta = {}) {
     throw new AppError('Product price is invalid', 400, { code: 'INVALID_PRICE' });
   }
 
-  const commission = await commissionService.computeOrderCommission(unitPrice, {
+  const subtotal = roundMoney(unitPrice * quantity);
+  const commission = await commissionService.computeOrderCommission(subtotal, {
     sellerId: seller._id,
     categoryId: product.category,
   });
@@ -104,11 +107,11 @@ export async function buyNow(payload, actor, requestMeta = {}) {
       const updated = await Product.findOneAndUpdate(
         {
           _id: product._id,
-          stock: { $gte: 1 },
+          stock: { $gte: quantity },
           status: PRODUCT_STATUS.LIVE,
           deletedAt: null,
         },
-        { $inc: { stock: -1 } },
+        { $inc: { stock: -quantity } },
         updateOpts,
       );
       if (!updated) {
@@ -120,6 +123,13 @@ export async function buyNow(payload, actor, requestMeta = {}) {
         else await updated.save();
       }
     }
+
+    const accounts = Array.from({ length: quantity }, (_, index) => ({
+      index,
+      identifier: `${orderNumber}-ACC-${index + 1}`,
+      status: 'active',
+      label: `Account ${index + 1}`,
+    }));
 
     const order = await orderRepository.createOrder(
       {
@@ -137,13 +147,14 @@ export async function buyNow(payload, actor, requestMeta = {}) {
           thumbnail: product.thumbnail,
           deliveryType: product.deliveryType,
         },
-        quantity: 1,
+        quantity,
+        accounts,
         unitPrice,
-        subtotal: unitPrice,
+        subtotal,
         commissionPercent: commission.percent,
         commissionAmount: commission.commissionAmount,
         sellerAmount: commission.sellerAmount,
-        totalAmount: unitPrice,
+        totalAmount: subtotal,
         currency: product.currency || LEDGER_CURRENCY,
         status: ORDER_STATUS.PENDING_PAYMENT,
         deliveryStatus: DELIVERY_STATUS.PENDING,
@@ -163,7 +174,7 @@ export async function buyNow(payload, actor, requestMeta = {}) {
         buyer: actor.id,
         seller: seller._id,
         gateway: 'cryptomus',
-        amount: unitPrice,
+        amount: subtotal,
         currency: order.currency,
         toCurrency: payload.toCurrency || null,
         network: payload.network || null,

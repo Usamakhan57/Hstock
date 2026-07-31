@@ -21,3 +21,12 @@ export {
 } from './token.js';
 export { toSlug, uniqueSlug } from './slug.js';
 export { withTransaction } from './transaction.js';
+export {
+  encryptCredential,
+  decryptCredential,
+  maskCredential,
+  encryptSensitiveObject,
+  decryptSensitiveObject,
+  redactForLogs,
+  CREDENTIAL_FIELD_KEYS,
+} from './credentials.crypto.js';

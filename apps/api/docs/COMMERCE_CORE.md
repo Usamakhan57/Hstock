@@ -99,12 +99,20 @@ Every financial action writes balanced debit+credit `LedgerEntry` rows sharing o
 ## Dispute flow
 
 ```
-Buyer opens dispute → Escrow disputed (auto-release blocked)
+Buyer opens dispute (optional disputedQuantity / disputedAccountIds)
+→ Partial: hold only disputed $; undisputed follows normal release timer
+→ Full: escrow status=disputed (auto-release blocked)
+→ Secure dispute chat auto-created
+→ Seller may send versioned replacement accounts
+→ Buyer accept → release disputed hold + resolve + chat read-only
+→ Buyer reject → dispute stays open
 → Admin resolves:
-   seller_wins|release → release to seller
-   buyer_wins → full escrow refund
-   partial_refund → refund amount + release remainder
+   seller_wins|release → release disputed hold to seller
+   buyer_wins → refund disputed hold only (+ release undisputed)
+   partial_refund → refund ≤ held disputed amount + release remainder
 ```
+
+Details: `docs/DISPUTE_SYSTEM.md`, `docs/ESCROW_PARTIAL.md`, `docs/SECURE_DISPUTE_CHAT.md`.
 
 ## Background jobs (`ENABLE_JOBS=true`)
 

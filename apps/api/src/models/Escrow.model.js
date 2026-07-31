@@ -59,6 +59,41 @@ const escrowSchema = new mongoose.Schema(
       required: true,
       min: 0,
     },
+    /** Partial dispute accounting (amounts in order currency). */
+    disputedAmount: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    undisputedAmount: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    releasedAmount: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    refundedAmount: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    heldAmount: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    partialDispute: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+    undisputedReleasedAt: {
+      type: Date,
+      default: null,
+    },
     currency: {
       type: String,
       default: LEDGER_CURRENCY,
