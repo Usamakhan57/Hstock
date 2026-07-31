@@ -68,6 +68,13 @@ export function getRootStorefrontCategories() {
   return getRootCategories(list());
 }
 
+/** Hero / homepage category pills — featured roots first, then remaining roots. */
+export function getHomepageCategories() {
+  const roots = getRootStorefrontCategories();
+  const featured = roots.filter((c) => c.featured);
+  return featured.length ? [...featured, ...roots.filter((c) => !c.featured)] : roots;
+}
+
 export function getStorefrontCategoryChildren(parentId = null) {
   return getChildren(list(), parentId);
 }
@@ -104,6 +111,7 @@ export default {
   getStorefrontCategoryTree,
   getCategoryTreeForStorefront,
   getRootStorefrontCategories,
+  getHomepageCategories,
   getStorefrontCategoryChildren,
   flattenStorefrontCategories,
   getCategoryAncestors,
