@@ -38,6 +38,22 @@ const platformConfigSchema = new mongoose.Schema(
       min: 1,
       default: 24,
     },
+    minWithdrawalAmount: {
+      type: Number,
+      min: 0,
+      default: 10,
+    },
+    maxWithdrawalAmount: {
+      type: Number,
+      min: 0,
+      default: 100000,
+    },
+    orderPaymentLifetimeSeconds: {
+      type: Number,
+      min: 300,
+      max: 43200,
+      default: 3600,
+    },
     supportEmail: {
       type: String,
       default: 'support@hstock.store',

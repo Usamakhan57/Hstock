@@ -17,6 +17,9 @@ export const updatePlatformConfigSchema = {
     maintenanceMode: z.boolean().optional(),
     escrowAutoReleaseHours: z.number().positive().optional(),
     withdrawalAdminSlaHours: z.number().positive().optional(),
+    minWithdrawalAmount: z.number().min(0).optional(),
+    maxWithdrawalAmount: z.number().min(0).optional(),
+    orderPaymentLifetimeSeconds: z.number().min(300).max(43200).optional(),
     supportEmail: z.string().email().optional(),
   }),
 };

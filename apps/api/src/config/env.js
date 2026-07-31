@@ -2,6 +2,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import dotenv from 'dotenv';
 import { z } from 'zod';
+import { CRYPTOMUS_DEFAULT_BASE_URL } from '../constants/cryptomus.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -54,6 +55,15 @@ const envSchema = z.object({
   CRYPTOMUS_MERCHANT_ID: z.string().optional().default(''),
   CRYPTOMUS_API_KEY: z.string().optional().default(''),
   CRYPTOMUS_WEBHOOK_SECRET: z.string().optional().default(''),
+  CRYPTOMUS_BASE_URL: z.string().url().optional().default(CRYPTOMUS_DEFAULT_BASE_URL),
+  CRYPTOMUS_MODE: z.enum(['sandbox', 'production']).default('sandbox'),
+  CRYPTOMUS_URL_RETURN: z.string().optional().default(''),
+  CRYPTOMUS_URL_SUCCESS: z.string().optional().default(''),
+  CRYPTOMUS_ENFORCE_IP_WHITELIST: z
+    .string()
+    .optional()
+    .transform((v) => v === 'true'),
+  FRONTEND_URL: z.string().optional().default('http://localhost:3000'),
 
   SMTP_HOST: z.string().optional().default(''),
   SMTP_PORT: z.coerce.number().int().positive().default(587),
@@ -91,6 +101,7 @@ export const env = {
     ? data.LOG_DIR
     : path.join(API_ROOT, data.LOG_DIR),
   uploadMaxFileSizeBytes: Math.floor(data.UPLOAD_MAX_FILE_SIZE_MB * 1024 * 1024),
+  cryptomusConfigured: Boolean(data.CRYPTOMUS_MERCHANT_ID && data.CRYPTOMUS_API_KEY),
 };
 
 export default env;

@@ -1,6 +1,5 @@
 /**
  * Supported withdrawal coins and Cryptomus-compatible networks.
- * Payment logic is NOT implemented here — schema preparation only.
  */
 
 export const SUPPORTED_COINS = Object.freeze([
@@ -14,9 +13,28 @@ export const SUPPORTED_COINS = Object.freeze([
   'LTC',
   'TON',
   'XRP',
+  'USDC',
+  'DAI',
+  'BUSD',
+  'MATIC',
+  'AVAX',
+  'SHIB',
+  'LINK',
+  'UNI',
+  'ATOM',
+  'NEAR',
+  'APT',
+  'ARB',
+  'OP',
+  'SUI',
+  'NOT',
+  'TRUMP',
+  'HMSTR',
+  'DOGS',
+  'CATI',
 ]);
 
-/** Cryptomus-compatible network codes commonly used with the coins above */
+/** Cryptomus-compatible network codes */
 export const CRYPTOMUS_NETWORKS = Object.freeze([
   'BTC',
   'ETH',
@@ -27,6 +45,7 @@ export const CRYPTOMUS_NETWORKS = Object.freeze([
   'BEP20',
   'POLYGON',
   'ARBITRUM',
+  'OPTIMISM',
   'AVALANCHE',
   'SOL',
   'TON',
@@ -34,12 +53,19 @@ export const CRYPTOMUS_NETWORKS = Object.freeze([
   'LTC',
   'XRP',
   'BNB',
+  'BASE',
+  'LINEA',
+  'ZKSYNC',
+  'NEAR',
+  'APT',
+  'SUI',
 ]);
 
 export const COIN_NETWORK_MAP = Object.freeze({
   BTC: ['BTC'],
-  ETH: ['ETH', 'ERC20', 'ARBITRUM'],
-  USDT: ['TRC20', 'ERC20', 'BEP20', 'BSC', 'POLYGON', 'TON', 'SOL', 'ARBITRUM', 'AVALANCHE'],
+  ETH: ['ETH', 'ERC20', 'ARBITRUM', 'OPTIMISM', 'BASE', 'LINEA', 'ZKSYNC'],
+  USDT: ['TRC20', 'ERC20', 'BEP20', 'BSC', 'POLYGON', 'TON', 'SOL', 'ARBITRUM', 'AVALANCHE', 'OPTIMISM', 'BASE'],
+  USDC: ['ERC20', 'BEP20', 'BSC', 'POLYGON', 'SOL', 'ARBITRUM', 'OPTIMISM', 'BASE', 'AVALANCHE'],
   TRX: ['TRON', 'TRC20'],
   BNB: ['BSC', 'BEP20'],
   DOGE: ['DOGE'],
@@ -47,10 +73,60 @@ export const COIN_NETWORK_MAP = Object.freeze({
   LTC: ['LTC'],
   TON: ['TON'],
   XRP: ['XRP'],
+  DAI: ['ERC20', 'BEP20', 'POLYGON'],
+  BUSD: ['BEP20', 'BSC', 'ERC20'],
+  MATIC: ['POLYGON', 'ERC20'],
+  AVAX: ['AVALANCHE'],
+  SHIB: ['ERC20', 'BEP20'],
+  LINK: ['ERC20', 'BEP20', 'ARBITRUM'],
+  UNI: ['ERC20'],
+  ATOM: ['ATOM'],
+  NEAR: ['NEAR'],
+  APT: ['APT'],
+  ARB: ['ARBITRUM'],
+  OP: ['OPTIMISM'],
+  SUI: ['SUI'],
+  NOT: ['TON'],
+  TRUMP: ['SOL'],
+  HMSTR: ['TON'],
+  DOGS: ['TON'],
+  CATI: ['TON'],
+});
+
+/**
+ * Basic wallet address format validators per network family.
+ * Full on-chain validation is out of band; these catch obvious invalid inputs.
+ */
+export const NETWORK_ADDRESS_PATTERNS = Object.freeze({
+  BTC: /^(bc1|[13])[a-zA-HJ-NP-Z0-9]{25,62}$/,
+  ETH: /^0x[a-fA-F0-9]{40}$/,
+  ERC20: /^0x[a-fA-F0-9]{40}$/,
+  BEP20: /^0x[a-fA-F0-9]{40}$/,
+  BSC: /^0x[a-fA-F0-9]{40}$/,
+  POLYGON: /^0x[a-fA-F0-9]{40}$/,
+  ARBITRUM: /^0x[a-fA-F0-9]{40}$/,
+  OPTIMISM: /^0x[a-fA-F0-9]{40}$/,
+  AVALANCHE: /^0x[a-fA-F0-9]{40}$/,
+  BASE: /^0x[a-fA-F0-9]{40}$/,
+  LINEA: /^0x[a-fA-F0-9]{40}$/,
+  ZKSYNC: /^0x[a-fA-F0-9]{40}$/,
+  TRON: /^T[1-9A-HJ-NP-Za-km-z]{33}$/,
+  TRC20: /^T[1-9A-HJ-NP-Za-km-z]{33}$/,
+  SOL: /^[1-9A-HJ-NP-Za-km-z]{32,44}$/,
+  TON: /^(UQ|EQ|kQ|0Q)[A-Za-z0-9_-]{46}$|^[A-Za-z0-9_-]{48}$/,
+  DOGE: /^D[5-9A-HJ-NP-U][1-9A-HJ-NP-Za-km-z]{32}$/,
+  LTC: /^(L|M|ltc1)[a-zA-HJ-NP-Z0-9]{25,62}$/,
+  XRP: /^r[1-9A-HJ-NP-Za-km-z]{24,34}$/,
+  BNB: /^(bnb1)[a-z0-9]{38}$|^0x[a-fA-F0-9]{40}$/,
+  NEAR: /^[a-z0-9_-]{2,64}(\.near)?$/,
+  APT: /^(0x)?[a-fA-F0-9]{64}$/,
+  SUI: /^(0x)?[a-fA-F0-9]{64}$/,
+  ATOM: /^cosmos1[a-z0-9]{38}$/,
 });
 
 export default {
   SUPPORTED_COINS,
   CRYPTOMUS_NETWORKS,
   COIN_NETWORK_MAP,
+  NETWORK_ADDRESS_PATTERNS,
 };

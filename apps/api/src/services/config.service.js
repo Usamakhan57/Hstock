@@ -19,6 +19,9 @@ const PLATFORM_DEFAULTS = Object.freeze({
   maintenanceMode: false,
   escrowAutoReleaseHours: 24,
   withdrawalAdminSlaHours: 24,
+  minWithdrawalAmount: 10,
+  maxWithdrawalAmount: 100000,
+  orderPaymentLifetimeSeconds: 3600,
   supportEmail: 'support@hstock.store',
 });
 

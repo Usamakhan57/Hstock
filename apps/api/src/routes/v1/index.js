@@ -8,19 +8,25 @@ import brandsRoutes from './brands.routes.js';
 import collectionsRoutes from './collections.routes.js';
 import tagsRoutes from './tags.routes.js';
 import productsRoutes from './products.routes.js';
+import ordersRoutes from './orders.routes.js';
+import paymentsRoutes from './payments.routes.js';
+import escrowRoutes from './escrow.routes.js';
+import walletRoutes from './wallet.routes.js';
+import withdrawalsRoutes from './withdrawals.routes.js';
+import disputesRoutes from './disputes.routes.js';
+import refundsRoutes from './refunds.routes.js';
 
 const router = Router();
 
 /**
- * API v1 — Phase 2 domain routes.
- * Phase 1 foundation (health, security, config bootstrap) remains intact.
+ * API v1 — Phase 1 foundation + Phase 2 catalog + Commerce Core.
  */
 router.get('/', (_req, res) => {
   return sendSuccess(res, {
     message: 'HStock API v1',
     data: {
       version: 'v1',
-      phase: 2,
+      phase: 'commerce-core',
       modules: [
         'auth',
         'users',
@@ -30,6 +36,13 @@ router.get('/', (_req, res) => {
         'collections',
         'tags',
         'products',
+        'orders',
+        'payments',
+        'escrow',
+        'wallet',
+        'withdrawals',
+        'disputes',
+        'refunds',
       ],
       health: '/health',
     },
@@ -44,5 +57,12 @@ router.use('/brands', brandsRoutes);
 router.use('/collections', collectionsRoutes);
 router.use('/tags', tagsRoutes);
 router.use('/products', productsRoutes);
+router.use('/orders', ordersRoutes);
+router.use('/payments', paymentsRoutes);
+router.use('/escrow', escrowRoutes);
+router.use('/wallet', walletRoutes);
+router.use('/withdrawals', withdrawalsRoutes);
+router.use('/disputes', disputesRoutes);
+router.use('/refunds', refundsRoutes);
 
 export default router;

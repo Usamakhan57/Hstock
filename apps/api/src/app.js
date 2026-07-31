@@ -53,7 +53,7 @@ app.get('/', (_req, res) => {
     success: true,
     message: 'HStock API',
     data: {
-      phase: 2,
+      phase: 'commerce-core',
       docs: '/api/v1',
       health: '/health',
     },
