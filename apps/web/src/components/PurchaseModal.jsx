@@ -93,7 +93,7 @@ const PurchaseModal = ({ product, license, open, onOpenChange }) => {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-[calc(100vw-32px)] max-w-[420px] sm:max-w-[90vw] md:max-w-[640px] rounded-[24px] border border-border bg-background px-4 py-5 sm:px-6 sm:py-6 md:px-7 md:py-7">
         <DialogTitle className="text-xl font-bold">Confirm Purchase</DialogTitle>
-        <DialogDescription className="sr-only">Confirm your HStock.store purchase and continue to Cryptomus payment</DialogDescription>
+        <DialogDescription className="sr-only">Confirm your ApnaStore purchase and continue to Cryptomus payment</DialogDescription>
 
         <div className="mt-6 flex flex-col gap-4 rounded-[16px] bg-secondary/50 p-4 md:p-4">
           <div className="flex items-start gap-4">

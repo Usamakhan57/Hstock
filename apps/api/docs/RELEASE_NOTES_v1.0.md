@@ -1,4 +1,4 @@
-# HStock v1.0 — Release Candidate Notes
+# ApnaStore v1.0 — Release Candidate Notes
 
 **Release:** v1.0-rc.1  
 **Date:** 2026-07-31  
@@ -41,7 +41,7 @@ None for existing Phase 6/7 API consumers.
 ## Known issues
 
 1. CMS/blog/coupons/reviews/media admin modules may still use local content stores (non-commerce).
-2. Seller registration fee payment collection is unused while fee remains `0`.
+2. Seller registration fee charging is unused while fee remains `0`.
 3. Withdrawals are manually marked Paid (intentional — no automatic Cryptomus payout).
 4. Access tokens remain in browser storage for SPA auth; mitigate with CSP + short access TTL. Prefer refresh via httpOnly cookie.
 5. Redis adapter is optional and not required for single-instance PM2.

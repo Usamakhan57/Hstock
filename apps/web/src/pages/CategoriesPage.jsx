@@ -23,7 +23,7 @@ const CategoriesPage = () => {
 
   return (
     <div className="min-h-screen">
-      <Seo title="Browse Categories" description="Explore digital marketplace categories on HStock — social accounts, domains, websites, SaaS, source code, and more." />
+      <Seo title="Browse Categories" description="Explore digital marketplace categories on ApnaStore — social accounts, domains, websites, SaaS, source code, and more." />
     <Header />
       <div className="mx-auto max-w-[90rem] px-5 lg:px-8 pt-10">
         <Breadcrumbs items={[{ name: 'Categories' }]} />

@@ -5,7 +5,7 @@
 module.exports = {
   apps: [
     {
-      name: 'hstock-api',
+      name: 'apnastore-api',
       script: 'server.js',
       cwd: __dirname,
       instances: 1,

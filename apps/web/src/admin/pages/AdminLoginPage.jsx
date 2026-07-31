@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, ShieldCheck } from 'lucide-react';
 import { useAdminAuth } from '../AdminAuthContext';
-import logo from '../assets/hstock-logo.png';
+import logo from '../assets/apnastore-logo.png';
 
 const AdminLoginPage = () => {
   const { login, isAuthenticated } = useAdminAuth();
@@ -39,7 +39,7 @@ const AdminLoginPage = () => {
     <div className="min-h-screen grid place-items-center bg-[#F7F7FB] px-5 py-16">
       <div className="w-full max-w-md">
         <div className="flex justify-center mb-6">
-          <img src={logo} alt="HStock" className="h-16 w-auto object-contain" />
+          <img src={logo} alt="ApnaStore" className="h-16 w-auto object-contain" />
         </div>
         <div className="bg-white rounded-3xl border border-border soft-shadow p-8">
           <div className="flex items-center justify-center gap-2 text-primary mb-2">
@@ -54,7 +54,7 @@ const AdminLoginPage = () => {
               <label htmlFor="email" className="text-sm font-medium block mb-1.5">Email</label>
               <div className="flex items-center gap-2 bg-secondary/60 rounded-2xl px-4 py-3 border border-transparent focus-within:border-primary transition-colors">
                 <Mail className="w-4 h-4 text-muted-foreground shrink-0" />
-                <input id="email" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="admin@hstock.store" className="bg-transparent outline-none text-sm w-full" />
+                <input id="email" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="admin@apnastore.org" className="bg-transparent outline-none text-sm w-full" />
               </div>
             </div>
             <div>
@@ -76,7 +76,7 @@ const AdminLoginPage = () => {
           </form>
 
           <p className="text-xs text-muted-foreground text-center mt-6">
-            Demo credentials: admin@hstock.store / admin123
+            Demo credentials: admin@apnastore.org / admin123
           </p>
         </div>
         <p className="text-center mt-6">

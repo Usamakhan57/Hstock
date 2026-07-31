@@ -66,7 +66,6 @@ describe('catalogApi helpers', () => {
       limit: 8,
       search: 'instagram',
       category: 'c1',
-      collection: 'col1',
       seller: 's1',
       featured: true,
     })).toEqual({
@@ -74,7 +73,6 @@ describe('catalogApi helpers', () => {
       limit: 8,
       search: 'instagram',
       category: 'c1',
-      collection: 'col1',
       seller: 's1',
       featured: 'true',
     });

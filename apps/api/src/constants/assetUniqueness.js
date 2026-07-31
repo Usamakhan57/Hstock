@@ -56,7 +56,7 @@ export const ASSET_CLAIM_STATUS = Object.freeze({
   RELEASED: 'released',
 });
 
-export const ASSET_DUPLICATE_MESSAGE = 'This digital asset is already listed on HStock.';
+export const ASSET_DUPLICATE_MESSAGE = 'This digital asset is already listed on ApnaStore.';
 export const ASSET_DUPLICATE_CODE = 'ASSET_ALREADY_LISTED';
 
 export function isBlockingProductStatus(status, { deletedAt = null } = {}) {

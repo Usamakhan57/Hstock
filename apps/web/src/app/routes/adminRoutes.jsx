@@ -8,7 +8,6 @@ const Dashboard = lazy(() => import('../../admin/pages/dashboard/Dashboard'));
 const ProductsList = lazy(() => import('../../admin/pages/products/ProductsList'));
 const ProductForm = lazy(() => import('../../admin/pages/products/ProductForm'));
 const CategoriesList = lazy(() => import('../../admin/pages/categories/CategoriesList'));
-const CollectionsList = lazy(() => import('../../admin/pages/collections/CollectionsList'));
 const BrandsList = lazy(() => import('../../admin/pages/brands/BrandsList'));
 const InventoryList = lazy(() => import('../../admin/pages/inventory/InventoryList'));
 const OrdersList = lazy(() => import('../../admin/pages/orders/OrdersList'));
@@ -82,7 +81,6 @@ export function adminRoutes() {
         <Route path="products/new" element={<LazyPage><ProductForm /></LazyPage>} />
         <Route path="products/:id/edit" element={<LazyPage><ProductForm /></LazyPage>} />
         <Route path="categories" element={<LazyPage><CategoriesList /></LazyPage>} />
-        <Route path="collections" element={<LazyPage><CollectionsList /></LazyPage>} />
         <Route path="brands" element={<LazyPage><BrandsList /></LazyPage>} />
         <Route path="inventory" element={<LazyPage><InventoryList /></LazyPage>} />
         <Route path="orders" element={<LazyPage><OrdersList /></LazyPage>} />

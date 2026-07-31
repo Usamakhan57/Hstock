@@ -21,12 +21,6 @@ function slugOf(value) {
   return value.slug || null;
 }
 
-function productIdsOf(collection) {
-  const raw = collection?.products || collection?.productIds || [];
-  if (!Array.isArray(raw)) return [];
-  return raw.map(idOf).filter(Boolean);
-}
-
 export function mapBackendCategory(category) {
   if (!category) return null;
   return {
@@ -50,24 +44,6 @@ export function mapBackendCategory(category) {
   };
 }
 
-export function mapBackendCollection(collection) {
-  if (!collection) return null;
-  const productIds = productIdsOf(collection);
-  return {
-    id: idOf(collection),
-    _id: idOf(collection),
-    name: collection.name,
-    slug: collection.slug,
-    description: collection.description || '',
-    image: collection.image || collection.coverImage || null,
-    coverImage: collection.coverImage || collection.image || null,
-    featured: !!collection.featured,
-    productIds,
-    products: productIds,
-    productCount: collection.productCount ?? productIds.length,
-  };
-}
-
 export function mapBackendProduct(product) {
   if (!product) return null;
 
@@ -85,7 +61,7 @@ export function mapBackendProduct(product) {
   const artist = nameOf(seller?.storeName || seller)
     || nameOf(brand)
     || product.artist
-    || 'HStock';
+    || 'ApnaStore';
 
   const cat = nameOf(category, product.cat || 'Digital Assets');
   const catSlug = slugOf(category) || product.catSlug || null;
@@ -131,17 +107,13 @@ export function mapBackendProduct(product) {
     reviewCount: product.reviewCount != null ? Number(product.reviewCount) : 0,
     downloads: product.salesCount ?? product.downloads ?? 0,
     salesCount: product.salesCount ?? product.downloads ?? 0,
-    promoted: !!product.promoted,
     featured: !!product.featured,
-    promotionLabel: product.promotionLabel || null,
     artist,
     artistSlug: seller?.storeSlug || slugOf(seller) || slugOf(brand) || null,
     sellerSlug: seller?.storeSlug || slugOf(seller) || null,
     sellerId: idOf(seller),
     verifiedSeller: sellerVerified,
     brandId: idOf(brand),
-    collectionId: idOf(product.collection),
-    collectionSlug: slugOf(product.collection),
     fileTypes: Array.isArray(product.fileTypes) && product.fileTypes.length
       ? product.fileTypes
       : [product.productType || 'Digital Download'].filter(Boolean),
@@ -208,7 +180,6 @@ export function mapBackendSeller(seller) {
 
 export default {
   mapBackendCategory,
-  mapBackendCollection,
   mapBackendProduct,
   mapBackendSeller,
 };

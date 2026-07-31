@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# MongoDB backup for HStock (daily cron recommended)
+# MongoDB backup for ApnaStore (daily cron recommended)
 set -euo pipefail
 
-BACKUP_DIR="${BACKUP_DIR:-/var/backups/hstock}"
+BACKUP_DIR="${BACKUP_DIR:-/var/backups/apnastore}"
 RETENTION_DAYS="${RETENTION_DAYS:-14}"
-DB_NAME="${MONGODB_DB_NAME:-hstock}"
+DB_NAME="${MONGODB_DB_NAME:-apnastore}"
 MONGODB_URI="${MONGODB_URI:-mongodb://127.0.0.1:27017}"
 STAMP="$(date +%Y%m%d_%H%M%S)"
 OUT="$BACKUP_DIR/${DB_NAME}_$STAMP"

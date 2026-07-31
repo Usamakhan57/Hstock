@@ -5,28 +5,29 @@ import Seo from '../components/Seo';
 import Breadcrumbs from '../components/Breadcrumbs';
 
 const sections = [
-  { title: '1. Digital Products Are Final Sale', body: 'Because every product on HStock is a digital file delivered instantly after checkout, all sales are generally final and non-refundable. Please review previews, file types, and license details carefully before purchasing.' },
-  { title: '2. When a Refund Is Available', body: 'We will issue a full refund or replacement if a file is corrupted and cannot be re-downloaded correctly, is significantly different from its listing description or previews, or was charged more than once for the same order.' },
-  { title: '3. How to Request a Refund', body: 'Contact our support team through the Contact page within 7 days of purchase. Include your order number and a short description of the issue — screenshots help us resolve requests faster.' },
-  { title: '4. Resolution Timeline', body: 'Refund requests are reviewed within 2 business days. Approved refunds are returned to your original payment method and typically appear within 5–10 business days depending on your bank.' },
-  { title: '5. What Is Not Covered', body: 'Refunds are not available for accidental purchases where the files have been downloaded, change of mind, software incompatibility that was stated on the listing, or misuse of a license tier.' },
-  { title: '6. Seller Payout Adjustments', body: 'When a refund is approved, the corresponding seller payout is adjusted in the seller dashboard. Repeated refunds against a listing may trigger a quality review.' },
-  { title: '7. Contact', body: 'Questions about this policy can be sent through our Contact page and our team will respond as soon as possible.' },
+  { title: '1. Digital Marketplace Sales', body: 'ApnaStore sells digital assets that may unlock immediately after payment. Because of the nature of digital delivery, many sales are final once access has been granted. Always review listing details, delivery type, and seller reputation before checkout.' },
+  { title: '2. When a Refund May Be Available', body: 'Refunds or replacements may be available when a listing is materially different from what was sold, delivery fails without a valid reason, access credentials are unusable at handover through no fault of the buyer, or a duplicate charge occurs for the same order.' },
+  { title: '3. Escrow & Disputes', body: 'Where escrow applies, buyers can open a dispute within the allowed window. ApnaStore reviews evidence from both parties and may release funds to the seller, refund the buyer, or apply another resolution consistent with marketplace rules.' },
+  { title: '4. How to Request Help', body: 'Contact support@apnastore.org or open a ticket from your account. Include your order number, listing title, and a clear description of the issue. Screenshots or delivery logs help us resolve cases faster.' },
+  { title: '5. Resolution Timeline', body: 'Eligible requests are typically reviewed within a few business days. Approved refunds return to the original payment method or wallet balance according to the payment provider and commerce flow.' },
+  { title: '6. What Is Not Covered', body: 'Refunds are generally not available for buyer remorse after successful delivery, failure to follow handover instructions, incompatibility that was disclosed in the listing, or misuse of delivered assets.' },
+  { title: '7. Seller Adjustments', body: 'When a refund is approved, related seller payouts and escrow balances are adjusted. Repeated quality issues may trigger listing or account review.' },
+  { title: '8. Contact', body: 'Questions about this policy can be sent through our Contact page or to support@apnastore.org.' },
 ];
 
 const RefundPolicyPage = () => (
   <div className="min-h-screen">
     <Seo
       title="Refund Policy"
-      description="HStock refund policy for digital products — when refunds are available, how to request one, and resolution timelines."
+      description="ApnaStore refund and dispute policy for digital marketplace purchases, escrow orders, and delivery issues."
     />
     <Header />
     <main id="main-content" className="mx-auto max-w-3xl px-5 lg:px-8 pt-10 pb-24">
       <Breadcrumbs items={[{ name: 'Refund Policy' }]} />
       <h1 className="text-4xl md:text-5xl font-black tracking-tight">Refund <span className="brand-text">Policy</span></h1>
-      <p className="text-muted-foreground mt-3">Last updated: June 1, 2026</p>
+      <p className="text-muted-foreground mt-3">Last updated: July 31, 2026</p>
       <p className="mt-6 text-sm leading-relaxed text-foreground/85">
-        We want every purchase on HStock to be a great experience. This policy explains when refunds are available for digital products and how to request one.
+        This policy explains when refunds, replacements, or dispute resolutions may apply for purchases on ApnaStore.
       </p>
 
       <div className="mt-10 space-y-8">

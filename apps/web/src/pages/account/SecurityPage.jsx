@@ -65,7 +65,7 @@ const SecurityPage = () => {
 
   return (
     <>
-      <Seo title="Security" description="Manage your HStock account security." noIndex />
+      <Seo title="Security" description="Manage your ApnaStore account security." noIndex />
       <AccountLayout title="Security" subtitle="Passwords, two-factor authentication, and active sessions.">
         <div className="grid lg:grid-cols-2 gap-6">
           <form onSubmit={changePassword} className="bg-white rounded-3xl border border-border soft-shadow p-6 space-y-4 h-fit">

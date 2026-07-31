@@ -23,7 +23,6 @@ Mongoose domain models for Authentication, Users, RBAC, Platform Configuration, 
 
 - `Category.model.js`
 - `Brand.model.js`
-- `Collection.model.js`
 - `Tag.model.js`
 - `Product.model.js`
 - `ProductImage.model.js`

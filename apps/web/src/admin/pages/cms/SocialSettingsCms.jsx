@@ -53,7 +53,7 @@ const SocialSettingsCms = () => {
               value={form[key]}
               onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.value }))}
               className={inputClass}
-              placeholder={`https://${key}.com/hstock`}
+              placeholder={`https://${key}.com/apnastore`}
             />
           </div>
         ))}

@@ -74,7 +74,7 @@ const DashboardPage = () => {
 
   return (
     <>
-      <Seo title="Dashboard" description="Your HStock buyer dashboard overview." noIndex />
+      <Seo title="Dashboard" description="Your ApnaStore buyer dashboard overview." noIndex />
       <AccountLayout title="Dashboard" subtitle={`Welcome back${user?.name ? `, ${user.name}` : ''} — here's what's happening with your account.`}>
         {loading ? (
           <ProductGridSkeleton count={4} className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8" />

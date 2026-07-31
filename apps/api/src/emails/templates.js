@@ -9,13 +9,13 @@ function layout({ title, bodyHtml }) {
   <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f4f4f7;padding:24px 12px;">
     <tr><td align="center">
       <table role="presentation" width="100%" style="max-width:560px;background:#ffffff;border-radius:12px;overflow:hidden;">
-        <tr><td style="background:#111827;color:#fff;padding:20px 24px;font-size:18px;font-weight:700;">HStock</td></tr>
+        <tr><td style="background:#111827;color:#fff;padding:20px 24px;font-size:18px;font-weight:700;">ApnaStore</td></tr>
         <tr><td style="padding:28px 24px;">
           <h1 style="margin:0 0 12px;font-size:20px;">${title}</h1>
           <div style="font-size:14px;line-height:1.6;color:#333;">${bodyHtml}</div>
         </td></tr>
         <tr><td style="padding:16px 24px;background:#f9fafb;font-size:12px;color:#6b7280;">
-          © ${new Date().getFullYear()} HStock · <a href="${env.FRONTEND_URL}" style="color:#6C3BFF;">hstock.store</a>
+          © ${new Date().getFullYear()} ApnaStore · <a href="${env.FRONTEND_URL}" style="color:#6C3BFF;">apnastore.org</a>
         </td></tr>
       </table>
     </td></tr>
@@ -27,16 +27,16 @@ export function buildEmailTemplate(type, data = {}) {
   const frontend = env.FRONTEND_URL || 'http://localhost:3000';
   const templates = {
     registration: {
-      subject: 'Welcome to HStock',
+      subject: 'Welcome to ApnaStore',
       html: layout({
-        title: 'Welcome to HStock',
+        title: 'Welcome to ApnaStore',
         bodyHtml: `<p>Hi ${data.name || 'there'},</p><p>Your account was created successfully. Start exploring the marketplace.</p>
-          <p><a href="${frontend}" style="display:inline-block;padding:10px 18px;background:#6C3BFF;color:#fff;border-radius:999px;text-decoration:none;">Open HStock</a></p>`,
+          <p><a href="${frontend}" style="display:inline-block;padding:10px 18px;background:#6C3BFF;color:#fff;border-radius:999px;text-decoration:none;">Open ApnaStore</a></p>`,
       }),
-      text: `Welcome to HStock. Open ${frontend} to get started.`,
+      text: `Welcome to ApnaStore. Open ${frontend} to get started.`,
     },
     verification: {
-      subject: 'Verify your HStock email',
+      subject: 'Verify your ApnaStore email',
       html: layout({
         title: 'Verify your email',
         bodyHtml: `<p>Hi ${data.name || 'there'},</p><p>Confirm your email address to activate your account.</p>
@@ -46,7 +46,7 @@ export function buildEmailTemplate(type, data = {}) {
       text: `Verify your email: ${data.verifyUrl || frontend}`,
     },
     password_reset: {
-      subject: 'Reset your HStock password',
+      subject: 'Reset your ApnaStore password',
       html: layout({
         title: 'Password reset',
         bodyHtml: `<p>Hi ${data.name || 'there'},</p><p>We received a request to reset your password.</p>
@@ -142,9 +142,9 @@ export function buildEmailTemplate(type, data = {}) {
   };
 
   return templates[type] || {
-    subject: data.subject || 'HStock notification',
+    subject: data.subject || 'ApnaStore notification',
     html: layout({ title: data.title || 'Notification', bodyHtml: `<p>${data.body || ''}</p>` }),
-    text: data.body || data.title || 'HStock notification',
+    text: data.body || data.title || 'ApnaStore notification',
   };
 }
 

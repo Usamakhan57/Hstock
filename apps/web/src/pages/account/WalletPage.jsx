@@ -53,8 +53,8 @@ const WalletPage = () => {
 
   return (
     <>
-      <Seo title="Payments" description="Track your HStock Cryptomus payments, pending invoices, and escrow-protected purchases." noIndex />
-      <AccountLayout title="Wallet" subtitle="Cryptomus payments for HStock Buy Now purchases — escrow-protected until release.">
+      <Seo title="Payments" description="Track your ApnaStore Cryptomus payments, pending invoices, and escrow-protected purchases." noIndex />
+      <AccountLayout title="Wallet" subtitle="Cryptomus payments for ApnaStore Buy Now purchases — escrow-protected until release.">
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
           <div className="relative overflow-hidden bg-white rounded-2xl border border-border soft-shadow p-5 hover:soft-shadow-lg transition-shadow">
             <span className="grid place-items-center w-9 h-9 rounded-xl brand-gradient text-white mb-3"><Wallet className="w-4.5 h-4.5" /></span>
@@ -81,7 +81,7 @@ const WalletPage = () => {
         <div className="bg-white rounded-3xl border border-border soft-shadow p-6 mb-6">
           <h3 className="font-bold text-sm mb-1">How payments work</h3>
           <p className="text-xs text-muted-foreground mb-4">
-            HStock does not use a buyer deposit wallet. Tap Buy Now on a product, confirm the purchase, and complete payment with Cryptomus. Verified funds move into escrow automatically.
+            ApnaStore does not use a buyer deposit wallet. Tap Buy Now on a product, confirm the purchase, and complete payment with Cryptomus. Verified funds move into escrow automatically.
           </p>
           <Link to="/shop" className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary hover:underline">
             Browse marketplace <ArrowUpRight className="w-4 h-4" />

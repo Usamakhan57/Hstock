@@ -12,7 +12,7 @@ const OrderFailedPage = () => {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <Seo title="Payment Failed" description="Your HStock order could not be completed." noIndex />
+      <Seo title="Payment Failed" description="Your ApnaStore order could not be completed." noIndex />
       <Header />
       <div className="flex-1 mx-auto max-w-lg w-full px-5 py-20 text-center">
         <span className="grid place-items-center w-20 h-20 rounded-full bg-red-100 text-destructive mx-auto mb-6">

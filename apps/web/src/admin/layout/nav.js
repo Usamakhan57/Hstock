@@ -1,5 +1,5 @@
 import {
-  LayoutDashboard, Package, FolderTree, Layers, Tag, Boxes, ShoppingCart,
+  LayoutDashboard, Package, FolderTree, Tag, Boxes, ShoppingCart,
   Users, Store, TicketPercent, Star, Image as ImageIcon, GalleryHorizontal,
   Settings as SettingsIcon, ShieldCheck, BarChart3, Newspaper, FileText,
   FilePlus2, FolderOpen, Tags, MessageSquare, Sliders, Trash2, UserSquare2,
@@ -20,7 +20,6 @@ export const adminNavSections = [
     items: [
       { label: 'Products', to: '/admin/products', icon: Package },
       { label: 'Categories', to: '/admin/categories', icon: FolderTree },
-      { label: 'Collections', to: '/admin/collections', icon: Layers },
       { label: 'Brands', to: '/admin/brands', icon: Tag },
       { label: 'Inventory', to: '/admin/inventory', icon: Boxes },
     ],

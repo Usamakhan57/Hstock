@@ -26,15 +26,15 @@ const FAQPage = () => {
     <div className="min-h-screen">
       <Seo
         title="FAQ"
-        description="Answers to common questions about downloads, licensing, refunds, and selling on HStock."
+        description="Answers to common questions about buying, selling, escrow, refunds, and support on ApnaStore."
         jsonLd={jsonLd}
       />
       <Header />
       <main id="main-content" className="mx-auto max-w-3xl px-5 lg:px-8 pt-10 pb-24">
         <Breadcrumbs items={[{ name: 'FAQ' }]} />
-        <h1 className="text-4xl md:text-5xl font-black tracking-tight">Frequently asked <span className="brand-text">questions</span></h1>
+        <h1 className="text-4xl md:text-5xl font-black tracking-tight">ApnaStore <span className="brand-text">FAQ</span></h1>
         <p className="text-muted-foreground mt-3 max-w-lg">
-          Everything you need to know about downloads, licensing, and selling on HStock.
+          Everything you need to know about checkout, delivery, escrow, refunds, and selling on ApnaStore.
         </p>
 
         <div className="mt-10 space-y-10">

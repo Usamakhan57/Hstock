@@ -14,7 +14,6 @@ import { useFetch } from '../hooks/useFetch';
 import { useDebouncedValue } from '../hooks/useDebouncedValue';
 import { productsApi } from '../services/api';
 import { getRootStorefrontCategories, getCategoryBySlug } from '../services/categoryRepository';
-import { getCollectionBySlug } from '../services/collectionRepository';
 import { getSellerBySlug } from '../services/sellerRepository';
 import { DEFAULT_FILTERS, SORT_OPTIONS, SORT_ALIASES, PAGE_SIZE } from '../constants';
 import { useStore } from '../context/StoreContext';
@@ -42,14 +41,9 @@ const ShopPage = () => {
   const [view, setView] = useState('grid');
   const [filters, setFilters] = useState({ ...DEFAULT_FILTERS });
 
-  const collectionSlug = searchParams.get('collection');
   const categorySlug = searchParams.get('category');
   const sellerSlug = searchParams.get('seller');
 
-  const collection = useMemo(
-    () => (collectionSlug ? getCollectionBySlug(collectionSlug) : null),
-    [collectionSlug, catalogVersion],
-  );
   const category = useMemo(
     () => (categorySlug ? getCategoryBySlug(categorySlug) : null),
     [categorySlug, catalogVersion],
@@ -69,12 +63,11 @@ const ShopPage = () => {
   useEffect(() => {
     setFilters((prev) => ({
       ...prev,
-      collectionId: collection?.id || null,
       categoryId: category?.id || null,
       sellerId: seller?.id || null,
       category: category?.name || 'All',
     }));
-  }, [collection?.id, category?.id, seller?.id, category?.name]);
+  }, [category?.id, seller?.id, category?.name]);
 
   useEffect(() => {
     setPage(1);
@@ -82,10 +75,9 @@ const ShopPage = () => {
 
   const activeFilters = useMemo(() => ({
     ...filters,
-    collectionId: collection?.id || filters.collectionId,
     categoryId: category?.id || filters.categoryId,
     sellerId: seller?.id || filters.sellerId,
-  }), [filters, collection?.id, category?.id, seller?.id]);
+  }), [filters, category?.id, seller?.id]);
 
   const { data: list, loading, error, retry } = useFetch(
     () => productsApi.list({ filters: activeFilters, sort, query: debouncedQuery }),
@@ -117,11 +109,9 @@ const ShopPage = () => {
           </button>
         ))}
       </div>
-      {(collection || seller) && (
+      {seller && (
         <p className="mt-3 text-xs text-muted-foreground">
-          {collection ? <>Collection: <span className="font-semibold text-foreground">{collection.title}</span></> : null}
-          {collection && seller ? ' · ' : null}
-          {seller ? <>Seller: <span className="font-semibold text-foreground">{seller.name}</span></> : null}
+          Seller: <span className="font-semibold text-foreground">{seller.name}</span>
         </p>
       )}
     </div>
@@ -130,8 +120,8 @@ const ShopPage = () => {
   return (
     <div className="min-h-screen bg-background">
       <Seo
-        title="Shop All Digital Products"
-        description="Browse thousands of premium social accounts, domains, SaaS, and source code from verified sellers."
+        title="Shop Digital Products"
+        description="Browse ApnaStore for social accounts, domains, websites, SaaS, source code, and digital tools from verified sellers."
       />
       <Header />
 

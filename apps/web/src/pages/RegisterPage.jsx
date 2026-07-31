@@ -50,7 +50,7 @@ const RegisterPage = () => {
     setLoading(true);
     try {
       await register({ name: name.trim(), email: email.trim(), password });
-      toast({ title: 'Account created!', description: `Welcome to HStock, ${name.trim()}.` });
+      toast({ title: 'Account created!', description: `Welcome to ApnaStore, ${name.trim()}.` });
       navigate('/');
     } catch (err) {
       setError(err.message || 'Unable to create account.');
@@ -61,13 +61,13 @@ const RegisterPage = () => {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <Seo title="Create Account" description="Create a free HStock account for instant downloads and order history." noIndex />
+      <Seo title="Create Account" description="Create a free ApnaStore account for instant downloads and order history." noIndex />
       <Header />
       <div className="flex-1 grid place-items-center px-5 py-16">
         <div className="w-full max-w-md">
           <div className="bg-white rounded-3xl border border-border soft-shadow p-8">
             <h1 className="text-2xl font-black tracking-tight text-center">Create your account</h1>
-            <p className="text-sm text-muted-foreground text-center mt-2">Join HStock to save favorites and check out faster.</p>
+            <p className="text-sm text-muted-foreground text-center mt-2">Join ApnaStore to save favorites and check out faster.</p>
 
             <div className="mt-8 space-y-4">
               <GoogleAuthButton label="Continue with Google" loading={googleLoading} onClick={handleGoogleAuth} />

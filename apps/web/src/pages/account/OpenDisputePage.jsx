@@ -136,7 +136,7 @@ const OpenDisputePage = () => {
 
   return (
     <>
-      <Seo title="Open Dispute" description="Open a dispute for your HStock order." noIndex />
+      <Seo title="Open Dispute" description="Open a dispute for your ApnaStore order." noIndex />
       <AccountLayout
         title="Open Dispute"
         subtitle={`Order ${order.id} · ${order.product?.title || 'Product'}`}

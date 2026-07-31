@@ -66,7 +66,7 @@ app.use(
 app.get('/', (_req, res) => {
   res.status(200).json({
     success: true,
-    message: 'HStock API',
+    message: 'ApnaStore API',
     data: {
       phase: 'production',
       docs: '/api/v1',

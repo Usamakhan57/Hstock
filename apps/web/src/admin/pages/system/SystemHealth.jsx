@@ -29,7 +29,7 @@ const SystemHealth = () => {
 
   return (
     <div>
-      <PageHeader title="System Health" description={`${health.service || 'HStock'} — ${health.environment || 'production'}`} />
+      <PageHeader title="System Health" description={`${health.service || 'ApnaStore'} — ${health.environment || 'production'}`} />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <StatCard label="Status" value={health.status || 'unknown'} icon={Activity} />

@@ -51,7 +51,7 @@
 - `Dockerfile`
 - `docker-compose.yml`
 - `ecosystem.config.cjs` (PM2)
-- `deploy/nginx/hstock.conf`
+- `deploy/nginx/apnastore.conf`
 
 ### Docs
 

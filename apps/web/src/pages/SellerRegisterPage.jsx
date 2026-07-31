@@ -51,13 +51,13 @@ const SellerRegisterPage = () => {
       setError(result.error);
       return;
     }
-    toast({ title: 'Store created!', description: `Welcome to HStock, ${storeName.trim()}.` });
+    toast({ title: 'Store created!', description: `Welcome to ApnaStore, ${storeName.trim()}.` });
     navigate('/seller/dashboard', { replace: true });
   };
 
   return (
     <div className="min-h-screen flex flex-col">
-      <Seo title="Open Your Store" description="Create your HStock seller account and start selling digital art." noIndex />
+      <Seo title="Open Your Store" description="Create your ApnaStore seller account and start selling digital assets." noIndex />
       <Header />
       <div className="flex-1 grid place-items-center px-5 py-16">
         <div className="w-full max-w-md">

@@ -126,7 +126,7 @@ const CategoryPage = () => {
             <p className="text-muted-foreground mt-1">{count.toLocaleString()}+ items in this category</p>
           </div>
         </div>
-        <p className="text-muted-foreground mt-4 max-w-2xl">{category.description || `Browse our curated ${category.name.toLowerCase()} collection.`}</p>
+        <p className="text-muted-foreground mt-4 max-w-2xl">{category.description || `Browse verified ${category.name.toLowerCase()} listings on ApnaStore.`}</p>
 
         <div className="mt-8 flex flex-col lg:flex-row gap-8">
           <aside className="lg:w-80 shrink-0">

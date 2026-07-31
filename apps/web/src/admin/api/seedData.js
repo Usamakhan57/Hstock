@@ -1,6 +1,6 @@
 /**
  * Seed data for the mock admin backend. Shapes here should mirror what
- * the future MongoDB collections will look like (id, timestamps,
+ * the future MongoDB documents will look like (id, timestamps,
  * references by id) so the eventual migration is a data-shape match,
  * not a redesign.
  */
@@ -25,7 +25,7 @@ const img = {
   script: 'https://placehold.co/800x600/A855F7/FFFFFF?font=roboto&text=Script',
 
   // Legacy aliases — the Blog CMS, Homepage CMS, and Hero Slider content
-  // below still predates the HStock niche and hasn't been rewritten yet
+  // below still predates the ApnaStore niche and hasn't been rewritten yet
   // (tracked as a follow-up content phase); these keep those existing
   // entries pointing at real images instead of breaking silently.
   wall: 'https://placehold.co/800x600/7A4DFF/FFFFFF?font=roboto&text=Websites',
@@ -39,7 +39,7 @@ const img = {
 };
 
 // Category model fields mirror what a future `categories` MongoDB
-// collection would look like: unlimited nesting via `parentId`,
+// document store would look like: unlimited nesting via `parentId`,
 // `displayOrder` scoped to siblings (drives both admin reorder and the
 // storefront), soft delete via `deletedAt`, and dedicated SEO fields so
 // the frontend never needs hardcoded per-category copy.
@@ -55,7 +55,7 @@ export const seedCategories = [
     description: 'Established Instagram, Facebook, TikTok, YouTube, and X accounts, transferred securely.',
     image: img.social, icon: 'Users', parentId: null, displayOrder: 0, status: 'active',
     featured: true, showInHeader: true, showOnHomepage: true,
-    seoTitle: 'Social Media Accounts | HStock', metaDescription: 'Buy verified social media accounts across Instagram, Facebook, TikTok, YouTube, and X.', ogImage: img.social,
+    seoTitle: 'Social Media Accounts | ApnaStore', metaDescription: 'Buy verified social media accounts across Instagram, Facebook, TikTok, YouTube, and X.', ogImage: img.social,
     createdAt: now, updatedAt: now, deletedAt: null,
   },
   {
@@ -63,7 +63,7 @@ export const seedCategories = [
     description: 'Premium, brandable, and aged domain names ready to transfer.',
     image: img.domain, icon: 'Globe2', parentId: null, displayOrder: 1, status: 'active',
     featured: true, showInHeader: true, showOnHomepage: true,
-    seoTitle: 'Domains | HStock', metaDescription: 'Browse premium and aged domain names available for instant transfer on HStock.', ogImage: img.domain,
+    seoTitle: 'Domains | ApnaStore', metaDescription: 'Browse premium and aged domain names available for instant transfer on ApnaStore.', ogImage: img.domain,
     createdAt: now, updatedAt: now, deletedAt: null,
   },
   {
@@ -71,7 +71,7 @@ export const seedCategories = [
     description: 'Fully built, revenue-ready websites with source code and hosting handover.',
     image: img.website, icon: 'Globe', parentId: null, displayOrder: 2, status: 'active',
     featured: true, showInHeader: true, showOnHomepage: true,
-    seoTitle: 'Websites | HStock', metaDescription: 'Buy fully built, ready-to-run websites complete with source code.', ogImage: img.website,
+    seoTitle: 'Websites | ApnaStore', metaDescription: 'Buy fully built, ready-to-run websites complete with source code.', ogImage: img.website,
     createdAt: now, updatedAt: now, deletedAt: null,
   },
   {
@@ -79,7 +79,7 @@ export const seedCategories = [
     description: 'SaaS boilerplates, starter kits, and ready-to-launch platforms.',
     image: img.saas, icon: 'Cloud', parentId: null, displayOrder: 3, status: 'active',
     featured: true, showInHeader: true, showOnHomepage: true,
-    seoTitle: 'SaaS | HStock', metaDescription: 'SaaS starter kits and ready-to-launch platforms with full source code.', ogImage: img.saas,
+    seoTitle: 'SaaS | ApnaStore', metaDescription: 'SaaS starter kits and ready-to-launch platforms with full source code.', ogImage: img.saas,
     createdAt: now, updatedAt: now, deletedAt: null,
   },
   {
@@ -87,7 +87,7 @@ export const seedCategories = [
     description: 'Full application source code for web and e-commerce projects.',
     image: img.sourceCode, icon: 'FileCode2', parentId: null, displayOrder: 4, status: 'active',
     featured: false, showInHeader: true, showOnHomepage: true,
-    seoTitle: 'Source Codes | HStock', metaDescription: 'Full application source code, ready to deploy or customize.', ogImage: img.sourceCode,
+    seoTitle: 'Source Codes | ApnaStore', metaDescription: 'Full application source code, ready to deploy or customize.', ogImage: img.sourceCode,
     createdAt: now, updatedAt: now, deletedAt: null,
   },
   {
@@ -95,7 +95,7 @@ export const seedCategories = [
     description: 'iOS and Android app templates and full app source packages.',
     image: img.mobileApp, icon: 'Smartphone', parentId: null, displayOrder: 5, status: 'active',
     featured: false, showInHeader: true, showOnHomepage: true,
-    seoTitle: 'Mobile Apps | HStock', metaDescription: 'iOS and Android app templates and full mobile app source packages.', ogImage: img.mobileApp,
+    seoTitle: 'Mobile Apps | ApnaStore', metaDescription: 'iOS and Android app templates and full mobile app source packages.', ogImage: img.mobileApp,
     createdAt: now, updatedAt: now, deletedAt: null,
   },
   {
@@ -103,7 +103,7 @@ export const seedCategories = [
     description: 'AI-powered tools and licenses for content, code, and automation.',
     image: img.aiTool, icon: 'Bot', parentId: null, displayOrder: 6, status: 'active',
     featured: true, showInHeader: true, showOnHomepage: true,
-    seoTitle: 'AI Tools | HStock', metaDescription: 'AI-powered tools and lifetime licenses for content, code, and automation.', ogImage: img.aiTool,
+    seoTitle: 'AI Tools | ApnaStore', metaDescription: 'AI-powered tools and lifetime licenses for content, code, and automation.', ogImage: img.aiTool,
     createdAt: now, updatedAt: now, deletedAt: null,
   },
   {
@@ -111,7 +111,7 @@ export const seedCategories = [
     description: 'A catch-all for standout digital assets that don\u2019t fit neatly into one category.',
     image: img.digitalAsset, icon: 'Layers', parentId: null, displayOrder: 7, status: 'inactive',
     featured: false, showInHeader: false, showOnHomepage: false,
-    seoTitle: 'Digital Assets | HStock', metaDescription: 'A mix of standout digital assets on HStock.', ogImage: img.digitalAsset,
+    seoTitle: 'Digital Assets | ApnaStore', metaDescription: 'A mix of standout digital assets on ApnaStore.', ogImage: img.digitalAsset,
     createdAt: now, updatedAt: now, deletedAt: null,
   },
   {
@@ -119,7 +119,7 @@ export const seedCategories = [
     description: 'Website, document, and productivity templates ready to customize.',
     image: img.template, icon: 'LayoutTemplate', parentId: null, displayOrder: 8, status: 'active',
     featured: false, showInHeader: true, showOnHomepage: true,
-    seoTitle: 'Templates | HStock', metaDescription: 'Website, document, and productivity templates ready to customize.', ogImage: img.template,
+    seoTitle: 'Templates | ApnaStore', metaDescription: 'Website, document, and productivity templates ready to customize.', ogImage: img.template,
     createdAt: now, updatedAt: now, deletedAt: null,
   },
   {
@@ -127,7 +127,7 @@ export const seedCategories = [
     description: 'Video courses covering development, marketing, and business skills.',
     image: img.course, icon: 'GraduationCap', parentId: null, displayOrder: 9, status: 'active',
     featured: false, showInHeader: true, showOnHomepage: true,
-    seoTitle: 'Courses | HStock', metaDescription: 'Video courses covering development, marketing, and business skills.', ogImage: img.course,
+    seoTitle: 'Courses | ApnaStore', metaDescription: 'Video courses covering development, marketing, and business skills.', ogImage: img.course,
     createdAt: now, updatedAt: now, deletedAt: null,
   },
   {
@@ -135,7 +135,7 @@ export const seedCategories = [
     description: 'Guides and eBooks on business, marketing, and self-improvement.',
     image: img.ebook, icon: 'BookOpen', parentId: null, displayOrder: 10, status: 'active',
     featured: false, showInHeader: true, showOnHomepage: false,
-    seoTitle: 'eBooks | HStock', metaDescription: 'Guides and eBooks on business, marketing, and self-improvement.', ogImage: img.ebook,
+    seoTitle: 'eBooks | ApnaStore', metaDescription: 'Guides and eBooks on business, marketing, and self-improvement.', ogImage: img.ebook,
     createdAt: now, updatedAt: now, deletedAt: null,
   },
   {
@@ -143,7 +143,7 @@ export const seedCategories = [
     description: 'Automation scripts and small utilities for everyday workflows.',
     image: img.script, icon: 'Terminal', parentId: null, displayOrder: 11, status: 'active',
     featured: false, showInHeader: true, showOnHomepage: false,
-    seoTitle: 'Scripts | HStock', metaDescription: 'Automation scripts and small utilities for everyday workflows.', ogImage: img.script,
+    seoTitle: 'Scripts | ApnaStore', metaDescription: 'Automation scripts and small utilities for everyday workflows.', ogImage: img.script,
     createdAt: now, updatedAt: now, deletedAt: null,
   },
 
@@ -153,7 +153,7 @@ export const seedCategories = [
     description: 'Instagram accounts across fashion, food, tech, and lifestyle niches.', icon: 'Instagram',
     parentId: 'cat-social-accounts', displayOrder: 0, status: 'active',
     featured: true, showInHeader: true, showOnHomepage: true,
-    seoTitle: 'Instagram Accounts | HStock', metaDescription: 'Buy Instagram accounts across fashion, food, tech, and lifestyle niches.', ogImage: img.instagram,
+    seoTitle: 'Instagram Accounts | ApnaStore', metaDescription: 'Buy Instagram accounts across fashion, food, tech, and lifestyle niches.', ogImage: img.instagram,
     createdAt: now, updatedAt: now, deletedAt: null,
   },
   {
@@ -161,7 +161,7 @@ export const seedCategories = [
     description: 'Facebook pages and groups with engaged, established audiences.', icon: 'Facebook',
     parentId: 'cat-social-accounts', displayOrder: 1, status: 'active',
     featured: false, showInHeader: true, showOnHomepage: true,
-    seoTitle: 'Facebook Pages | HStock', metaDescription: 'Buy Facebook pages and groups with engaged, established audiences.', ogImage: img.facebook,
+    seoTitle: 'Facebook Pages | ApnaStore', metaDescription: 'Buy Facebook pages and groups with engaged, established audiences.', ogImage: img.facebook,
     createdAt: now, updatedAt: now, deletedAt: null,
   },
   {
@@ -169,7 +169,7 @@ export const seedCategories = [
     description: 'TikTok accounts with strong follower counts and watch time.', icon: 'Music2',
     parentId: 'cat-social-accounts', displayOrder: 2, status: 'active',
     featured: true, showInHeader: true, showOnHomepage: true,
-    seoTitle: 'TikTok Accounts | HStock', metaDescription: 'Buy TikTok accounts with strong follower counts and watch time.', ogImage: img.tiktok,
+    seoTitle: 'TikTok Accounts | ApnaStore', metaDescription: 'Buy TikTok accounts with strong follower counts and watch time.', ogImage: img.tiktok,
     createdAt: now, updatedAt: now, deletedAt: null,
   },
   {
@@ -177,7 +177,7 @@ export const seedCategories = [
     description: 'Monetized YouTube channels across tech, gaming, and lifestyle.', icon: 'Youtube',
     parentId: 'cat-social-accounts', displayOrder: 3, status: 'active',
     featured: false, showInHeader: true, showOnHomepage: false,
-    seoTitle: 'YouTube Channels | HStock', metaDescription: 'Buy monetized YouTube channels across tech, gaming, and lifestyle.', ogImage: img.youtube,
+    seoTitle: 'YouTube Channels | ApnaStore', metaDescription: 'Buy monetized YouTube channels across tech, gaming, and lifestyle.', ogImage: img.youtube,
     createdAt: now, updatedAt: now, deletedAt: null,
   },
   {
@@ -185,7 +185,7 @@ export const seedCategories = [
     description: 'Verified and aged X (Twitter) accounts with real engagement.', icon: 'Twitter',
     parentId: 'cat-social-accounts', displayOrder: 4, status: 'active',
     featured: false, showInHeader: true, showOnHomepage: false,
-    seoTitle: 'Twitter / X Accounts | HStock', metaDescription: 'Buy verified and aged X (Twitter) accounts with real engagement.', ogImage: img.twitter,
+    seoTitle: 'Twitter / X Accounts | ApnaStore', metaDescription: 'Buy verified and aged X (Twitter) accounts with real engagement.', ogImage: img.twitter,
     createdAt: now, updatedAt: now, deletedAt: null,
   },
 ];
@@ -198,31 +198,22 @@ export const seedBrands = [
   { id: 'brand-learnly', name: 'Learnly Studio', logo: img.course, website: '', description: 'Courses, templates, and eBooks for creators and founders.', status: 'active', productCount: 3 },
 ];
 
-// Curated collections — distinct from Categories. A collection groups
-// products across categories around a theme (e.g. a seasonal promo or
-// a "starter bundle"), and admins manage it with Create/Edit/Delete.
-export const seedCollections = [
-  { id: 'coll-editors-picks', name: "Editors' Picks", slug: 'editors-picks', image: img.social, description: 'Hand-picked bestsellers our team loves.', status: 'active', productIds: ['prod-1', 'prod-8', 'prod-10'] },
-  { id: 'coll-trending-week', name: 'Trending This Week', slug: 'trending-this-week', image: img.tiktok, description: 'What buyers are snapping up right now.', status: 'active', productIds: ['prod-3', 'prod-15'] },
-  { id: 'coll-new-seller-bundle', name: 'New Seller Bundle', slug: 'new-seller-bundle', image: img.course, description: 'Everything a new founder needs to get going.', status: 'active', productIds: ['prod-13', 'prod-12', 'prod-14'] },
-];
-
 export const seedProducts = [
-  { id: 'prod-1', title: 'Instagram Growth Account — 50K Followers (Fashion Niche)', slug: 'instagram-growth-account-50k-fashion', sku: 'HS-IG-001', categoryId: 'cat-instagram', collectionIds: ['coll-editors-picks'], brandId: 'brand-socialboost', tags: ['instagram', 'social-account', 'fashion'], fileTypes: ['Account Transfer'], licenseIds: ['personal', 'commercial'], price: 249, salePrice: 199, cost: 60, stock: 3, lowStockThreshold: 2, status: 'active', featured: true, thumbnail: img.instagram, gallery: [img.instagram, img.social], previewImages: [img.instagram], previewVideos: [], zipFile: { name: 'instagram-account-handover-guide.pdf', size: 1_200_000 }, description: 'An established, 50K-follower Instagram account in the fashion niche, with full email and 2FA handover.', whatsIncluded: 'Full account credentials, email access, 2FA transfer, and a step-by-step handover call.', faq: [{ question: 'How is the account transferred?', answer: 'We update the linked email and phone, then walk you through securing 2FA on your own devices.' }, { question: 'Is engagement organic?', answer: 'Yes — this account has been grown through organic content and collaborations, no bot followers.' }], metaTitle: 'Instagram Growth Account — 50K Followers | HStock', metaDescription: 'Buy an established 50K-follower fashion Instagram account with full secure handover.', rating: 4.9, reviewCount: 41, downloads: 0, createdAt: '2025-11-02T10:00:00.000Z' },
-  { id: 'prod-2', title: 'Aged Facebook Business Page — 100K Likes', slug: 'aged-facebook-business-page-100k-likes', sku: 'HS-FB-002', categoryId: 'cat-facebook', collectionIds: [], brandId: 'brand-socialboost', tags: ['facebook', 'social-account', 'business-page'], fileTypes: ['Account Transfer'], licenseIds: ['personal', 'commercial'], price: 179, salePrice: null, cost: 45, stock: 4, lowStockThreshold: 2, status: 'active', featured: false, thumbnail: img.facebook, gallery: [img.facebook], previewImages: [img.facebook], previewVideos: [], zipFile: null, description: 'A 6-year-old Facebook business page with 100K likes and steady organic reach.', whatsIncluded: 'Admin transfer, page insights export, and a handover checklist.', metaTitle: 'Aged Facebook Business Page — 100K Likes | HStock', metaDescription: 'Buy an aged Facebook business page with 100K likes and steady organic reach.', rating: 4.7, reviewCount: 23, downloads: 0, createdAt: '2025-11-10T10:00:00.000Z' },
-  { id: 'prod-3', title: 'TikTok Viral Account — 200K Followers (Comedy)', slug: 'tiktok-viral-account-200k-comedy', sku: 'HS-TT-003', categoryId: 'cat-tiktok', collectionIds: ['coll-trending-week'], brandId: 'brand-socialboost', tags: ['tiktok', 'social-account', 'comedy'], fileTypes: ['Account Transfer'], licenseIds: ['personal', 'commercial'], price: 349, salePrice: 299, cost: 80, stock: 2, lowStockThreshold: 1, status: 'active', featured: true, thumbnail: img.tiktok, gallery: [img.tiktok, img.social], previewImages: [img.tiktok], previewVideos: [], zipFile: null, description: 'A comedy-niche TikTok account with 200K followers and multiple videos past 1M views.', whatsIncluded: 'Full login transfer, content calendar handoff, and posting-history export.', metaTitle: 'TikTok Viral Account — 200K Followers | HStock', metaDescription: 'Buy a comedy-niche TikTok account with 200K followers and viral video history.', rating: 4.8, reviewCount: 35, downloads: 0, createdAt: '2025-12-01T10:00:00.000Z' },
-  { id: 'prod-4', title: 'Monetized YouTube Channel — 10K Subs (Tech Reviews)', slug: 'monetized-youtube-channel-10k-tech', sku: 'HS-YT-004', categoryId: 'cat-youtube', collectionIds: [], brandId: 'brand-socialboost', tags: ['youtube', 'social-account', 'tech'], fileTypes: ['Account Transfer'], licenseIds: ['personal', 'commercial'], price: 899, salePrice: null, cost: 250, stock: 1, lowStockThreshold: 1, status: 'draft', featured: false, thumbnail: img.youtube, gallery: [img.youtube], previewImages: [img.youtube], previewVideos: [], zipFile: null, description: 'A fully monetized tech-review YouTube channel with 10K subscribers and consistent ad revenue.', whatsIncluded: 'AdSense-linked channel transfer, revenue history, and a 30-day support window.', metaTitle: 'Monetized YouTube Channel — 10K Subs | HStock', metaDescription: 'Buy a monetized tech-review YouTube channel with 10K subscribers.', rating: 4.9, reviewCount: 12, downloads: 0, createdAt: '2025-12-05T10:00:00.000Z' },
-  { id: 'prod-5', title: 'Verified Tech X (Twitter) Account — 30K Followers', slug: 'verified-tech-x-account-30k', sku: 'HS-TW-005', categoryId: 'cat-twitter', collectionIds: [], brandId: 'brand-socialboost', tags: ['twitter', 'x', 'social-account', 'tech'], fileTypes: ['Account Transfer'], licenseIds: ['personal', 'commercial'], price: 259, salePrice: 219, cost: 65, stock: 2, lowStockThreshold: 1, status: 'active', featured: false, thumbnail: img.twitter, gallery: [img.twitter], previewImages: [img.twitter], previewVideos: [], zipFile: null, description: 'A verified tech-niche X account with 30K engaged followers.', whatsIncluded: 'Verified badge transfer, email/2FA handover, and posting history.', metaTitle: 'Verified Tech X Account — 30K Followers | HStock', metaDescription: 'Buy a verified tech-niche X (Twitter) account with 30K followers.', rating: 4.6, reviewCount: 18, downloads: 0, createdAt: '2025-12-10T10:00:00.000Z' },
-  { id: 'prod-6', title: 'Premium Domain — cloudstack.io', slug: 'premium-domain-cloudstack-io', sku: 'HS-DM-006', categoryId: 'cat-domains', collectionIds: [], brandId: 'brand-domainvault', tags: ['domain', 'premium', 'saas-brand'], fileTypes: ['Domain Transfer'], licenseIds: ['commercial'], price: 1200, salePrice: 999, cost: 300, stock: 1, lowStockThreshold: 1, status: 'active', featured: true, thumbnail: img.domain, gallery: [img.domain], previewImages: [img.domain], previewVideos: [], zipFile: null, description: 'A short, brandable .io domain, ideal for a SaaS or developer-tools product.', whatsIncluded: 'Registrar transfer (push or auth-code), DNS handover, and ownership verification support.', metaTitle: 'Premium Domain — cloudstack.io | HStock', metaDescription: 'Buy the premium, brandable domain cloudstack.io with a fast, secure transfer.', rating: 5.0, reviewCount: 6, downloads: 0, createdAt: '2026-01-04T10:00:00.000Z' },
-  { id: 'prod-7', title: 'Invoicing SaaS Website — Fully Built with Source', slug: 'invoicing-saas-website-fully-built', sku: 'HS-WB-007', categoryId: 'cat-websites', collectionIds: [], brandId: 'brand-nexusapps', tags: ['website', 'saas', 'invoicing'], fileTypes: ['Live Website', 'Full Source Code'], licenseIds: ['commercial', 'extended'], price: 1499, salePrice: null, cost: 400, stock: 1, lowStockThreshold: 1, status: 'active', featured: true, thumbnail: img.website, gallery: [img.website, img.saas], previewImages: [img.website], previewVideos: [{ name: 'invoicing-saas-demo-walkthrough.mp4', size: 28_400_000 }], zipFile: { name: 'invoicing-saas-source.zip', size: 62_000_000 }, description: 'A fully built invoicing SaaS with Stripe billing, hosting handover, and complete source code.', whatsIncluded: 'Full source code, database export, hosting/domain handover checklist, and 14 days of setup support.', metaTitle: 'Invoicing SaaS Website — Fully Built | HStock', metaDescription: 'Buy a fully built invoicing SaaS website with Stripe billing and full source code.', rating: 4.8, reviewCount: 9, downloads: 140, createdAt: '2026-01-15T10:00:00.000Z' },
-  { id: 'prod-8', title: 'SaaS Starter Kit — Next.js + Stripe Boilerplate', slug: 'saas-starter-kit-nextjs-stripe', sku: 'HS-SS-008', categoryId: 'cat-saas', collectionIds: ['coll-editors-picks'], brandId: 'brand-nexusapps', tags: ['saas', 'nextjs', 'stripe', 'boilerplate'], fileTypes: ['Full Source Code'], licenseIds: ['personal', 'commercial', 'extended'], price: 129, salePrice: 89, cost: 15, stock: 999, lowStockThreshold: 20, status: 'active', featured: true, thumbnail: img.saas, gallery: [img.saas], previewImages: [img.saas], previewVideos: [{ name: 'saas-starter-kit-preview.mp4', size: 19_800_000 }], zipFile: { name: 'saas-starter-kit-nextjs-stripe.zip', size: 8_400_000 }, description: 'A production-ready Next.js + Stripe SaaS boilerplate with auth, billing, and a dashboard already wired up.', whatsIncluded: 'Full source code, environment setup guide, and Stripe webhook configuration docs.', faq: [{ question: 'Does this include a database?', answer: 'Yes, it ships with a Postgres schema and Prisma models ready to extend.' }], metaTitle: 'SaaS Starter Kit — Next.js + Stripe | HStock', metaDescription: 'A production-ready Next.js + Stripe SaaS boilerplate with auth and billing built in.', rating: 4.9, reviewCount: 212, downloads: 1840, createdAt: '2026-01-20T10:00:00.000Z' },
-  { id: 'prod-9', title: 'E-commerce Marketplace Source Code — MERN Stack', slug: 'ecommerce-marketplace-source-mern', sku: 'HS-SC-009', categoryId: 'cat-source-code', collectionIds: [], brandId: 'brand-codeforge', tags: ['source-code', 'mern', 'marketplace', 'ecommerce'], fileTypes: ['Full Source Code'], licenseIds: ['commercial', 'extended'], price: 249, salePrice: null, cost: 40, stock: 999, lowStockThreshold: 20, status: 'active', featured: false, thumbnail: img.sourceCode, gallery: [img.sourceCode], previewImages: [img.sourceCode], previewVideos: [], zipFile: { name: 'ecommerce-marketplace-mern.zip', size: 34_500_000 }, description: 'A complete multi-vendor marketplace built on MongoDB, Express, React, and Node.', whatsIncluded: 'Frontend + backend source, seed data, and setup documentation.', metaTitle: 'E-commerce Marketplace Source Code | HStock', metaDescription: 'A complete multi-vendor MERN-stack marketplace source code package.', rating: 4.7, reviewCount: 76, downloads: 610, createdAt: '2026-01-25T10:00:00.000Z' },
-  { id: 'prod-10', title: 'Fitness Tracker App Template — iOS + Android', slug: 'fitness-tracker-app-template-ios-android', sku: 'HS-MA-010', categoryId: 'cat-mobile-apps', collectionIds: ['coll-editors-picks'], brandId: 'brand-nexusapps', tags: ['mobile-app', 'react-native', 'fitness', 'template'], fileTypes: ['Full Source Code'], licenseIds: ['personal', 'commercial'], price: 199, salePrice: 149, cost: 30, stock: 999, lowStockThreshold: 20, status: 'active', featured: false, thumbnail: img.mobileApp, gallery: [img.mobileApp], previewImages: [img.mobileApp], previewVideos: [{ name: 'fitness-tracker-app-demo.mp4', size: 22_100_000 }], zipFile: { name: 'fitness-tracker-app-template.zip', size: 15_900_000 }, description: 'A React Native fitness-tracking app template for both iOS and Android, with workout logging and charts built in.', whatsIncluded: 'Full React Native source, backend API stub, and app-store submission checklist.', metaTitle: 'Fitness Tracker App Template | HStock', metaDescription: 'A React Native fitness-tracking app template for iOS and Android.', rating: 4.6, reviewCount: 58, downloads: 890, createdAt: '2026-02-01T10:00:00.000Z' },
-  { id: 'prod-11', title: 'AI Content Writer — Lifetime License', slug: 'ai-content-writer-lifetime-license', sku: 'HS-AI-011', categoryId: 'cat-ai-tools', collectionIds: [], brandId: 'brand-codeforge', tags: ['ai-tool', 'content', 'lifetime-license'], fileTypes: ['License Key'], licenseIds: ['personal', 'commercial'], price: 89, salePrice: 69, cost: 10, stock: 999, lowStockThreshold: 20, status: 'active', featured: true, thumbnail: img.aiTool, gallery: [img.aiTool], previewImages: [img.aiTool], previewVideos: [], zipFile: null, description: 'A lifetime license to an AI writing assistant for blog posts, ads, and product copy.', whatsIncluded: 'Lifetime license key, activation guide, and access to future updates.', metaTitle: 'AI Content Writer — Lifetime License | HStock', metaDescription: 'Get a lifetime license to an AI writing assistant for blogs, ads, and product copy.', rating: 4.5, reviewCount: 134, downloads: 2210, createdAt: '2026-02-05T10:00:00.000Z' },
-  { id: 'prod-12', title: 'Notion Productivity Template Bundle', slug: 'notion-productivity-template-bundle', sku: 'HS-TP-012', categoryId: 'cat-templates', collectionIds: ['coll-new-seller-bundle'], brandId: 'brand-learnly', tags: ['template', 'notion', 'productivity'], fileTypes: ['Template File'], licenseIds: ['personal', 'commercial'], price: 19, salePrice: 12, cost: 2, stock: 999, lowStockThreshold: 20, status: 'active', featured: false, thumbnail: img.template, gallery: [img.template], previewImages: [img.template], previewVideos: [], zipFile: { name: 'notion-productivity-bundle.zip', size: 4_200_000 }, description: 'A bundle of Notion templates for goal tracking, habit building, and project planning.', whatsIncluded: 'Notion duplication links and a short setup video.', metaTitle: 'Notion Productivity Template Bundle | HStock', metaDescription: 'A bundle of Notion templates for goal tracking, habits, and project planning.', rating: 4.8, reviewCount: 305, downloads: 4120, createdAt: '2026-02-10T10:00:00.000Z' },
-  { id: 'prod-13', title: 'Complete Web Development Bootcamp — Video Course', slug: 'complete-web-development-bootcamp', sku: 'HS-CR-013', categoryId: 'cat-courses', collectionIds: ['coll-new-seller-bundle'], brandId: 'brand-learnly', tags: ['course', 'web-development', 'video'], fileTypes: ['Video Course'], licenseIds: ['personal'], price: 79, salePrice: 49, cost: 8, stock: 999, lowStockThreshold: 20, status: 'active', featured: true, thumbnail: img.course, gallery: [img.course], previewImages: [img.course], previewVideos: [{ name: 'bootcamp-course-trailer.mp4', size: 41_000_000 }], zipFile: null, description: 'A complete video course covering front-end, back-end, and deployment for beginners.', whatsIncluded: 'Lifetime access to 40+ video lessons, project files, and a certificate of completion.', metaTitle: 'Complete Web Development Bootcamp | HStock', metaDescription: 'A complete video course covering front-end, back-end, and deployment for beginners.', rating: 4.9, reviewCount: 512, downloads: 6340, createdAt: '2026-02-15T10:00:00.000Z' },
-  { id: 'prod-14', title: 'Passive Income Blueprint — eBook', slug: 'passive-income-blueprint-ebook', sku: 'HS-EB-014', categoryId: 'cat-ebooks', collectionIds: ['coll-new-seller-bundle'], brandId: 'brand-learnly', tags: ['ebook', 'business', 'passive-income'], fileTypes: ['PDF'], licenseIds: ['personal'], price: 15, salePrice: null, cost: 1, stock: 999, lowStockThreshold: 20, status: 'active', featured: false, thumbnail: img.ebook, gallery: [img.ebook], previewImages: [img.ebook], previewVideos: [], zipFile: { name: 'passive-income-blueprint.pdf', size: 3_100_000 }, description: 'A practical eBook on building digital income streams, from templates to SaaS.', whatsIncluded: 'PDF download and a bonus resource checklist.', metaTitle: 'Passive Income Blueprint — eBook | HStock', metaDescription: 'A practical eBook on building digital income streams.', rating: 4.6, reviewCount: 87, downloads: 1930, createdAt: '2026-02-20T10:00:00.000Z' },
-  { id: 'prod-15', title: 'Social Media Auto-Poster Script', slug: 'social-media-auto-poster-script', sku: 'HS-SP-015', categoryId: 'cat-scripts', collectionIds: ['coll-trending-week'], brandId: 'brand-codeforge', tags: ['script', 'automation', 'social-media'], fileTypes: ['Full Source Code'], licenseIds: ['personal', 'commercial'], price: 59, salePrice: 39, cost: 5, stock: 999, lowStockThreshold: 20, status: 'active', featured: false, thumbnail: img.script, gallery: [img.script], previewImages: [img.script], previewVideos: [], zipFile: { name: 'social-auto-poster-script.zip', size: 2_800_000 }, description: 'A PHP script that schedules and auto-posts content across multiple social accounts.', whatsIncluded: 'Full PHP source, install guide, and API setup docs.', metaTitle: 'Social Media Auto-Poster Script | HStock', metaDescription: 'A PHP script that schedules and auto-posts content across social accounts.', rating: 4.4, reviewCount: 44, downloads: 720, createdAt: '2026-03-01T10:00:00.000Z' },
+  { id: 'prod-1', title: 'Instagram Growth Account — 50K Followers (Fashion Niche)', slug: 'instagram-growth-account-50k-fashion', sku: 'HS-IG-001', categoryId: 'cat-instagram', brandId: 'brand-socialboost', tags: ['instagram', 'social-account', 'fashion'], fileTypes: ['Account Transfer'], licenseIds: ['personal', 'commercial'], price: 249, salePrice: 199, cost: 60, stock: 3, lowStockThreshold: 2, status: 'active', featured: true, thumbnail: img.instagram, gallery: [img.instagram, img.social], previewImages: [img.instagram], previewVideos: [], zipFile: { name: 'instagram-account-handover-guide.pdf', size: 1_200_000 }, description: 'An established, 50K-follower Instagram account in the fashion niche, with full email and 2FA handover.', whatsIncluded: 'Full account credentials, email access, 2FA transfer, and a step-by-step handover call.', faq: [{ question: 'How is the account transferred?', answer: 'We update the linked email and phone, then walk you through securing 2FA on your own devices.' }, { question: 'Is engagement organic?', answer: 'Yes — this account has been grown through organic content and collaborations, no bot followers.' }], metaTitle: 'Instagram Growth Account — 50K Followers | ApnaStore', metaDescription: 'Buy an established 50K-follower fashion Instagram account with full secure handover.', rating: 4.9, reviewCount: 41, downloads: 0, createdAt: '2025-11-02T10:00:00.000Z' },
+  { id: 'prod-2', title: 'Aged Facebook Business Page — 100K Likes', slug: 'aged-facebook-business-page-100k-likes', sku: 'HS-FB-002', categoryId: 'cat-facebook', brandId: 'brand-socialboost', tags: ['facebook', 'social-account', 'business-page'], fileTypes: ['Account Transfer'], licenseIds: ['personal', 'commercial'], price: 179, salePrice: null, cost: 45, stock: 4, lowStockThreshold: 2, status: 'active', featured: false, thumbnail: img.facebook, gallery: [img.facebook], previewImages: [img.facebook], previewVideos: [], zipFile: null, description: 'A 6-year-old Facebook business page with 100K likes and steady organic reach.', whatsIncluded: 'Admin transfer, page insights export, and a handover checklist.', metaTitle: 'Aged Facebook Business Page — 100K Likes | ApnaStore', metaDescription: 'Buy an aged Facebook business page with 100K likes and steady organic reach.', rating: 4.7, reviewCount: 23, downloads: 0, createdAt: '2025-11-10T10:00:00.000Z' },
+  { id: 'prod-3', title: 'TikTok Viral Account — 200K Followers (Comedy)', slug: 'tiktok-viral-account-200k-comedy', sku: 'HS-TT-003', categoryId: 'cat-tiktok', brandId: 'brand-socialboost', tags: ['tiktok', 'social-account', 'comedy'], fileTypes: ['Account Transfer'], licenseIds: ['personal', 'commercial'], price: 349, salePrice: 299, cost: 80, stock: 2, lowStockThreshold: 1, status: 'active', featured: true, thumbnail: img.tiktok, gallery: [img.tiktok, img.social], previewImages: [img.tiktok], previewVideos: [], zipFile: null, description: 'A comedy-niche TikTok account with 200K followers and multiple videos past 1M views.', whatsIncluded: 'Full login transfer, content calendar handoff, and posting-history export.', metaTitle: 'TikTok Viral Account — 200K Followers | ApnaStore', metaDescription: 'Buy a comedy-niche TikTok account with 200K followers and viral video history.', rating: 4.8, reviewCount: 35, downloads: 0, createdAt: '2025-12-01T10:00:00.000Z' },
+  { id: 'prod-4', title: 'Monetized YouTube Channel — 10K Subs (Tech Reviews)', slug: 'monetized-youtube-channel-10k-tech', sku: 'HS-YT-004', categoryId: 'cat-youtube', brandId: 'brand-socialboost', tags: ['youtube', 'social-account', 'tech'], fileTypes: ['Account Transfer'], licenseIds: ['personal', 'commercial'], price: 899, salePrice: null, cost: 250, stock: 1, lowStockThreshold: 1, status: 'draft', featured: false, thumbnail: img.youtube, gallery: [img.youtube], previewImages: [img.youtube], previewVideos: [], zipFile: null, description: 'A fully monetized tech-review YouTube channel with 10K subscribers and consistent ad revenue.', whatsIncluded: 'AdSense-linked channel transfer, revenue history, and a 30-day support window.', metaTitle: 'Monetized YouTube Channel — 10K Subs | ApnaStore', metaDescription: 'Buy a monetized tech-review YouTube channel with 10K subscribers.', rating: 4.9, reviewCount: 12, downloads: 0, createdAt: '2025-12-05T10:00:00.000Z' },
+  { id: 'prod-5', title: 'Verified Tech X (Twitter) Account — 30K Followers', slug: 'verified-tech-x-account-30k', sku: 'HS-TW-005', categoryId: 'cat-twitter', brandId: 'brand-socialboost', tags: ['twitter', 'x', 'social-account', 'tech'], fileTypes: ['Account Transfer'], licenseIds: ['personal', 'commercial'], price: 259, salePrice: 219, cost: 65, stock: 2, lowStockThreshold: 1, status: 'active', featured: false, thumbnail: img.twitter, gallery: [img.twitter], previewImages: [img.twitter], previewVideos: [], zipFile: null, description: 'A verified tech-niche X account with 30K engaged followers.', whatsIncluded: 'Verified badge transfer, email/2FA handover, and posting history.', metaTitle: 'Verified Tech X Account — 30K Followers | ApnaStore', metaDescription: 'Buy a verified tech-niche X (Twitter) account with 30K followers.', rating: 4.6, reviewCount: 18, downloads: 0, createdAt: '2025-12-10T10:00:00.000Z' },
+  { id: 'prod-6', title: 'Premium Domain — cloudstack.io', slug: 'premium-domain-cloudstack-io', sku: 'HS-DM-006', categoryId: 'cat-domains', brandId: 'brand-domainvault', tags: ['domain', 'premium', 'saas-brand'], fileTypes: ['Domain Transfer'], licenseIds: ['commercial'], price: 1200, salePrice: 999, cost: 300, stock: 1, lowStockThreshold: 1, status: 'active', featured: true, thumbnail: img.domain, gallery: [img.domain], previewImages: [img.domain], previewVideos: [], zipFile: null, description: 'A short, brandable .io domain, ideal for a SaaS or developer-tools product.', whatsIncluded: 'Registrar transfer (push or auth-code), DNS handover, and ownership verification support.', metaTitle: 'Premium Domain — cloudstack.io | ApnaStore', metaDescription: 'Buy the premium, brandable domain cloudstack.io with a fast, secure transfer.', rating: 5.0, reviewCount: 6, downloads: 0, createdAt: '2026-01-04T10:00:00.000Z' },
+  { id: 'prod-7', title: 'Invoicing SaaS Website — Fully Built with Source', slug: 'invoicing-saas-website-fully-built', sku: 'HS-WB-007', categoryId: 'cat-websites', brandId: 'brand-nexusapps', tags: ['website', 'saas', 'invoicing'], fileTypes: ['Live Website', 'Full Source Code'], licenseIds: ['commercial', 'extended'], price: 1499, salePrice: null, cost: 400, stock: 1, lowStockThreshold: 1, status: 'active', featured: true, thumbnail: img.website, gallery: [img.website, img.saas], previewImages: [img.website], previewVideos: [{ name: 'invoicing-saas-demo-walkthrough.mp4', size: 28_400_000 }], zipFile: { name: 'invoicing-saas-source.zip', size: 62_000_000 }, description: 'A fully built invoicing SaaS with Stripe billing, hosting handover, and complete source code.', whatsIncluded: 'Full source code, database export, hosting/domain handover checklist, and 14 days of setup support.', metaTitle: 'Invoicing SaaS Website — Fully Built | ApnaStore', metaDescription: 'Buy a fully built invoicing SaaS website with Stripe billing and full source code.', rating: 4.8, reviewCount: 9, downloads: 140, createdAt: '2026-01-15T10:00:00.000Z' },
+  { id: 'prod-8', title: 'SaaS Starter Kit — Next.js + Stripe Boilerplate', slug: 'saas-starter-kit-nextjs-stripe', sku: 'HS-SS-008', categoryId: 'cat-saas', brandId: 'brand-nexusapps', tags: ['saas', 'nextjs', 'stripe', 'boilerplate'], fileTypes: ['Full Source Code'], licenseIds: ['personal', 'commercial', 'extended'], price: 129, salePrice: 89, cost: 15, stock: 999, lowStockThreshold: 20, status: 'active', featured: true, thumbnail: img.saas, gallery: [img.saas], previewImages: [img.saas], previewVideos: [{ name: 'saas-starter-kit-preview.mp4', size: 19_800_000 }], zipFile: { name: 'saas-starter-kit-nextjs-stripe.zip', size: 8_400_000 }, description: 'A production-ready Next.js + Stripe SaaS boilerplate with auth, billing, and a dashboard already wired up.', whatsIncluded: 'Full source code, environment setup guide, and Stripe webhook configuration docs.', faq: [{ question: 'Does this include a database?', answer: 'Yes, it ships with a Postgres schema and Prisma models ready to extend.' }], metaTitle: 'SaaS Starter Kit — Next.js + Stripe | ApnaStore', metaDescription: 'A production-ready Next.js + Stripe SaaS boilerplate with auth and billing built in.', rating: 4.9, reviewCount: 212, downloads: 1840, createdAt: '2026-01-20T10:00:00.000Z' },
+  { id: 'prod-9', title: 'E-commerce Marketplace Source Code — MERN Stack', slug: 'ecommerce-marketplace-source-mern', sku: 'HS-SC-009', categoryId: 'cat-source-code', brandId: 'brand-codeforge', tags: ['source-code', 'mern', 'marketplace', 'ecommerce'], fileTypes: ['Full Source Code'], licenseIds: ['commercial', 'extended'], price: 249, salePrice: null, cost: 40, stock: 999, lowStockThreshold: 20, status: 'active', featured: false, thumbnail: img.sourceCode, gallery: [img.sourceCode], previewImages: [img.sourceCode], previewVideos: [], zipFile: { name: 'ecommerce-marketplace-mern.zip', size: 34_500_000 }, description: 'A complete multi-vendor marketplace built on MongoDB, Express, React, and Node.', whatsIncluded: 'Frontend + backend source, seed data, and setup documentation.', metaTitle: 'E-commerce Marketplace Source Code | ApnaStore', metaDescription: 'A complete multi-vendor MERN-stack marketplace source code package.', rating: 4.7, reviewCount: 76, downloads: 610, createdAt: '2026-01-25T10:00:00.000Z' },
+  { id: 'prod-10', title: 'Fitness Tracker App Template — iOS + Android', slug: 'fitness-tracker-app-template-ios-android', sku: 'HS-MA-010', categoryId: 'cat-mobile-apps', brandId: 'brand-nexusapps', tags: ['mobile-app', 'react-native', 'fitness', 'template'], fileTypes: ['Full Source Code'], licenseIds: ['personal', 'commercial'], price: 199, salePrice: 149, cost: 30, stock: 999, lowStockThreshold: 20, status: 'active', featured: false, thumbnail: img.mobileApp, gallery: [img.mobileApp], previewImages: [img.mobileApp], previewVideos: [{ name: 'fitness-tracker-app-demo.mp4', size: 22_100_000 }], zipFile: { name: 'fitness-tracker-app-template.zip', size: 15_900_000 }, description: 'A React Native fitness-tracking app template for both iOS and Android, with workout logging and charts built in.', whatsIncluded: 'Full React Native source, backend API stub, and app-store submission checklist.', metaTitle: 'Fitness Tracker App Template | ApnaStore', metaDescription: 'A React Native fitness-tracking app template for iOS and Android.', rating: 4.6, reviewCount: 58, downloads: 890, createdAt: '2026-02-01T10:00:00.000Z' },
+  { id: 'prod-11', title: 'AI Content Writer — Lifetime License', slug: 'ai-content-writer-lifetime-license', sku: 'HS-AI-011', categoryId: 'cat-ai-tools', brandId: 'brand-codeforge', tags: ['ai-tool', 'content', 'lifetime-license'], fileTypes: ['License Key'], licenseIds: ['personal', 'commercial'], price: 89, salePrice: 69, cost: 10, stock: 999, lowStockThreshold: 20, status: 'active', featured: true, thumbnail: img.aiTool, gallery: [img.aiTool], previewImages: [img.aiTool], previewVideos: [], zipFile: null, description: 'A lifetime license to an AI writing assistant for blog posts, ads, and product copy.', whatsIncluded: 'Lifetime license key, activation guide, and access to future updates.', metaTitle: 'AI Content Writer — Lifetime License | ApnaStore', metaDescription: 'Get a lifetime license to an AI writing assistant for blogs, ads, and product copy.', rating: 4.5, reviewCount: 134, downloads: 2210, createdAt: '2026-02-05T10:00:00.000Z' },
+  { id: 'prod-12', title: 'Notion Productivity Template Bundle', slug: 'notion-productivity-template-bundle', sku: 'HS-TP-012', categoryId: 'cat-templates', brandId: 'brand-learnly', tags: ['template', 'notion', 'productivity'], fileTypes: ['Template File'], licenseIds: ['personal', 'commercial'], price: 19, salePrice: 12, cost: 2, stock: 999, lowStockThreshold: 20, status: 'active', featured: false, thumbnail: img.template, gallery: [img.template], previewImages: [img.template], previewVideos: [], zipFile: { name: 'notion-productivity-bundle.zip', size: 4_200_000 }, description: 'A bundle of Notion templates for goal tracking, habit building, and project planning.', whatsIncluded: 'Notion duplication links and a short setup video.', metaTitle: 'Notion Productivity Template Bundle | ApnaStore', metaDescription: 'A bundle of Notion templates for goal tracking, habits, and project planning.', rating: 4.8, reviewCount: 305, downloads: 4120, createdAt: '2026-02-10T10:00:00.000Z' },
+  { id: 'prod-13', title: 'Complete Web Development Bootcamp — Video Course', slug: 'complete-web-development-bootcamp', sku: 'HS-CR-013', categoryId: 'cat-courses', brandId: 'brand-learnly', tags: ['course', 'web-development', 'video'], fileTypes: ['Video Course'], licenseIds: ['personal'], price: 79, salePrice: 49, cost: 8, stock: 999, lowStockThreshold: 20, status: 'active', featured: true, thumbnail: img.course, gallery: [img.course], previewImages: [img.course], previewVideos: [{ name: 'bootcamp-course-trailer.mp4', size: 41_000_000 }], zipFile: null, description: 'A complete video course covering front-end, back-end, and deployment for beginners.', whatsIncluded: 'Lifetime access to 40+ video lessons, project files, and a certificate of completion.', metaTitle: 'Complete Web Development Bootcamp | ApnaStore', metaDescription: 'A complete video course covering front-end, back-end, and deployment for beginners.', rating: 4.9, reviewCount: 512, downloads: 6340, createdAt: '2026-02-15T10:00:00.000Z' },
+  { id: 'prod-14', title: 'Passive Income Blueprint — eBook', slug: 'passive-income-blueprint-ebook', sku: 'HS-EB-014', categoryId: 'cat-ebooks', brandId: 'brand-learnly', tags: ['ebook', 'business', 'passive-income'], fileTypes: ['PDF'], licenseIds: ['personal'], price: 15, salePrice: null, cost: 1, stock: 999, lowStockThreshold: 20, status: 'active', featured: false, thumbnail: img.ebook, gallery: [img.ebook], previewImages: [img.ebook], previewVideos: [], zipFile: { name: 'passive-income-blueprint.pdf', size: 3_100_000 }, description: 'A practical eBook on building digital income streams, from templates to SaaS.', whatsIncluded: 'PDF download and a bonus resource checklist.', metaTitle: 'Passive Income Blueprint — eBook | ApnaStore', metaDescription: 'A practical eBook on building digital income streams.', rating: 4.6, reviewCount: 87, downloads: 1930, createdAt: '2026-02-20T10:00:00.000Z' },
+  { id: 'prod-15', title: 'Social Media Auto-Poster Script', slug: 'social-media-auto-poster-script', sku: 'HS-SP-015', categoryId: 'cat-scripts', brandId: 'brand-codeforge', tags: ['script', 'automation', 'social-media'], fileTypes: ['Full Source Code'], licenseIds: ['personal', 'commercial'], price: 59, salePrice: 39, cost: 5, stock: 999, lowStockThreshold: 20, status: 'active', featured: false, thumbnail: img.script, gallery: [img.script], previewImages: [img.script], previewVideos: [], zipFile: { name: 'social-auto-poster-script.zip', size: 2_800_000 }, description: 'A PHP script that schedules and auto-posts content across multiple social accounts.', whatsIncluded: 'Full PHP source, install guide, and API setup docs.', metaTitle: 'Social Media Auto-Poster Script | ApnaStore', metaDescription: 'A PHP script that schedules and auto-posts content across social accounts.', rating: 4.4, reviewCount: 44, downloads: 720, createdAt: '2026-03-01T10:00:00.000Z' },
 ];
 
 export const seedCustomers = [
@@ -279,17 +270,17 @@ export const seedMedia = [
 
 export const seedBanners = [
   { id: 'ban-1', title: 'Summer Sale — Up to 40% Off Social Accounts', image: img.social, mobileImage: '', link: '/shop?search=sale', buttonText: 'Shop the Sale', position: 'homepage', status: 'active', startAt: '2026-06-01T00:00:00.000Z', endAt: '2026-08-31T00:00:00.000Z' },
-  { id: 'ban-2', title: 'New Arrivals: Premium Domains', image: img.domain, mobileImage: '', link: '/shop?search=Domain', buttonText: 'Explore Domains', position: 'collection', status: 'active', startAt: '2026-06-15T00:00:00.000Z', endAt: '2026-12-31T00:00:00.000Z' },
+  { id: 'ban-2', title: 'New Arrivals: Premium Domains', image: img.domain, mobileImage: '', link: '/shop?search=Domain', buttonText: 'Explore Domains', position: 'shop', status: 'active', startAt: '2026-06-15T00:00:00.000Z', endAt: '2026-12-31T00:00:00.000Z' },
   { id: 'ban-3', title: 'Launch Your SaaS — Starter Kits', image: img.saas, mobileImage: '', link: '/shop?search=SaaS', buttonText: 'Shop SaaS Kits', position: 'category', status: 'scheduled', startAt: '2026-08-01T00:00:00.000Z', endAt: '2026-09-15T00:00:00.000Z' },
   { id: 'ban-4', title: 'AI Tools Launch Week', image: img.aiTool, mobileImage: '', link: '/shop?search=AI', buttonText: 'Shop Now', position: 'sale', status: 'draft', startAt: '2026-11-01T00:00:00.000Z', endAt: '2026-12-25T00:00:00.000Z' },
 ];
 
 export const seedUsers = [
-  { id: 'usr-1', name: 'Ava Thompson', email: 'ava@hstock.store', role: 'Admin', status: 'active', lastLoginAt: '2026-07-15T09:00:00.000Z' },
-  { id: 'usr-2', name: 'Liam Chen', email: 'liam@hstock.store', role: 'Editor', status: 'active', lastLoginAt: '2026-07-14T15:20:00.000Z' },
-  { id: 'usr-3', name: 'Noor Hassan', email: 'noor@hstock.store', role: 'Support', status: 'active', lastLoginAt: '2026-07-10T11:45:00.000Z' },
-  { id: 'usr-4', name: 'Diego Alvarez', email: 'diego@hstock.store', role: 'Editor', status: 'invited', lastLoginAt: null },
-  { id: 'usr-5', name: 'Mei Lin', email: 'mei@hstock.store', role: 'Support', status: 'suspended', lastLoginAt: '2026-05-02T08:00:00.000Z' },
+  { id: 'usr-1', name: 'Ava Thompson', email: 'ava@apnastore.org', role: 'Admin', status: 'active', lastLoginAt: '2026-07-15T09:00:00.000Z' },
+  { id: 'usr-2', name: 'Liam Chen', email: 'liam@apnastore.org', role: 'Editor', status: 'active', lastLoginAt: '2026-07-14T15:20:00.000Z' },
+  { id: 'usr-3', name: 'Noor Hassan', email: 'noor@apnastore.org', role: 'Support', status: 'active', lastLoginAt: '2026-07-10T11:45:00.000Z' },
+  { id: 'usr-4', name: 'Diego Alvarez', email: 'diego@apnastore.org', role: 'Editor', status: 'invited', lastLoginAt: null },
+  { id: 'usr-5', name: 'Mei Lin', email: 'mei@apnastore.org', role: 'Support', status: 'suspended', lastLoginAt: '2026-05-02T08:00:00.000Z' },
 ];
 
 // Marketplace vendors (distinct from admin Users above, which are internal
@@ -308,8 +299,8 @@ export const seedSellers = [
 export const seedStockLog = [];
 
 export const seedSettings = {
-  storeName: 'HStock',
-  storeEmail: 'hello@hstock.store',
+  storeName: 'ApnaStore',
+  storeEmail: 'hello@apnastore.org',
   storePhone: '+1 555-010-0000',
   address: '123 Market Street, Suite 400, San Francisco, CA',
   currency: 'USD',
@@ -342,16 +333,16 @@ export const seedSettings = {
 // BLOG CMS — authors, posts, categories, tags, comments (future-ready),
 // revisions (future-ready), settings. Shapes mirror what future
 // `blog_authors` / `posts` / `blog_categories` / `blog_tags` /
-// `blog_comments` / `blog_post_revisions` / `blog_settings` collections
+// `blog_comments` / `blog_post_revisions` / `blog_settings` stores
 // would look like so wiring a real backend later is a data-shape match,
 // not a redesign.
 // ---------------------------------------------------------------------
 
 export const seedBlogAuthors = [
   {
-    id: 'author-hstock-team', name: 'HStock Team', avatar: img.font,
-    bio: 'The team behind HStock, writing about digital products, licensing, and everything else that helps sellers succeed.',
-    socialLinks: [{ platform: 'website', url: 'https://hstock.example.com' }, { platform: 'twitter', url: 'https://twitter.com/hstock' }],
+    id: 'author-apnastore-team', name: 'ApnaStore Team', avatar: img.font,
+    bio: 'The team behind ApnaStore, writing about digital products, licensing, and everything else that helps sellers succeed.',
+    socialLinks: [{ platform: 'website', url: 'https://apnastore.org' }, { platform: 'twitter', url: 'https://twitter.com/apnastore' }],
   },
   {
     id: 'author-petal-ink', name: 'Petal & Ink', avatar: img.floral,
@@ -372,7 +363,7 @@ export const seedBlogAuthors = [
 
 export const seedBlogCategories = [
   { id: 'bcat-guides', name: 'Guides', slug: 'guides', description: 'Practical how-tos for using and selling digital downloads.', icon: 'BookOpen', image: img.font, status: 'active', order: 0, postCount: 1 },
-  { id: 'bcat-inspiration', name: 'Inspiration', slug: 'inspiration', description: 'Creative ways to use HStock assets.', icon: 'Sparkles', image: img.floral, status: 'active', order: 1, postCount: 1 },
+  { id: 'bcat-inspiration', name: 'Inspiration', slug: 'inspiration', description: 'Creative ways to use ApnaStore assets.', icon: 'Sparkles', image: img.floral, status: 'active', order: 1, postCount: 1 },
   { id: 'bcat-business', name: 'Business', slug: 'business', description: 'Running and growing a digital shop.', icon: 'Briefcase', image: img.icons, status: 'active', order: 2, postCount: 1 },
   { id: 'bcat-trends', name: 'Trends', slug: 'trends', description: 'What is shaping design and digital products this year.', icon: 'TrendingUp', image: img.planner, status: 'active', order: 3, postCount: 1 },
   { id: 'bcat-behind-the-scenes', name: 'Behind the Scenes', slug: 'behind-the-scenes', description: 'How our sellers make what they make.', icon: 'Camera', image: img.color, status: 'active', order: 4, postCount: 1 },
@@ -396,11 +387,11 @@ export const seedBlogPosts = [
   {
     id: 'post-1', title: 'Choosing the Right License for Your Project', slug: 'choosing-the-right-license',
     excerpt: 'Personal, Commercial, or Extended — here is how to pick the license that actually matches how you plan to use your download.',
-    content: 'Every product on HStock ships with at least one license tier, and picking the right one is less about the price and more about what you plan to do with the file after checkout.\n\nA Personal license covers gifts, home projects, and anything that never touches a sale. A Commercial license opens the door to client work and limited-run resale, while Extended Commercial removes the sales cap entirely for agencies and high-volume shops.\n\nWhen in doubt, start with the smallest license that covers your current project — you can always come back and upgrade later if your use case grows.',
-    categoryId: 'bcat-guides', tags: ['btag-license', 'btag-tutorial'], authorId: 'author-hstock-team',
+    content: 'Every product on ApnaStore ships with at least one license tier, and picking the right one is less about the price and more about what you plan to do with the file after checkout.\n\nA Personal license covers gifts, home projects, and anything that never touches a sale. A Commercial license opens the door to client work and limited-run resale, while Extended Commercial removes the sales cap entirely for agencies and high-volume shops.\n\nWhen in doubt, start with the smallest license that covers your current project — you can always come back and upgrade later if your use case grows.',
+    categoryId: 'bcat-guides', tags: ['btag-license', 'btag-tutorial'], authorId: 'author-apnastore-team',
     featuredImage: img.font, gallery: [img.font], status: 'published', featured: true, trending: false, editorsPick: true,
     readingTime: '5 min read',
-    seoTitle: 'Choosing the Right License for Your Project | HStock', metaDescription: 'How to pick the license tier that matches how you plan to use your download.', focusKeyword: 'digital product license',
+    seoTitle: 'Choosing the Right License for Your Project | ApnaStore', metaDescription: 'How to pick the license tier that matches how you plan to use your download.', focusKeyword: 'digital product license',
     canonicalUrl: '', robotsIndex: true, robotsFollow: true,
     ogTitle: '', ogDescription: '', ogImage: img.font,
     twitterCard: 'summary_large_image', twitterTitle: '', twitterDescription: '', twitterImage: '',
@@ -414,7 +405,7 @@ export const seedBlogPosts = [
     categoryId: 'bcat-inspiration', tags: ['btag-clipart'], authorId: 'author-petal-ink',
     featuredImage: img.floral, gallery: [img.floral], status: 'published', featured: true, trending: true, editorsPick: false,
     readingTime: '4 min read',
-    seoTitle: '5 Ways to Use Clipart Beyond the Obvious | HStock', metaDescription: 'Creative, non-obvious ways sellers are using clipart bundles.', focusKeyword: 'clipart ideas',
+    seoTitle: '5 Ways to Use Clipart Beyond the Obvious | ApnaStore', metaDescription: 'Creative, non-obvious ways sellers are using clipart bundles.', focusKeyword: 'clipart ideas',
     canonicalUrl: '', robotsIndex: true, robotsFollow: true,
     ogTitle: '', ogDescription: '', ogImage: img.floral,
     twitterCard: 'summary_large_image', twitterTitle: '', twitterDescription: '', twitterImage: '',
@@ -428,7 +419,7 @@ export const seedBlogPosts = [
     categoryId: 'bcat-business', tags: ['btag-pod'], authorId: 'author-pixel-craft',
     featuredImage: img.icons, gallery: [img.icons], status: 'published', featured: false, trending: true, editorsPick: false,
     readingTime: '7 min read',
-    seoTitle: 'Setting Up Your Print-on-Demand Shop in a Weekend | HStock', metaDescription: 'A no-fluff walkthrough for launching a print-on-demand shop fast.', focusKeyword: 'print on demand shop',
+    seoTitle: 'Setting Up Your Print-on-Demand Shop in a Weekend | ApnaStore', metaDescription: 'A no-fluff walkthrough for launching a print-on-demand shop fast.', focusKeyword: 'print on demand shop',
     canonicalUrl: '', robotsIndex: true, robotsFollow: true,
     ogTitle: '', ogDescription: '', ogImage: img.icons,
     twitterCard: 'summary_large_image', twitterTitle: '', twitterDescription: '', twitterImage: '',
@@ -442,7 +433,7 @@ export const seedBlogPosts = [
     categoryId: 'bcat-trends', tags: ['btag-planner'], authorId: 'author-daily-flow',
     featuredImage: img.planner, gallery: [img.planner], status: 'published', featured: false, trending: false, editorsPick: true,
     readingTime: '4 min read',
-    seoTitle: '2026 Trends in Digital Planning | HStock', metaDescription: 'What is shaping digital planner design in 2026.', focusKeyword: 'digital planner trends',
+    seoTitle: '2026 Trends in Digital Planning | ApnaStore', metaDescription: 'What is shaping digital planner design in 2026.', focusKeyword: 'digital planner trends',
     canonicalUrl: '', robotsIndex: true, robotsFollow: true,
     ogTitle: '', ogDescription: '', ogImage: img.planner,
     twitterCard: 'summary_large_image', twitterTitle: '', twitterDescription: '', twitterImage: '',
@@ -456,7 +447,7 @@ export const seedBlogPosts = [
     categoryId: 'bcat-behind-the-scenes', tags: ['btag-watercolor', 'btag-clipart'], authorId: 'author-petal-ink',
     featuredImage: img.color, gallery: [img.color, img.floral], status: 'published', featured: false, trending: false, editorsPick: false,
     readingTime: '6 min read',
-    seoTitle: 'Behind the Scenes: Our Watercolor Technique | HStock', metaDescription: 'How our floral clipart sets go from real paint to layered PNG files.', focusKeyword: 'watercolor clipart process',
+    seoTitle: 'Behind the Scenes: Our Watercolor Technique | ApnaStore', metaDescription: 'How our floral clipart sets go from real paint to layered PNG files.', focusKeyword: 'watercolor clipart process',
     canonicalUrl: '', robotsIndex: true, robotsFollow: true,
     ogTitle: '', ogDescription: '', ogImage: img.color,
     twitterCard: 'summary_large_image', twitterTitle: '', twitterDescription: '', twitterImage: '',
@@ -467,7 +458,7 @@ export const seedBlogPosts = [
     id: 'post-6', title: 'A First Look at Our Q3 Roadmap', slug: 'q3-roadmap-preview',
     excerpt: 'A short preview of what the team is shipping next quarter — still being finalized.',
     content: 'We are heads-down on a handful of seller-requested features for next quarter.\n\nThis post is still a work in progress and will be expanded closer to launch.',
-    categoryId: 'bcat-business', tags: [], authorId: 'author-hstock-team',
+    categoryId: 'bcat-business', tags: [], authorId: 'author-apnastore-team',
     featuredImage: img.vector, gallery: [], status: 'draft', featured: false, trending: false, editorsPick: false,
     readingTime: '2 min read',
     seoTitle: '', metaDescription: '', focusKeyword: '',
@@ -478,13 +469,13 @@ export const seedBlogPosts = [
     version: 1, modifiedBy: 'Admin', deletedAt: null,
   },
   {
-    id: 'post-7', title: 'Fall Refresh: New Seasonal Collections', slug: 'fall-refresh-seasonal-collections',
-    excerpt: 'A scheduled announcement for the upcoming seasonal collection drop.',
-    content: 'Our fall collection drops soon with new planner spreads, clipart sets, and printable decor.\n\nCheck back for the full lineup on release day.',
+    id: 'post-7', title: 'Fall Refresh: New Marketplace Drops', slug: 'fall-refresh-marketplace-drops',
+    excerpt: 'A scheduled announcement for the upcoming seasonal marketplace drop.',
+    content: 'Our fall marketplace drop is coming soon with new digital listings across top categories.\n\nCheck back for the full lineup on release day.',
     categoryId: 'bcat-trends', tags: ['btag-planner'], authorId: 'author-daily-flow',
     featuredImage: img.planner, gallery: [], status: 'scheduled', featured: false, trending: false, editorsPick: false,
     readingTime: '3 min read',
-    seoTitle: 'Fall Refresh: New Seasonal Collections | HStock', metaDescription: 'A first look at our upcoming fall seasonal collection.', focusKeyword: 'fall seasonal collection',
+    seoTitle: 'Fall Refresh: New Marketplace Drops | ApnaStore', metaDescription: 'A first look at seasonal digital asset drops on ApnaStore.', focusKeyword: 'fall marketplace drops',
     canonicalUrl: '', robotsIndex: true, robotsFollow: true,
     ogTitle: '', ogDescription: '', ogImage: img.planner,
     twitterCard: 'summary_large_image', twitterTitle: '', twitterDescription: '', twitterImage: '',
@@ -525,8 +516,8 @@ export const seedBlogRevisions = [
 ];
 
 export const seedBlogSettings = {
-  pageTitle: 'The HStock Blog',
-  heroHeading: 'The HStock Blog',
+  pageTitle: 'The ApnaStore Blog',
+  heroHeading: 'The ApnaStore Blog',
   heroDescription: 'Guides, inspiration, and behind-the-scenes stories from our team and top artists.',
   featuredCategoryIds: ['bcat-guides', 'bcat-inspiration', 'bcat-business', 'bcat-trends'],
   postsPerPage: 9,
@@ -534,10 +525,10 @@ export const seedBlogSettings = {
   enableCategories: true,
   enableRelatedPosts: true,
   enableNewsletter: true,
-  defaultAuthorId: 'author-hstock-team',
+  defaultAuthorId: 'author-apnastore-team',
   defaultOgImage: img.font,
-  defaultSeoTitle: 'Blog — Guides & Inspiration | HStock',
-  defaultMetaDescription: 'Guides, inspiration, and behind-the-scenes stories from the HStock team and top digital artists.',
+  defaultSeoTitle: 'Blog — Guides & Inspiration | ApnaStore',
+  defaultMetaDescription: 'Guides and marketplace tips from the ApnaStore team for buyers and sellers.',
   // Dynamic copy — every user-facing label on the Blog page is
   // configurable here so nothing is hardcoded in frontend components.
   searchPlaceholder: 'Search articles…',
@@ -570,9 +561,9 @@ export const seedHomepageCms = {
       description: '', maxProducts: 8, backgroundImage: '', buttonText: 'View All Categories', buttonUrl: '/categories',
     },
     {
-      key: 'featured_collections', type: 'collections', label: 'Featured Collections', enabled: true, sortOrder: 3,
-      title: 'Curated Collections', subtitle: 'Themed bundles picked by our team',
-      description: '', maxProducts: 6, backgroundImage: '', buttonText: 'View All Collections', buttonUrl: '/collections',
+      key: 'featured_categories', type: 'categories', label: 'Featured Categories', enabled: true, sortOrder: 3,
+      title: 'Popular Categories', subtitle: 'Browse top marketplace categories',
+      description: '', maxProducts: 6, backgroundImage: '', buttonText: 'View All Categories', buttonUrl: '/categories',
     },
     {
       key: 'featured_products', type: 'products', label: 'Featured Products', enabled: true, sortOrder: 4,
@@ -601,7 +592,7 @@ export const seedHomepageCms = {
     },
     {
       key: 'popular_sellers', type: 'sellers', label: 'Popular Sellers', enabled: true, sortOrder: 9,
-      title: 'Popular Sellers', subtitle: 'Top-rated shops on HStock',
+      title: 'Popular Sellers', subtitle: 'Top-rated shops on ApnaStore',
       description: '', maxProducts: 8, backgroundImage: '', buttonText: 'Browse All Sellers', buttonUrl: '/sellers',
     },
     {
@@ -659,9 +650,9 @@ export const seedHeaderCms = {
 // here by menu key, so the same menu builder powers header and footer.
 export const seedFooterCms = {
   logo: '',
-  description: 'A premium marketplace for digital art. Instant downloads, clear licensing, and hand-picked quality from talented creators worldwide.',
+  description: 'A secure marketplace for digital accounts, domains, websites, SaaS, source code, and tools — with escrow protection and verified sellers.',
   tagline: 'Secure payments · Instant delivery · 30-day guarantee',
-  copyrightText: '© {year} HStock. All rights reserved.',
+  copyrightText: '© {year} ApnaStore. All rights reserved.',
   socialLinks: [
     { id: 'soc-1', platform: 'Instagram', url: '#' },
     { id: 'soc-2', platform: 'Twitter', url: '#' },
@@ -703,7 +694,7 @@ export const seedNavMenus = [
     items: [
       { id: 'hn-1', label: 'Shop', url: '/shop', icon: '', openInNewTab: false, parentId: null, sortOrder: 1 },
       { id: 'hn-2', label: 'Categories', url: '/categories', icon: '', openInNewTab: false, parentId: null, sortOrder: 2 },
-      { id: 'hn-3', label: 'Collections', url: '/collections', icon: '', openInNewTab: false, parentId: null, sortOrder: 3 },
+      { id: 'hn-3', label: 'Categories', url: '/categories', icon: '', openInNewTab: false, parentId: null, sortOrder: 3 },
       { id: 'hn-4', label: 'Blog', url: '/blog', icon: '', openInNewTab: false, parentId: null, sortOrder: 4 },
     ],
   },
@@ -712,7 +703,7 @@ export const seedNavMenus = [
     items: [
       { id: 'fm-1', label: 'Shop All', url: '/shop', icon: '', openInNewTab: false, parentId: null, sortOrder: 1 },
       { id: 'fm-2', label: 'Categories', url: '/categories', icon: '', openInNewTab: false, parentId: null, sortOrder: 2 },
-      { id: 'fm-3', label: 'Collections', url: '/collections', icon: '', openInNewTab: false, parentId: null, sortOrder: 3 },
+      { id: 'fm-3', label: 'Categories', url: '/categories', icon: '', openInNewTab: false, parentId: null, sortOrder: 3 },
       { id: 'fm-4', label: 'Best Sellers', url: '/shop?sort=top-rated', icon: '', openInNewTab: false, parentId: null, sortOrder: 4 },
       { id: 'fm-5', label: 'Become a Seller', url: '/become-a-seller', icon: '', openInNewTab: false, parentId: null, sortOrder: 5 },
     ],
@@ -759,9 +750,9 @@ export const seedHeroSlides = [
     backgroundImage: img.wall, buttonText: 'Explore the Shop', buttonUrl: '/shop', status: 'active', sortOrder: 1,
   },
   {
-    id: 'slide-2', title: 'New: Botanical Illustration Collection', subtitle: 'Fresh from our top-rated sellers',
+    id: 'slide-2', title: 'New: Botanical Digital Assets', subtitle: 'Fresh from our top-rated sellers',
     description: 'Nature-inspired vectors, patterns, and prints.',
-    backgroundImage: img.vector, buttonText: 'Shop the Collection', buttonUrl: '/shop?search=Nature', status: 'active', sortOrder: 2,
+    backgroundImage: img.vector, buttonText: 'Shop Nature Assets', buttonUrl: '/shop?search=Nature', status: 'active', sortOrder: 2,
   },
   {
     id: 'slide-3', title: 'Summer Sale — Up to 40% Off', subtitle: 'Limited time on select bundles',
@@ -775,21 +766,21 @@ export const seedHeroSlides = [
 // component the Blog CMS uses), swapped for a real editor later with no
 // change to this shape.
 export const seedStaticPages = [
-  { id: 'page-about', title: 'About Us', slug: 'about', content: 'HStock connects independent digital artists with creators who need quality assets fast.', featuredImage: '', seoTitle: 'About Us | HStock', metaDescription: 'Learn about HStock, a marketplace for digital art and templates.', ogImage: '', status: 'published' },
-  { id: 'page-contact', title: 'Contact', slug: 'contact', content: 'Reach out to our support team any time — we typically reply within one business day.', featuredImage: '', seoTitle: 'Contact Us | HStock', metaDescription: 'Get in touch with the HStock team.', ogImage: '', status: 'published' },
-  { id: 'page-privacy', title: 'Privacy Policy', slug: 'privacy', content: 'This policy explains what information we collect and how we use it.', featuredImage: '', seoTitle: 'Privacy Policy | HStock', metaDescription: 'Read the HStock privacy policy.', ogImage: '', status: 'published' },
-  { id: 'page-terms', title: 'Terms & Conditions', slug: 'terms', content: 'These terms govern your use of HStock and the licenses attached to purchased products.', featuredImage: '', seoTitle: 'Terms & Conditions | HStock', metaDescription: 'Read the HStock terms and conditions.', ogImage: '', status: 'published' },
-  { id: 'page-refund', title: 'Refund Policy', slug: 'refund-policy', content: 'Digital products are non-refundable once downloaded, with exceptions outlined below.', featuredImage: '', seoTitle: 'Refund Policy | HStock', metaDescription: 'Read the HStock refund policy for digital products.', ogImage: '', status: 'published' },
-  { id: 'page-cookies', title: 'Cookie Policy', slug: 'cookie-policy', content: 'We use cookies to keep you signed in and to understand how the site is used.', featuredImage: '', seoTitle: 'Cookie Policy | HStock', metaDescription: 'Learn how HStock uses cookies.', ogImage: '', status: 'draft' },
-  { id: 'page-license', title: 'License Policy', slug: 'license-policy', content: 'Every product on HStock is sold under a Personal, Commercial, or Extended license — see what each allows.', featuredImage: '', seoTitle: 'License Policy | HStock', metaDescription: 'Understand HStock product licensing terms.', ogImage: '', status: 'published' },
-  { id: 'page-shipping', title: 'Shipping Policy', slug: 'shipping-policy', content: 'Digital products deliver instantly. For the rare physical item, see delivery estimates below.', featuredImage: '', seoTitle: 'Shipping Policy | HStock', metaDescription: 'Delivery details for digital and physical orders on HStock.', ogImage: '', status: 'draft' },
+  { id: 'page-about', title: 'About Us', slug: 'about', content: 'ApnaStore connects buyers and verified sellers for digital accounts, domains, SaaS, source code, and tools.', featuredImage: '', seoTitle: 'About Us | ApnaStore', metaDescription: 'Learn about ApnaStore, a secure digital marketplace.', ogImage: '', status: 'published' },
+  { id: 'page-contact', title: 'Contact', slug: 'contact', content: 'Reach out to our support team any time — we typically reply within one business day.', featuredImage: '', seoTitle: 'Contact Us | ApnaStore', metaDescription: 'Get in touch with the ApnaStore team.', ogImage: '', status: 'published' },
+  { id: 'page-privacy', title: 'Privacy Policy', slug: 'privacy', content: 'This policy explains what information we collect and how we use it.', featuredImage: '', seoTitle: 'Privacy Policy | ApnaStore', metaDescription: 'Read the ApnaStore privacy policy.', ogImage: '', status: 'published' },
+  { id: 'page-terms', title: 'Terms & Conditions', slug: 'terms', content: 'These terms govern your use of ApnaStore and the licenses attached to purchased products.', featuredImage: '', seoTitle: 'Terms & Conditions | ApnaStore', metaDescription: 'Read the ApnaStore terms and conditions.', ogImage: '', status: 'published' },
+  { id: 'page-refund', title: 'Refund Policy', slug: 'refund-policy', content: 'Digital products are non-refundable once downloaded, with exceptions outlined below.', featuredImage: '', seoTitle: 'Refund Policy | ApnaStore', metaDescription: 'Read the ApnaStore refund policy for digital products.', ogImage: '', status: 'published' },
+  { id: 'page-cookies', title: 'Cookie Policy', slug: 'cookie-policy', content: 'We use cookies to keep you signed in and to understand how the site is used.', featuredImage: '', seoTitle: 'Cookie Policy | ApnaStore', metaDescription: 'Learn how ApnaStore uses cookies.', ogImage: '', status: 'draft' },
+  { id: 'page-license', title: 'License Policy', slug: 'license-policy', content: 'Every product on ApnaStore is sold under a Personal, Commercial, or Extended license — see what each allows.', featuredImage: '', seoTitle: 'License Policy | ApnaStore', metaDescription: 'Understand ApnaStore product licensing terms.', ogImage: '', status: 'published' },
+  { id: 'page-shipping', title: 'Shipping Policy', slug: 'shipping-policy', content: 'Digital products deliver instantly. For the rare physical item, see delivery estimates below.', featuredImage: '', seoTitle: 'Shipping Policy | ApnaStore', metaDescription: 'Delivery details for digital and physical orders on ApnaStore.', ogImage: '', status: 'draft' },
 ];
 
 // FAQ — grouped questions shown on the /faq storefront page.
 export const seedFaqCategories = [
   { id: 'faqcat-orders', name: 'Orders & Downloads', slug: 'orders-downloads', sortOrder: 1 },
   { id: 'faqcat-licensing', name: 'Licensing', slug: 'licensing', sortOrder: 2 },
-  { id: 'faqcat-sellers', name: 'Selling on HStock', slug: 'selling', sortOrder: 3 },
+  { id: 'faqcat-sellers', name: 'Selling on ApnaStore', slug: 'selling', sortOrder: 3 },
   { id: 'faqcat-account', name: 'Account & Billing', slug: 'account-billing', sortOrder: 4 },
 ];
 
@@ -836,12 +827,12 @@ export const seedPopups = [
   },
   {
     id: 'popup-announcement', type: 'announcement', label: 'Announcement Popup', enabled: false,
-    image: '', headline: "We've launched Collections!", content: 'Browse curated bundles picked by our team.',
-    buttonText: 'Explore Collections', buttonUrl: '/collections', delaySeconds: 3, scheduleStart: '', scheduleEnd: '',
+    image: '', headline: "Explore ApnaStore Categories", content: 'Browse accounts, domains, SaaS, source code, and more.',
+    buttonText: 'Explore Categories', buttonUrl: '/categories', delaySeconds: 3, scheduleStart: '', scheduleEnd: '',
   },
   {
     id: 'popup-age', type: 'age_verification', label: 'Age Verification Popup', enabled: false,
-    image: '', headline: 'Please confirm your age', content: 'Some content on HStock may not be suitable for all ages.',
+    image: '', headline: 'Please confirm your age', content: 'Some content on ApnaStore may not be suitable for all ages.',
     buttonText: 'I am 18 or older', buttonUrl: '', delaySeconds: 0, scheduleStart: '', scheduleEnd: '',
   },
 ];
@@ -852,23 +843,23 @@ export const seedPopups = [
 // (see seedStaticPages), so those aren't duplicated here.
 export const seedSeoEntries = [
   {
-    id: 'seo-homepage', pageType: 'Homepage', metaTitle: 'HStock — Digital Assets for Creators', metaDescription: 'Templates, mockups, fonts, and more from independent digital artists. Instant download, clear licensing.',
+    id: 'seo-homepage', pageType: 'Homepage', metaTitle: 'ApnaStore — Secure Digital Marketplace', metaDescription: 'Buy and sell social accounts, domains, SaaS, source code, and digital tools with escrow protection.',
     keywords: 'digital assets, templates, mockups, fonts, marketplace', canonicalUrl: '/', ogTitle: '', ogDescription: '', ogImage: '', twitterCard: 'summary_large_image', twitterTitle: '', twitterDescription: '', twitterImage: '', schemaType: 'WebSite',
   },
   {
-    id: 'seo-shop', pageType: 'Products (Shop)', metaTitle: 'Shop All Digital Products | HStock', metaDescription: 'Browse the full HStock catalog of digital templates, mockups, fonts, and design assets.',
-    keywords: 'shop, digital products, templates', canonicalUrl: '/shop', ogTitle: '', ogDescription: '', ogImage: '', twitterCard: 'summary_large_image', twitterTitle: '', twitterDescription: '', twitterImage: '', schemaType: 'CollectionPage',
+    id: 'seo-shop', pageType: 'Products (Shop)', metaTitle: 'Shop All Digital Products | ApnaStore', metaDescription: 'Browse the full ApnaStore catalog of digital templates, mockups, fonts, and design assets.',
+    keywords: 'shop, digital products, templates', canonicalUrl: '/shop', ogTitle: '', ogDescription: '', ogImage: '', twitterCard: 'summary_large_image', twitterTitle: '', twitterDescription: '', twitterImage: '', schemaType: 'WebPage',
   },
   {
-    id: 'seo-categories', pageType: 'Categories', metaTitle: 'Shop by Category | HStock', metaDescription: 'Explore digital products organized by category.',
-    keywords: 'categories, digital products', canonicalUrl: '/categories', ogTitle: '', ogDescription: '', ogImage: '', twitterCard: 'summary_large_image', twitterTitle: '', twitterDescription: '', twitterImage: '', schemaType: 'CollectionPage',
+    id: 'seo-categories', pageType: 'Categories', metaTitle: 'Shop by Category | ApnaStore', metaDescription: 'Explore digital products organized by category.',
+    keywords: 'categories, digital products', canonicalUrl: '/categories', ogTitle: '', ogDescription: '', ogImage: '', twitterCard: 'summary_large_image', twitterTitle: '', twitterDescription: '', twitterImage: '', schemaType: 'WebPage',
   },
   {
-    id: 'seo-collections', pageType: 'Collections', metaTitle: 'Curated Collections | HStock', metaDescription: 'Themed bundles of digital products, hand-picked by our team.',
-    keywords: 'collections, bundles', canonicalUrl: '/collections', ogTitle: '', ogDescription: '', ogImage: '', twitterCard: 'summary_large_image', twitterTitle: '', twitterDescription: '', twitterImage: '', schemaType: 'CollectionPage',
+    id: 'seo-categories', pageType: 'Categories', metaTitle: 'Marketplace Categories | ApnaStore', metaDescription: 'Browse ApnaStore categories for accounts, domains, SaaS, source code, and digital tools.',
+    keywords: 'categories, marketplace', canonicalUrl: '/categories', ogTitle: '', ogDescription: '', ogImage: '', twitterCard: 'summary_large_image', twitterTitle: '', twitterDescription: '', twitterImage: '', schemaType: 'WebPage',
   },
   {
-    id: 'seo-seller-store', pageType: 'Seller Store', metaTitle: '{sellerName} — Seller on HStock', metaDescription: "Shop {sellerName}'s digital products on HStock.",
+    id: 'seo-seller-store', pageType: 'Seller Store', metaTitle: '{sellerName} — Seller on ApnaStore', metaDescription: "Shop {sellerName}'s digital products on ApnaStore.",
     keywords: 'seller, shop, digital products', canonicalUrl: '', ogTitle: '', ogDescription: '', ogImage: '', twitterCard: 'summary_large_image', twitterTitle: '', twitterDescription: '', twitterImage: '', schemaType: 'ProfilePage',
   },
 ];
@@ -877,11 +868,11 @@ export const seedSeoEntries = [
 // today (same RichTextEditorPlaceholder pattern used elsewhere); `{tokens}`
 // mark merge fields the future backend will substitute.
 export const seedEmailTemplates = [
-  { id: 'email-welcome', key: 'welcome', name: 'Welcome Email', subject: 'Welcome to HStock, {customerName}!', body: "Hi {customerName},\n\nWelcome to HStock — we're glad you're here. Start exploring templates, mockups, and fonts from independent creators.\n\nHappy shopping!", enabled: true },
-  { id: 'email-order', key: 'order', name: 'Order Confirmation Email', subject: 'Your HStock order {orderNumber} is confirmed', body: 'Hi {customerName},\n\nThanks for your order! Your download is ready in your account under Orders.\n\nOrder: {orderNumber}\nTotal: {orderTotal}', enabled: true },
+  { id: 'email-welcome', key: 'welcome', name: 'Welcome Email', subject: 'Welcome to ApnaStore, {customerName}!', body: "Hi {customerName},\n\nWelcome to ApnaStore — we're glad you're here. Start exploring templates, mockups, and fonts from independent creators.\n\nHappy shopping!", enabled: true },
+  { id: 'email-order', key: 'order', name: 'Order Confirmation Email', subject: 'Your ApnaStore order {orderNumber} is confirmed', body: 'Hi {customerName},\n\nThanks for your order! Your download is ready in your account under Orders.\n\nOrder: {orderNumber}\nTotal: {orderTotal}', enabled: true },
   { id: 'email-refund', key: 'refund', name: 'Refund Email', subject: 'Your refund for order {orderNumber} has been processed', body: 'Hi {customerName},\n\nYour refund for order {orderNumber} has been processed and should appear in your account within 5-10 business days.', enabled: true },
-  { id: 'email-seller-approval', key: 'seller_approval', name: 'Seller Approval Email', subject: "You're approved to sell on HStock!", body: 'Hi {sellerName},\n\nCongratulations — your seller application has been approved. You can now list your first product from your Seller Dashboard.', enabled: true },
-  { id: 'email-password-reset', key: 'password_reset', name: 'Password Reset Email', subject: 'Reset your HStock password', body: 'Hi {customerName},\n\nClick the link below to reset your password. This link expires in 1 hour.\n\n{resetLink}', enabled: true },
+  { id: 'email-seller-approval', key: 'seller_approval', name: 'Seller Approval Email', subject: "You're approved to sell on ApnaStore!", body: 'Hi {sellerName},\n\nCongratulations — your seller application has been approved. You can now list your first product from your Seller Dashboard.', enabled: true },
+  { id: 'email-password-reset', key: 'password_reset', name: 'Password Reset Email', subject: 'Reset your ApnaStore password', body: 'Hi {customerName},\n\nClick the link below to reset your password. This link expires in 1 hour.\n\n{resetLink}', enabled: true },
   { id: 'email-newsletter', key: 'newsletter', name: 'Newsletter Email', subject: '{newsletterSubject}', body: 'Hi {customerName},\n\n{newsletterContent}', enabled: false },
 ];
 
@@ -890,7 +881,7 @@ export const seedEmailTemplates = [
 // (store email/phone/address/tax), which stay as-is; this owns the
 // visual identity fields the CMS spec calls for.
 export const seedGlobalSettings = {
-  siteName: 'HStock',
+  siteName: 'ApnaStore',
   tagline: 'Digital assets for creators who ship',
   logo: '',
   favicon: '',
@@ -910,16 +901,16 @@ export const seedGlobalSettings = {
 // components — e.g. a future "follow us" block or schema markup — read
 // from, so a platform is entered once).
 export const seedSocialSettings = {
-  facebook: '', instagram: 'https://instagram.com/hstock', youtube: '', tiktok: '', pinterest: '', linkedin: '', x: 'https://x.com/hstock',
+  facebook: '', instagram: 'https://instagram.com/apnastore', youtube: '', tiktok: '', pinterest: '', linkedin: '', x: 'https://x.com/apnastore',
 };
 
 // Contact Settings — company/contact info shown on the Contact page and
 // used for schema.org LocalBusiness/Organization markup later.
 export const seedContactSettings = {
-  companyName: 'HStock Inc.',
+  companyName: 'ApnaStore Inc.',
   address: '123 Market Street, Suite 400, San Francisco, CA',
   phone: '+1 555-010-0000',
-  email: 'hello@hstock.store',
+  email: 'hello@apnastore.org',
   whatsapp: '',
   googleMapsUrl: '',
   businessHours: [

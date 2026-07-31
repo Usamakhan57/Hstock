@@ -8,7 +8,6 @@ import {
   Zap,
   BadgeCheck,
   Star,
-  BookOpen,
 } from 'lucide-react';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
@@ -18,7 +17,6 @@ import Seo from '../components/Seo';
 import { ProductGridSkeleton } from '../components/Skeletons';
 import { NetworkErrorState } from '../components/ErrorState';
 import { getStorefrontSellers } from '../services/sellerRepository';
-import { getStorefrontCollections } from '../services/collectionRepository';
 import { getHomepageCategories } from '../services/categoryRepository';
 import { productsApi } from '../services/api';
 import { useFetch } from '../hooks/useFetch';
@@ -58,10 +56,10 @@ const STORE_STATS = [
 ];
 
 const WHY_FEATURES = [
-  { icon: ShieldCheck, title: 'Verified sellers', description: 'Buy from trusted creators with verified product quality and fast support.' },
-  { icon: Zap, title: 'Instant delivery', description: 'Most listings deliver instantly after checkout for a frictionless purchase.' },
-  { icon: BadgeCheck, title: 'Secure payments', description: 'Secure checkout and payment protection keep your orders safe.' },
-  { icon: Star, title: 'Top-rated marketplace', description: 'A premium marketplace built for digital goods, creators, and small businesses.' },
+  { icon: ShieldCheck, title: 'Verified sellers', description: 'Shop from vetted sellers with clear listing standards and responsive support.' },
+  { icon: Zap, title: 'Fast delivery', description: 'Most digital listings unlock right after payment so you can start using them immediately.' },
+  { icon: BadgeCheck, title: 'Escrow protection', description: 'Payments stay protected until delivery is confirmed — safer for buyers and sellers.' },
+  { icon: Star, title: 'Built for digital commerce', description: 'Accounts, domains, SaaS, source code, and tools in one secure marketplace.' },
 ];
 
 const homeJsonLd = {
@@ -141,7 +139,6 @@ const HomePage = () => {
   const { data: featuredProducts, loading: featuredLoading, error: featuredError, retry: retryFeatured } = useFetch(() => productsApi.featured(8), []);
   const { data: latestProducts, loading: latestLoading, error: latestError, retry: retryLatest } = useFetch(() => productsApi.latest(10), []);
   const featuredStores = useMemo(() => getStorefrontSellers().slice(0, 6), [catalogVersion]);
-  const collections = useMemo(() => getStorefrontCollections().slice(0, 6), [catalogVersion]);
   const popularCategories = useMemo(() => getHomepageCategories().slice(0, 20), [catalogVersion]);
   const [recentlyViewed, setRecentlyViewed] = useState([]);
 
@@ -163,7 +160,7 @@ const HomePage = () => {
         <HeroSection />
 
         {popularCategories.length > 0 && (
-          <Section eyebrow="Popular categories" title="Browse top digital categories" cta="View all" ctaTo="/categories">
+          <Section eyebrow="Popular categories" title="Browse top marketplace categories" cta="View all" ctaTo="/categories">
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 xl:grid-cols-8 2xl:grid-cols-10 gap-4">
               {popularCategories.map((category) => {
                 const Icon = category.icon;
@@ -200,7 +197,7 @@ const HomePage = () => {
                     )}
                   </div>
                   <h3 className="mt-5 text-xl font-semibold text-foreground transition-colors group-hover:text-primary">{seller.name}</h3>
-                  <p className="mt-2 text-sm text-muted-foreground leading-relaxed line-clamp-2">{seller.specialty || seller.bio || 'High-quality digital products from a trusted creator.'}</p>
+                  <p className="mt-2 text-sm text-muted-foreground leading-relaxed line-clamp-2">{seller.specialty || seller.bio || 'Trusted digital listings from a verified ApnaStore seller.'}</p>
                   <div className="mt-5 grid gap-3 sm:grid-cols-2">
                     <div className="rounded-2xl bg-secondary/70 px-4 py-3 text-xs font-semibold text-foreground">{seller.productCount || 0} products</div>
                     <div className="rounded-2xl bg-secondary/70 px-4 py-3 text-xs font-semibold text-foreground">
@@ -271,30 +268,6 @@ const HomePage = () => {
           </Section>
         )}
 
-        {collections.length > 0 && (
-          <Section eyebrow="Popular collections" title="Collections for every creator" cta="See all collections" ctaTo="/collections">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-5">
-              {collections.map((collection) => (
-                <Link
-                  key={collection.slug}
-                  to={`/collection/${collection.slug}`}
-                  className="group relative overflow-hidden rounded-[2rem] p-7 text-white shadow-lg transition-all duration-300 hover:-translate-y-1"
-                  style={{ background: 'linear-gradient(135deg, rgba(108,59,255,0.95), rgba(255,79,216,0.9))' }}
-                >
-                  <div className="flex h-14 w-14 items-center justify-center rounded-3xl bg-white/15 text-white mb-5">
-                    <BookOpen className="h-6 w-6" aria-hidden="true" />
-                  </div>
-                  <h3 className="text-xl font-semibold">{collection.title}</h3>
-                  <p className="mt-3 text-sm text-white/85 leading-relaxed line-clamp-3">{collection.description || 'A premium curated collection for your next digital purchase.'}</p>
-                  <span className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-white/90 group-hover:text-white">
-                    Explore <ArrowRight className="h-4 w-4" aria-hidden="true" />
-                  </span>
-                </Link>
-              ))}
-            </div>
-          </Section>
-        )}
-
         <section className="mx-auto max-w-[90rem] px-5 lg:px-8 mt-24">
           <div className="grid gap-5 rounded-[2.5rem] bg-white border border-border soft-shadow p-10 lg:grid-cols-4 lg:p-12">
             {STORE_STATS.map((stat) => (
@@ -306,7 +279,7 @@ const HomePage = () => {
           </div>
         </section>
 
-        <Section eyebrow="Why choose HStock" title="Built for a premium digital marketplace">
+        <Section eyebrow="Why choose ApnaStore" title="A safer way to buy and sell digital assets">
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
             {WHY_FEATURES.map((feature) => (
               <motion.div key={feature.title} initial="hidden" whileInView="show" viewport={{ once: true }} variants={fadeUp} className="rounded-[2rem] border border-border bg-white p-7 shadow-sm transition hover:-translate-y-1 hover:shadow-lg">
@@ -324,8 +297,8 @@ const HomePage = () => {
             <div className="relative grid gap-8 lg:grid-cols-[1.3fr_0.9fr] items-center">
               <div>
                 <p className="text-sm font-semibold uppercase tracking-[0.25em] text-white/80">Become a Seller</p>
-                <h2 className="mt-6 text-4xl md:text-5xl font-black tracking-tight">Start Selling Digital Products Today</h2>
-                <p className="mt-5 max-w-xl text-sm text-white/90 leading-relaxed">Launch your storefront on HStock and connect with tens of thousands of buyers for accounts, templates, code, and services.</p>
+                <h2 className="mt-6 text-4xl md:text-5xl font-black tracking-tight">Start Selling on ApnaStore</h2>
+                <p className="mt-5 max-w-xl text-sm text-white/90 leading-relaxed">Open your storefront and list accounts, domains, websites, SaaS, source code, and tools for buyers who expect secure checkout.</p>
                 <div className="mt-8 flex flex-wrap gap-3">
                   <Link to="/become-a-seller" className="inline-flex items-center gap-2 rounded-full bg-white px-7 py-3.5 text-sm font-semibold text-foreground shadow-lg transition hover:opacity-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white">
                     Become Seller <ArrowRight className="w-4 h-4" aria-hidden="true" />
@@ -337,10 +310,10 @@ const HomePage = () => {
               </div>
               <div className="rounded-[2rem] border border-white/15 bg-white/10 p-7 shadow-2xl backdrop-blur-xl">
                 <div className="flex items-center gap-4 text-sm text-white/90">
-                  <span className="grid place-items-center h-12 w-12 rounded-3xl bg-white/15 text-white">HS</span>
+                  <span className="grid place-items-center h-12 w-12 rounded-3xl bg-white/15 text-white">AS</span>
                   <div>
-                    <p className="font-semibold">HStock Sellers</p>
-                    <p className="text-xs text-white/80">Grow with a marketplace built for digital goods</p>
+                    <p className="font-semibold">ApnaStore Sellers</p>
+                    <p className="text-xs text-white/80">Grow with escrow-backed digital commerce</p>
                   </div>
                 </div>
                 <div className="mt-7 grid gap-4">

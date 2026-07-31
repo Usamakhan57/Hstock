@@ -145,7 +145,7 @@ const SellerProfilePage = () => {
                     <span className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full bg-secondary text-secondary-foreground"><ShieldCheck className="w-3.5 h-3.5 text-primary" /> Verified Seller</span>
                   )}
                 </div>
-                <p className="text-sm text-muted-foreground mt-2 max-w-xl leading-relaxed">{artist.bio || artist.specialty || 'Digital products from a trusted HStock seller.'}</p>
+                <p className="text-sm text-muted-foreground mt-2 max-w-xl leading-relaxed">{artist.bio || artist.specialty || 'Digital products from a trusted ApnaStore seller.'}</p>
               </div>
               <div className="flex items-center gap-2 shrink-0">
                 <button

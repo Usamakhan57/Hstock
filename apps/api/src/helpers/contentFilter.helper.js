@@ -51,7 +51,7 @@ const PLATFORM_KEYWORDS = [
     /message\s+me\s+(on|via|outside)/i,
     /reach\s+me\s+(on|via|outside)/i,
     /talk\s+(on|via)\s+(whatsapp|telegram|discord|email|instagram|facebook|tiktok)/i,
-    /outside\s+hstock/i,
+    /outside\s+apnastore/i,
     /off[\s-]?platform/i,
   ] },
   { rule: 'qr_code', patterns: [/\bqr[\s-]?code\b/i, /\bscan\s+(my\s+)?qr\b/i] },
@@ -244,7 +244,7 @@ export function detectOcrSensitiveContent(raw) {
   if (
     /contact\s+me\s+(on|via|outside)/i.test(originalLower)
     || /message\s+me\s+(on|via)\s+(whatsapp|telegram|discord)/i.test(originalLower)
-    || /outside\s+hstock/i.test(originalLower)
+    || /outside\s+apnastore/i.test(originalLower)
   ) {
     pushRule(rules, 'off_platform_invite');
   }

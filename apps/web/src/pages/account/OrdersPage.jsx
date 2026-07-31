@@ -63,7 +63,7 @@ const OrdersPage = () => {
 
   return (
     <>
-      <Seo title="My Orders" description="View your HStock order history." noIndex />
+      <Seo title="My Orders" description="View your ApnaStore order history." noIndex />
       <AccountLayout title="Order History" subtitle="Every purchase you've made, with escrow and access status.">
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 mb-5">
           {TABS.map((t) => (
@@ -121,7 +121,7 @@ const OrdersPage = () => {
                     <div className="flex-1 min-w-0">
                       <Link to={o.product.id ? `/product/${o.product.id}` : '/shop'} className="text-sm font-semibold hover:text-primary transition-colors line-clamp-1">{o.product.title}</Link>
                       <p className="text-xs text-muted-foreground">
-                        by {o.product.artist || 'HStock Seller'} · Payment {o.paymentStatusLabel} · Escrow {o.escrowStatusLabel}
+                        by {o.product.artist || 'ApnaStore Seller'} · Payment {o.paymentStatusLabel} · Escrow {o.escrowStatusLabel}
                       </p>
                     </div>
                   </div>

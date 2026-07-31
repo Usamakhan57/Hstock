@@ -51,7 +51,7 @@ export async function sendEmail({ to, subject, html, text }) {
 
   const transport = getTransporter();
   const info = await transport.sendMail({
-    from: env.EMAIL_FROM || 'noreply@hstock.store',
+    from: env.EMAIL_FROM || 'noreply@apnastore.org',
     to,
     subject,
     html,

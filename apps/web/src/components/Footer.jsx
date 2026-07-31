@@ -8,30 +8,26 @@ const cols = [
   { title: 'Marketplace', links: [
     { name: 'Shop All', to: '/shop' },
     { name: 'Categories', to: '/categories' },
-    { name: 'Collections', to: '/collections' },
-    { name: 'Best Sellers', to: '/shop?sort=top-rated' },
+    { name: 'Best Sellers', to: '/shop?sort=Most%20Popular' },
     { name: 'Become a Seller', to: '/become-a-seller' },
   ] },
   { title: 'Company', links: [
     { name: 'About', to: '/about' },
     { name: 'Blog', to: '/blog' },
     { name: 'Contact', to: '/contact' },
-    { name: 'Careers', to: '/contact' },
-    { name: 'Affiliates', to: '/contact' },
+    { name: 'Seller Hub', to: '/seller' },
   ] },
   { title: 'Support', links: [
     { name: 'FAQ', to: '/faq' },
-    { name: 'Licensing', to: '/terms' },
-    { name: 'Wallet', to: '/wallet' },
+    { name: 'Buyer Guide', to: '/buyer-guide' },
+    { name: 'Seller Guide', to: '/seller-guide' },
     { name: 'Order History', to: '/orders' },
-    { name: 'Help Center', to: '/contact' },
+    { name: 'Help Center', to: '/support' },
   ] },
   { title: 'Legal', links: [
     { name: 'Privacy Policy', to: '/privacy' },
     { name: 'Terms & Conditions', to: '/terms' },
     { name: 'Refund Policy', to: '/refund-policy' },
-    { name: 'Cookies', to: '/privacy' },
-    { name: 'DMCA', to: '/terms' },
   ] },
 ];
 
@@ -85,11 +81,11 @@ const Footer = () => (
     <div className="mx-auto max-w-[90rem] px-5 lg:px-8 py-16">
       <div className="grid gap-12 lg:grid-cols-[1.4fr_repeat(4,1fr)]">
         <div>
-          <Link to="/" className="inline-block mb-4" aria-label="HStock home">
-            <img src={LOGO} alt="HStock" className="h-14 w-auto" />
+          <Link to="/" className="inline-block mb-4" aria-label="ApnaStore home">
+            <img src={LOGO} alt="ApnaStore" className="h-14 w-auto" />
           </Link>
           <p className="text-sm text-muted-foreground max-w-xs leading-relaxed">
-            A premium marketplace for digital art. Instant downloads, clear licensing, and hand-picked quality from talented creators worldwide.
+            ApnaStore is a secure marketplace for digital accounts, domains, websites, SaaS, and software assets — protected by escrow and built for verified sellers.
           </p>
           <div className="flex gap-2 mt-5">
             {[Instagram, Twitter, Github, Youtube].map((Ic, i) => (
@@ -114,8 +110,8 @@ const Footer = () => (
         ))}
       </div>
       <div className="mt-14 pt-8 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-4">
-        <p className="text-xs text-muted-foreground">© {new Date().getFullYear()} HStock. All rights reserved.</p>
-        <p className="text-xs text-muted-foreground">Secure payments · Instant delivery · 30-day guarantee</p>
+        <p className="text-xs text-muted-foreground">© {new Date().getFullYear()} ApnaStore. All rights reserved. apnastore.org</p>
+        <p className="text-xs text-muted-foreground">Escrow protection · Cryptomus payments · Verified sellers</p>
       </div>
     </div>
   </footer>

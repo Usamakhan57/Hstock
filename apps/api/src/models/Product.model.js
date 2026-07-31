@@ -72,12 +72,6 @@ const productSchema = new mongoose.Schema(
       default: null,
       index: true,
     },
-    collection: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Collection',
-      default: null,
-      index: true,
-    },
     tags: [
       {
         type: mongoose.Schema.Types.ObjectId,
@@ -208,7 +202,6 @@ productSchema.index({ status: 1, visibility: 1, approvalStatus: 1 });
 productSchema.index({ deletedAt: 1, status: 1, visibility: 1, approvalStatus: 1, createdAt: -1 });
 productSchema.index({ category: 1, status: 1, visibility: 1, approvalStatus: 1, deletedAt: 1, createdAt: -1 });
 productSchema.index({ brand: 1, status: 1, visibility: 1, approvalStatus: 1, deletedAt: 1 });
-productSchema.index({ collection: 1, status: 1, visibility: 1, approvalStatus: 1, deletedAt: 1 });
 productSchema.index({ featured: 1, status: 1, visibility: 1, approvalStatus: 1, deletedAt: 1 });
 productSchema.index({ seller: 1, status: 1 });
 productSchema.index({ createdAt: -1 });

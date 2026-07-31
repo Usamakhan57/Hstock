@@ -23,6 +23,6 @@ export function buildBlogPostingSchema(post, { authorName, categoryLabel, url } 
     ...(categoryLabel ? { articleSection: categoryLabel } : {}),
     datePublished: post.publishedAt || post.createdAt,
     dateModified: post.updatedAt || post.publishedAt || post.createdAt,
-    author: { '@type': 'Person', name: authorName || 'HStock Team' },
+    author: { '@type': 'Person', name: authorName || 'ApnaStore Team' },
   };
 }

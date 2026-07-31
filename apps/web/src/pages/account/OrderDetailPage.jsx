@@ -103,7 +103,7 @@ const OrderDetailPage = () => {
 
   return (
     <>
-      <Seo title={`Order ${order.id}`} description="View your HStock order details, payment, and escrow." noIndex />
+      <Seo title={`Order ${order.id}`} description="View your ApnaStore order details, payment, and escrow." noIndex />
       <AccountLayout
         title={`Order ${order.id}`}
         subtitle={order.date ? new Date(order.date).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }) : '—'}

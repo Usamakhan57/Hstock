@@ -41,7 +41,7 @@ const CouponsPage = () => {
 
   return (
     <>
-      <Seo title="My Coupons" description="View and apply your saved HStock coupons." noIndex />
+      <Seo title="My Coupons" description="View and apply your saved ApnaStore coupons." noIndex />
       <AccountLayout title="Coupons" subtitle="Discounts available on your account, ready to apply at checkout.">
         <form onSubmit={applyCoupon} className="flex items-center gap-2 bg-white rounded-full px-2 py-2 border border-border mb-6 max-w-md">
           <input value={applyCode} onChange={(e) => setApplyCode(e.target.value)} placeholder="Enter coupon code" className="bg-transparent outline-none text-sm w-full px-3" />

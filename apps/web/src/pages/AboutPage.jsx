@@ -7,35 +7,55 @@ import Seo from '../components/Seo';
 import Breadcrumbs from '../components/Breadcrumbs';
 import { getStorefrontSellers } from '../services/sellerRepository';
 import { getStorefrontTestimonials } from '../services/testimonialRepository';
+import { SITE } from '../constants';
 
 const stats = [
-  { value: '12,000+', label: 'Digital Assets' },
-  { value: '85,000+', label: 'Happy Customers' },
-  { value: '150+', label: 'Independent Artists' },
+  { value: '100K+', label: 'Digital Listings' },
+  { value: '50K+', label: 'Active Buyers' },
+  { value: '15K+', label: 'Verified Sellers' },
   { value: '4.9/5', label: 'Average Rating' },
 ];
 
 const values = [
-  { icon: Sparkles, title: 'Hand-Picked Quality', text: 'Every product is reviewed before it goes live — no filler, no low-effort uploads.' },
-  { icon: ShieldCheck, title: 'Clear Licensing', text: 'Personal, Commercial, and Extended tiers spelled out plainly so you always know what you can do.' },
-  { icon: Zap, title: 'Instant Delivery', text: 'Downloads unlock the second checkout completes — no waiting on emails or approvals.' },
-  { icon: Heart, title: 'Artist-First', text: 'Creators keep the majority of every sale, so the marketplace grows around real, sustainable work.' },
+  { icon: Sparkles, title: 'Quality listings', text: 'Every product is reviewed for clarity, delivery readiness, and marketplace standards before it goes live.' },
+  { icon: ShieldCheck, title: 'Escrow protection', text: 'Payments stay protected until delivery is confirmed so buyers and sellers can trade with confidence.' },
+  { icon: Zap, title: 'Fast digital delivery', text: 'Most listings unlock immediately after checkout — accounts, files, and assets when you need them.' },
+  { icon: Heart, title: 'Seller-first economics', text: 'Transparent fees and reliable payouts help serious sellers grow sustainable digital businesses.' },
 ];
+
+const aboutJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'AboutPage',
+  name: 'About ApnaStore',
+  url: `${SITE.url}/about`,
+  description: SITE.description,
+  mainEntity: {
+    '@type': 'Organization',
+    name: SITE.name,
+    url: SITE.url,
+  },
+};
 
 const AboutPage = () => (
   <div className="min-h-screen">
-    <Seo title="About Us" description="HStock is a premium marketplace for digital art — learn about our mission, curation, and creator community." />
+    <Seo
+      title="About Us"
+      description="ApnaStore is a secure digital marketplace for accounts, domains, websites, SaaS, source code, and tools — built for buyers and verified sellers."
+      jsonLd={aboutJsonLd}
+    />
     <Header />
 
     <div className="mx-auto max-w-[90rem] px-5 lg:px-8 pt-10">
-        <Breadcrumbs items={[{ name: 'About' }]} />
+      <Breadcrumbs items={[{ name: 'About' }]} />
 
       <div className="max-w-2xl">
-        <h1 className="text-4xl md:text-5xl font-black tracking-tight">A marketplace built for <span className="brand-text">digital creators</span></h1>
+        <h1 className="text-4xl md:text-5xl font-black tracking-tight">
+          <span className="brand-text">ApnaStore</span> — a marketplace built for digital commerce
+        </h1>
         <p className="text-muted-foreground mt-4 leading-relaxed">
-          HStock started in 2019 as a small clipart shop and grew into a full marketplace for premium digital art — wall prints,
-          planners, cliparts, templates, and more — made by independent artists around the world. We obsess over two things:
-          the quality of what we sell, and making sure the people who make it are paid fairly.
+          ApnaStore helps people buy and sell social accounts, domains, websites, SaaS products, source code,
+          apps, AI tools, templates, courses, and other digital assets. We focus on secure checkout, clear
+          delivery, and a fair experience for both sides of every transaction.
         </p>
       </div>
 
@@ -67,9 +87,9 @@ const AboutPage = () => (
 
       <div className="mt-24">
         <div className="flex items-end justify-between gap-6 mb-8">
-          <h2 className="text-3xl font-extrabold tracking-tight">Meet a few of our artists</h2>
+          <h2 className="text-3xl font-extrabold tracking-tight">Meet a few of our sellers</h2>
           <Link to="/shop" className="hidden sm:flex items-center gap-1.5 text-sm font-semibold text-primary hover:gap-2.5 transition-all shrink-0">
-            Shop all artists <ArrowRight className="w-4 h-4" />
+            Browse marketplace <ArrowRight className="w-4 h-4" />
           </Link>
         </div>
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -105,10 +125,10 @@ const AboutPage = () => (
       </div>
 
       <div className="mb-24 rounded-3xl brand-gradient p-10 md:p-14 text-center text-white">
-        <h2 className="text-3xl md:text-4xl font-black tracking-tight">Ready to find your next asset?</h2>
-        <p className="mt-3 text-white/85 max-w-md mx-auto">Browse thousands of premium, print-ready designs — instant download, every time.</p>
+        <h2 className="text-3xl md:text-4xl font-black tracking-tight">Ready for your next digital asset?</h2>
+        <p className="mt-3 text-white/85 max-w-md mx-auto">Shop verified listings with escrow protection — or open a seller storefront today.</p>
         <Link to="/shop" className="inline-flex items-center justify-center gap-2 mt-7 px-7 py-3.5 rounded-full bg-white text-foreground font-semibold hover:scale-[1.03] transition-transform">
-          Explore the Shop <ArrowRight className="w-4 h-4" />
+          Explore ApnaStore <ArrowRight className="w-4 h-4" />
         </Link>
       </div>
     </div>

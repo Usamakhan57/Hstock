@@ -11,7 +11,7 @@ const NOTIFICATION_TOGGLES = [
   { key: 'newOrders', label: 'New order emails', hint: 'Get notified whenever a customer buys one of your products.' },
   { key: 'newReviews', label: 'New review alerts', hint: 'Get notified when a buyer leaves a review.' },
   { key: 'payouts', label: 'Payout updates', hint: 'Get notified when a withdrawal is processed.' },
-  { key: 'marketing', label: 'HStock news & tips', hint: 'Occasional seller tips and platform updates.' },
+  { key: 'marketing', label: 'ApnaStore news & tips', hint: 'Occasional seller tips and platform updates.' },
 ];
 
 const SellerStoreSettingsTab = ({ seller }) => {
@@ -182,7 +182,7 @@ const SellerStoreSettingsTab = ({ seller }) => {
 
         <div className="bg-white rounded-3xl border border-border soft-shadow p-6 space-y-4">
           <h3 className="font-bold">Digital Delivery Settings</h3>
-          <p className="text-xs text-muted-foreground -mt-2">Every HStock product is delivered instantly after purchase, so there are no shipping costs or carrier settings to manage.</p>
+          <p className="text-xs text-muted-foreground -mt-2">Every ApnaStore product is delivered instantly after purchase, so there are no shipping costs or carrier settings to manage.</p>
           <div>
             <label className="block text-sm font-medium mb-1.5">Delivery Notes</label>
             <textarea value={form.shippingPolicy} onChange={set('shippingPolicy')} className={textareaClass} placeholder="Add any notes about access instructions, licensing, or download windows…" />
