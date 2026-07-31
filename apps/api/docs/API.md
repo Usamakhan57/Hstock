@@ -174,5 +174,5 @@ Middleware:
 
 ## Out of scope (not implemented)
 
-Notifications, Reviews, Admin Dashboard UI.
+Reviews module (storefront reviews). Notifications and Admin ops APIs are included in v1.0.
 

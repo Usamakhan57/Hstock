@@ -1,11 +1,6 @@
-# HStock API — Commerce Core
+# HStock API — v1.0 Release Candidate
 
-Production-ready **Node.js + Express + MongoDB** backend for the HStock multi-vendor digital marketplace.
-
-> Phase 1 foundation and Phase 2 (Auth, Users, Catalog, Products) remain intact.  
-> **Commerce Core adds** Orders, Cryptomus Payments, Escrow, Seller Wallet, Double-Entry Ledger, Withdrawals, Disputes, Refunds, and background jobs.
-
-Frontend is untouched — all work is inside `apps/api`.
+Production **Node.js + Express + MongoDB** backend for the HStock multi-vendor digital marketplace.
 
 ## Stack
 
@@ -17,6 +12,8 @@ Frontend is untouched — all work is inside `apps/api`.
 | Validation | Zod |
 | Auth | JWT access + refresh, bcrypt, httpOnly cookies |
 | Payments | Cryptomus only |
+| Realtime | Socket.io |
+| Email | Nodemailer (SMTP) |
 | Logging | Winston + Morgan |
 | Jobs | node-cron |
 | Process manager | PM2 |
@@ -28,42 +25,18 @@ Frontend is untouched — all work is inside `apps/api`.
 ```bash
 cd apps/api
 cp .env.example .env
-# set MONGODB_URI, JWT_ACCESS_SECRET, JWT_REFRESH_SECRET
-# set CRYPTOMUS_* for live payments
+# set MONGODB_URI, JWT_*, CREDENTIALS_ENCRYPTION_KEY
 npm install
 npm run seed
 npm run dev
 ```
 
-## Business rules
-
-1. Seller registration fee default **0** (`SystemConfig`)
-2. Default commission **10%** (`CommissionConfig`) — MongoDB configurable, never hardcoded
-3. Buy Now — **one order = one product** (no cart)
-4. Escrow auto-release after **24 hours** if no dispute
-5. Withdrawals are **manual** — admin marks Paid after external payout
-6. Cryptomus is the **only** payment gateway
-
 ## API surface (`/api/v1`)
 
-| Area | Prefix |
-|------|--------|
-| Auth | `/api/v1/auth` |
-| Users | `/api/v1/users` |
-| Config | `/api/v1/config` |
-| Catalog | `/api/v1/categories\|brands\|collections\|tags` |
-| Products | `/api/v1/products` |
-| Orders | `/api/v1/orders` |
-| Payments | `/api/v1/payments` |
-| Escrow | `/api/v1/escrow` |
-| Wallet / Ledger | `/api/v1/wallet` |
-| Withdrawals | `/api/v1/withdrawals` |
-| Disputes | `/api/v1/disputes` |
-| Refunds | `/api/v1/refunds` |
+Auth · Users · Config · Catalog · Products · Orders · Payments · Escrow · Wallet · Withdrawals · Disputes · Refunds · Notifications · Admin
 
-Health: `/health`, `/health/live`, `/health/ready`.
-
-Full commerce docs: [`docs/COMMERCE_CORE.md`](docs/COMMERCE_CORE.md)
+Health: `/health`, `/health/live`, `/health/ready`  
+Socket: `/socket.io`
 
 ## Scripts
 
@@ -75,11 +48,9 @@ npm test
 npm audit
 npm run seed
 npm run dev
+npm run pm2:start
 ```
 
 ## Documentation
 
-- [`docs/COMMERCE_CORE.md`](docs/COMMERCE_CORE.md)
-- [`docs/API.md`](docs/API.md)
-- [`docs/FOLDER_STRUCTURE.md`](docs/FOLDER_STRUCTURE.md)
-- [`docs/ENVIRONMENT.md`](docs/ENVIRONMENT.md)
+See [`docs/`](./docs/) — Environment, Production Deployment, API, manuals, Release Notes, Deployment Checklist, Rollback Plan.

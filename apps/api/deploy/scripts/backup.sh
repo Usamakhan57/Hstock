@@ -5,11 +5,12 @@ set -euo pipefail
 BACKUP_DIR="${BACKUP_DIR:-/var/backups/hstock}"
 RETENTION_DAYS="${RETENTION_DAYS:-14}"
 DB_NAME="${MONGODB_DB_NAME:-hstock}"
+MONGODB_URI="${MONGODB_URI:-mongodb://127.0.0.1:27017}"
 STAMP="$(date +%Y%m%d_%H%M%S)"
 OUT="$BACKUP_DIR/${DB_NAME}_$STAMP"
 
 mkdir -p "$BACKUP_DIR"
-mongodump --db "$DB_NAME" --out "$OUT"
+mongodump --uri="$MONGODB_URI" --db "$DB_NAME" --out "$OUT"
 tar -czf "${OUT}.tar.gz" -C "$BACKUP_DIR" "${DB_NAME}_$STAMP"
 rm -rf "$OUT"
 

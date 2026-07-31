@@ -168,6 +168,8 @@ const paymentSchema = new mongoose.Schema(
 
 paymentSchema.index({ status: 1, createdAt: -1 });
 paymentSchema.index({ buyer: 1, createdAt: -1 });
+paymentSchema.index({ seller: 1, status: 1, createdAt: -1 });
+paymentSchema.index({ status: 1, lastSyncedAt: 1, createdAt: 1 });
 
 const Payment = mongoose.models.Payment || mongoose.model('Payment', paymentSchema);
 

@@ -337,7 +337,11 @@ async function loginWithRoleCheck(email, password, rolePredicate, meta, failureC
     throw new AppError('Invalid email or password', 401, { code: failureCode });
   }
 
-  if (user.status === UserStatusEnum.Suspended || user.status === UserStatusEnum.Deleted) {
+  if (
+    user.status === UserStatusEnum.Suspended
+    || user.status === UserStatusEnum.Deleted
+    || user.status === UserStatusEnum.Inactive
+  ) {
     throw new AppError('Account is not active', 403, { code: 'ACCOUNT_INACTIVE' });
   }
 
@@ -428,22 +432,52 @@ export async function refreshSession(refreshToken, meta = {}) {
   }
 
   const tokenHash = hashToken(refreshToken);
-  const stored = await RefreshToken.findOne({ tokenHash, revokedAt: null });
-  if (!stored || stored.expiresAt.getTime() < Date.now()) {
+  const existing = await RefreshToken.findOne({ tokenHash });
+  if (!existing) {
     throw new AppError('Refresh token expired or revoked', 401, {
       code: 'REFRESH_EXPIRED',
     });
   }
 
-  const user = await User.findById(decoded.sub || stored.user);
+  // Reuse of an already-rotated/revoked refresh token → revoke all sessions
+  if (existing.revokedAt) {
+    await RefreshToken.updateMany(
+      { user: existing.user, revokedAt: null },
+      { $set: { revokedAt: new Date() } },
+    );
+    throw new AppError('Refresh token reuse detected — all sessions revoked', 401, {
+      code: 'REFRESH_REUSE',
+    });
+  }
+
+  if (existing.expiresAt.getTime() < Date.now()) {
+    throw new AppError('Refresh token expired or revoked', 401, {
+      code: 'REFRESH_EXPIRED',
+    });
+  }
+
+  const user = await User.findById(decoded.sub || existing.user);
   if (!user || user.status !== UserStatusEnum.Active) {
     throw new AppError('User not found or inactive', 401, { code: 'UNAUTHORIZED' });
   }
 
-  stored.revokedAt = new Date();
+  // Atomic rotate — prevent concurrent double-issue races
+  const stored = await RefreshToken.findOneAndUpdate(
+    { tokenHash, revokedAt: null },
+    { $set: { revokedAt: new Date() } },
+    { new: true },
+  );
+  if (!stored) {
+    throw new AppError('Refresh token expired or revoked', 401, {
+      code: 'REFRESH_EXPIRED',
+    });
+  }
+
   const tokens = await issueTokenPair(user, meta);
-  stored.replacedByTokenHash = hashToken(tokens.refreshToken);
-  await stored.save();
+  await RefreshToken.updateOne(
+    { _id: stored._id },
+    { $set: { replacedByTokenHash: hashToken(tokens.refreshToken) } },
+  );
 
   return { user: publicUser(user), ...tokens };
 }

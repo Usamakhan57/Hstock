@@ -189,6 +189,8 @@ const orderSchema = new mongoose.Schema(
 
 orderSchema.index({ buyer: 1, createdAt: -1 });
 orderSchema.index({ seller: 1, createdAt: -1 });
+orderSchema.index({ buyer: 1, status: 1, createdAt: -1 });
+orderSchema.index({ seller: 1, status: 1, createdAt: -1 });
 orderSchema.index({ status: 1, expiresAt: 1 });
 orderSchema.index({ status: 1, createdAt: -1 });
 

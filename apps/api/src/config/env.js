@@ -97,6 +97,36 @@ if (!parsed.success) {
 }
 
 const data = parsed.data;
+const corsOrigins = data.CORS_ORIGINS.split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
+if (data.NODE_ENV === 'production') {
+  const productionErrors = [];
+  if (!data.CREDENTIALS_ENCRYPTION_KEY || data.CREDENTIALS_ENCRYPTION_KEY.length < 32) {
+    productionErrors.push('CREDENTIALS_ENCRYPTION_KEY must be set (≥32 chars) in production');
+  }
+  if (corsOrigins.includes('*')) {
+    productionErrors.push('CORS_ORIGINS must not include * when credentials are enabled');
+  }
+  if (!data.CRYPTOMUS_MERCHANT_ID || !data.CRYPTOMUS_API_KEY) {
+    productionErrors.push('CRYPTOMUS_MERCHANT_ID and CRYPTOMUS_API_KEY are required in production');
+  }
+  if (data.CRYPTOMUS_MODE !== 'production') {
+    productionErrors.push('CRYPTOMUS_MODE must be production when NODE_ENV=production');
+  }
+  if (!data.CRYPTOMUS_ENFORCE_IP_WHITELIST) {
+    productionErrors.push('CRYPTOMUS_ENFORCE_IP_WHITELIST must be true in production');
+  }
+  if (data.JWT_ACCESS_SECRET.includes('change-me') || data.JWT_REFRESH_SECRET.includes('change-me')) {
+    productionErrors.push('Replace default JWT secrets before production launch');
+  }
+  if (productionErrors.length) {
+    // eslint-disable-next-line no-console
+    console.error('Invalid production environment:\n' + productionErrors.join('\n'));
+    process.exit(1);
+  }
+}
 
 export const env = {
   ...data,
@@ -104,9 +134,7 @@ export const env = {
   isProduction: data.NODE_ENV === 'production',
   isDevelopment: data.NODE_ENV === 'development',
   isTest: data.NODE_ENV === 'test',
-  corsOrigins: data.CORS_ORIGINS.split(',')
-    .map((origin) => origin.trim())
-    .filter(Boolean),
+  corsOrigins,
   uploadPath: path.isAbsolute(data.UPLOAD_DIR)
     ? data.UPLOAD_DIR
     : path.join(API_ROOT, data.UPLOAD_DIR),
@@ -115,6 +143,7 @@ export const env = {
     : path.join(API_ROOT, data.LOG_DIR),
   uploadMaxFileSizeBytes: Math.floor(data.UPLOAD_MAX_FILE_SIZE_MB * 1024 * 1024),
   cryptomusConfigured: Boolean(data.CRYPTOMUS_MERCHANT_ID && data.CRYPTOMUS_API_KEY),
+  cookieSecure: data.COOKIE_SECURE === true || data.NODE_ENV === 'production',
 };
 
 export default env;

@@ -65,19 +65,35 @@ export function subscribeCatalog(listener) {
   return () => listeners.delete(listener);
 }
 
+async function fetchAllCatalog(fetchPage, { limit = 100, maxPages = 50 } = {}) {
+  let page = 1;
+  const items = [];
+  while (page <= maxPages) {
+    // eslint-disable-next-line no-await-in-loop
+    const result = await fetchPage({ page, limit }).catch(() => ({ items: [], meta: null }));
+    const batch = result.items || [];
+    items.push(...batch);
+    const total = result.meta?.total;
+    if (total != null && items.length >= total) break;
+    if (batch.length < limit) break;
+    page += 1;
+  }
+  return items;
+}
+
 export async function hydrateCatalog({ force = false } = {}) {
   if (hydrated && !force) return { categories, collections, products, sellers, version };
   if (hydratePromise && !force) return hydratePromise;
 
   hydratePromise = (async () => {
-    const [catRes, colRes, productRes] = await Promise.all([
-      fetchCategories({ limit: 100 }).catch(() => ({ items: [] })),
-      fetchCollections({ limit: 100 }).catch(() => ({ items: [] })),
-      fetchProducts({ limit: 100 }).catch(() => ({ items: [] })),
+    const [catItems, colItems, productItems] = await Promise.all([
+      fetchAllCatalog((params) => fetchCategories(params)),
+      fetchAllCatalog((params) => fetchCollections(params)),
+      fetchAllCatalog((params) => fetchProducts(params)),
     ]);
-    categories = catRes.items || [];
-    collections = colRes.items || [];
-    products = productRes.items || [];
+    categories = catItems;
+    collections = colItems;
+    products = productItems;
     sellers = deriveSellersFromProducts(products);
     hydrated = true;
     version += 1;

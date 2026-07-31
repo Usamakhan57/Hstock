@@ -22,6 +22,9 @@ const SENSITIVE_FIELD_KEYS = Object.freeze([
 ]);
 
 function getKey() {
+  if (env.isProduction && (!env.CREDENTIALS_ENCRYPTION_KEY || env.CREDENTIALS_ENCRYPTION_KEY.length < 32)) {
+    throw new Error('CREDENTIALS_ENCRYPTION_KEY is required in production');
+  }
   const raw = env.CREDENTIALS_ENCRYPTION_KEY
     || crypto.createHash('sha256').update(env.JWT_ACCESS_SECRET).digest('hex');
   return crypto.createHash('sha256').update(String(raw)).digest();

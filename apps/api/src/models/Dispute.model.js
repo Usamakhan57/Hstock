@@ -193,6 +193,8 @@ const disputeSchema = new mongoose.Schema(
 disputeSchema.index({ status: 1, createdAt: -1 });
 disputeSchema.index({ buyer: 1, createdAt: -1 });
 disputeSchema.index({ seller: 1, createdAt: -1 });
+disputeSchema.index({ assignedAdmin: 1, status: 1, createdAt: -1 });
+disputeSchema.index({ sellerUser: 1, status: 1, createdAt: -1 });
 
 const Dispute = mongoose.models.Dispute || mongoose.model('Dispute', disputeSchema);
 

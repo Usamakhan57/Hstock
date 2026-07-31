@@ -14,7 +14,7 @@ import * as cryptomusService from './cryptomus.service.js';
 import * as escrowService from './escrow.service.js';
 import { logActivity } from './activity.service.js';
 import { parsePagination, buildPaginationMeta } from '../utils/pagination.js';
-import { Payment } from '../models/index.js';
+import { Payment, SellerProfile } from '../models/index.js';
 import { emitDomainEvent } from '../events/bus.js';
 import { DOMAIN_EVENTS } from '../constants/events.js';
 
@@ -34,7 +34,12 @@ export async function listPayments(query = {}, actor) {
 
   if (!isAdmin) {
     if (actor?.roles?.includes('seller') && query.scope === 'seller') {
-      filter.seller = query.sellerId;
+      const seller = await SellerProfile.findOne({ user: actor.id }).select('_id').lean();
+      if (!seller) {
+        throw new AppError('Seller profile not found', 404, { code: 'SELLER_NOT_FOUND' });
+      }
+      // Bind to authenticated seller — never trust client-supplied sellerId
+      filter.seller = seller._id;
     } else {
       filter.buyer = actor.id;
     }
@@ -56,6 +61,7 @@ function assertPaymentAccess(payment, actor) {
   const isAdmin = actor.roles?.some((r) => ['admin', 'super_admin', 'support'].includes(r));
   if (isAdmin) return;
   if (String(payment.buyer) === String(actor.id)) return;
+  if (payment.sellerUser && String(payment.sellerUser) === String(actor.id)) return;
   throw new AppError('Forbidden', 403, { code: 'FORBIDDEN' });
 }
 

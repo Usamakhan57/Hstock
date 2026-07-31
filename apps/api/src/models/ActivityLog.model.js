@@ -40,6 +40,8 @@ const activityLogSchema = new mongoose.Schema(
 );
 
 activityLogSchema.index({ createdAt: -1 });
+activityLogSchema.index({ user: 1, createdAt: -1 });
+activityLogSchema.index({ action: 1, createdAt: -1 });
 
 const ActivityLog =
   mongoose.models.ActivityLog || mongoose.model('ActivityLog', activityLogSchema);

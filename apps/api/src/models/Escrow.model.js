@@ -151,6 +151,8 @@ const escrowSchema = new mongoose.Schema(
 
 escrowSchema.index({ status: 1, releaseAt: 1 });
 escrowSchema.index({ seller: 1, status: 1 });
+escrowSchema.index({ status: 1, partialDispute: 1, releaseAt: 1 });
+escrowSchema.index({ status: 1, releaseAt: 1, releaseJobProcessedAt: 1 });
 
 const Escrow = mongoose.models.Escrow || mongoose.model('Escrow', escrowSchema);
 
