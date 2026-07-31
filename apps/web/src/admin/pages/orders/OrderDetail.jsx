@@ -126,6 +126,37 @@ const OrderDetail = () => {
             <p className="font-medium">{order.customerName}</p>
             <p className="text-sm text-muted-foreground">{order.email}</p>
           </div>
+
+          <div className="bg-white rounded-2xl border border-border p-5 space-y-3">
+            <h3 className="font-semibold text-sm">Escrow & Refund</h3>
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <span>Escrow status</span>
+              <span className="font-medium text-foreground">{order.escrowStatus || '—'}</span>
+            </div>
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <span>Release at</span>
+              <span className="font-medium text-foreground">{order.escrowReleaseAt ? fmtDate(order.escrowReleaseAt) : '—'}</span>
+            </div>
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <span>Refund status</span>
+              <span className="font-medium text-foreground">{order.refundStatus || 'none'}</span>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-2xl border border-border p-5 space-y-3">
+            <h3 className="font-semibold text-sm">Timeline</h3>
+            <ol className="space-y-2">
+              {(order.timeline || []).map((step) => (
+                <li key={step.key} className="flex items-start gap-2 text-xs">
+                  <span className={`mt-0.5 w-2 h-2 rounded-full shrink-0 ${step.done ? 'bg-primary' : 'bg-border'}`} />
+                  <div>
+                    <p className={`font-medium ${step.done ? 'text-foreground' : 'text-muted-foreground'}`}>{step.label}</p>
+                    <p className="text-muted-foreground">{step.date ? fmtDate(step.date) : 'Pending'}</p>
+                  </div>
+                </li>
+              ))}
+            </ol>
+          </div>
         </div>
       </div>
     </div>

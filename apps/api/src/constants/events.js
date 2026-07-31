@@ -1,0 +1,41 @@
+/**
+ * Domain event names for notifications, email, and Socket.io fan-out.
+ */
+export const DOMAIN_EVENTS = Object.freeze({
+  USER_REGISTERED: 'user.registered',
+  EMAIL_VERIFICATION_SENT: 'auth.verification_sent',
+  PASSWORD_RESET_REQUESTED: 'auth.password_reset_requested',
+  ORDER_CREATED: 'order.created',
+  PAYMENT_SUCCESS: 'payment.success',
+  PAYMENT_FAILED: 'payment.failed',
+  ESCROW_LOCKED: 'escrow.locked',
+  ESCROW_RELEASED: 'escrow.released',
+  WITHDRAWAL_REQUESTED: 'withdrawal.requested',
+  WITHDRAWAL_APPROVED: 'withdrawal.approved',
+  WITHDRAWAL_REJECTED: 'withdrawal.rejected',
+  WITHDRAWAL_PAID: 'withdrawal.paid',
+  DISPUTE_OPENED: 'dispute.opened',
+  DISPUTE_RESOLVED: 'dispute.resolved',
+  DISPUTE_CHAT_MESSAGE: 'dispute.chat.message',
+  PRODUCT_MODERATED: 'product.moderated',
+  NOTIFICATION_CREATED: 'notification.created',
+});
+
+export const SOCKET_EVENTS = Object.freeze({
+  NOTIFICATION: 'notification',
+  NOTIFICATION_UNREAD_COUNT: 'notification:unread_count',
+  ORDER_UPDATED: 'order:updated',
+  PAYMENT_UPDATED: 'payment:updated',
+  ESCROW_UPDATED: 'escrow:updated',
+  WITHDRAWAL_UPDATED: 'withdrawal:updated',
+  DISPUTE_UPDATED: 'dispute:updated',
+  DISPUTE_CHAT_MESSAGE: 'dispute:chat:message',
+  SELLER_DASHBOARD: 'seller:dashboard',
+  BUYER_DASHBOARD: 'buyer:dashboard',
+  ADMIN_DASHBOARD: 'admin:dashboard',
+});
+
+export default {
+  DOMAIN_EVENTS,
+  SOCKET_EVENTS,
+};

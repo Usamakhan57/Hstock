@@ -32,6 +32,8 @@ import { getPlatformConfig } from './config.service.js';
 import { logActivity } from './activity.service.js';
 import { parsePagination, buildPaginationMeta } from '../utils/pagination.js';
 import { USER_ROLES } from '../constants/roles.js';
+import { emitDomainEvent } from '../events/bus.js';
+import { DOMAIN_EVENTS } from '../constants/events.js';
 
 function isStaff(actor) {
   return actor?.roles?.some((r) => [
@@ -267,7 +269,7 @@ export async function buyNow(payload, actor, requestMeta = {}) {
     metadata: { simulated },
   });
 
-  return {
+  const response = {
     order: (await orderRepository.findOrderById(result.order._id, { lean: true })),
     payment: payment.toObject ? payment.toObject() : payment,
     escrow: (await escrowRepository.findEscrowById(result.escrow._id, { lean: true })),
@@ -279,6 +281,13 @@ export async function buyNow(payload, actor, requestMeta = {}) {
       mode: cryptomusService.getCryptomusMode(),
     },
   };
+
+  emitDomainEvent(DOMAIN_EVENTS.ORDER_CREATED, {
+    order: response.order,
+    payment: response.payment,
+  });
+
+  return response;
 }
 
 export async function getOrder(idOrNumber, actor) {

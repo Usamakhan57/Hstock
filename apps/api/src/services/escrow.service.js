@@ -16,6 +16,8 @@ import { parsePagination, buildPaginationMeta } from '../utils/pagination.js';
 import { Order, Escrow } from '../models/index.js';
 import { DISPUTE_TIMELINE_EVENTS } from '../constants/disputeFinal.js';
 import * as disputeTimelineService from './disputeTimeline.service.js';
+import { emitDomainEvent } from '../events/bus.js';
+import { DOMAIN_EVENTS } from '../constants/events.js';
 
 /**
  * Create escrow in pending state (linked to order/payment before lock).
@@ -238,6 +240,14 @@ export async function releaseEscrow(escrowId, {
       resourceId: escrow._id,
       meta: { orderId: order._id, reason, sellerAmount: escrow.sellerAmount },
       session: activeSession,
+    });
+
+    const escrowObj = escrow.toObject ? escrow.toObject() : escrow;
+    const orderObj = order.toObject ? order.toObject() : order;
+    emitDomainEvent(DOMAIN_EVENTS.ESCROW_RELEASED, {
+      escrow: escrowObj,
+      order: orderObj,
+      reason,
     });
 
     return escrow;

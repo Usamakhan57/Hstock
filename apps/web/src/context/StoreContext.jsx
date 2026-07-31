@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { authApi } from '../services/authApi';
 import { usersApi } from '../services/usersApi';
+import { notificationsApi } from '../services/notificationsApi';
 import {
   clearSession,
   getAccessToken,
@@ -9,6 +10,7 @@ import {
   getRememberMe,
 } from '../lib/tokenStorage';
 import { hydrateCatalog, getCatalogVersion } from '../services/catalogCache';
+import useSocket from '../hooks/useSocket';
 
 const StoreContext = createContext(null);
 
@@ -41,6 +43,18 @@ function toStoreUser(user) {
   };
 }
 
+function mapNotification(n) {
+  return {
+    id: n.id || n._id,
+    type: n.type || 'message',
+    title: n.title || '',
+    body: n.body || '',
+    link: n.link || null,
+    date: n.date || n.createdAt || nowIso(),
+    read: !!n.read,
+  };
+}
+
 export const StoreProvider = ({ children }) => {
   const [user, setUser] = useState(() => toStoreUser(getStoredUser()));
   const [authReady, setAuthReady] = useState(false);
@@ -48,12 +62,10 @@ export const StoreProvider = ({ children }) => {
   const [catalogVersion, setCatalogVersion] = useState(0);
   const [profiles, setProfiles] = useState(null);
   const [compareList, setCompareList] = useState(() => load('hs_compare', []));
-  const [notifications, setNotifications] = useState(() => load('hs_notifications', []));
+  const [notifications, setNotifications] = useState([]);
 
-  useEffect(() => { localStorage.setItem('hs_notifications', JSON.stringify(notifications)); }, [notifications]);
   useEffect(() => { localStorage.setItem('hs_compare', JSON.stringify(compareList)); }, [compareList]);
 
-  // Clear legacy mock commerce keys from earlier phases.
   useEffect(() => {
     try {
       localStorage.removeItem('hs_wallet');
@@ -61,6 +73,19 @@ export const StoreProvider = ({ children }) => {
       localStorage.removeItem('hs_orders');
     } catch {
       // ignore
+    }
+  }, []);
+
+  const refreshNotifications = useCallback(async () => {
+    if (!getAccessToken()) {
+      setNotifications([]);
+      return;
+    }
+    try {
+      const { items } = await notificationsApi.list({ limit: 50 });
+      setNotifications(items.map(mapNotification));
+    } catch {
+      setNotifications([]);
     }
   }, []);
 
@@ -85,6 +110,7 @@ export const StoreProvider = ({ children }) => {
               user: me.user,
               remember: getRememberMe(),
             });
+            await refreshNotifications();
           }
         }
       } catch {
@@ -92,6 +118,7 @@ export const StoreProvider = ({ children }) => {
           clearSession();
           setUser(null);
           setProfiles(null);
+          setNotifications([]);
         }
       } finally {
         if (!cancelled) {
@@ -102,7 +129,25 @@ export const StoreProvider = ({ children }) => {
       }
     })();
     return () => { cancelled = true; };
+  }, [refreshNotifications]);
+
+  const handleSocketNotification = useCallback((payload) => {
+    const mapped = mapNotification(payload);
+    setNotifications((prev) => {
+      const without = prev.filter((n) => n.id !== mapped.id);
+      return [mapped, ...without].slice(0, 50);
+    });
   }, []);
+
+  const handleSocketUnreadCount = useCallback(() => {
+    refreshNotifications();
+  }, [refreshNotifications]);
+
+  useSocket({
+    enabled: !!user && !!getAccessToken(),
+    onNotification: handleSocketNotification,
+    onUnreadCount: handleSocketUnreadCount,
+  });
 
   const MAX_COMPARE = 4;
 
@@ -113,12 +158,37 @@ export const StoreProvider = ({ children }) => {
     ].slice(0, 50));
   }, []);
 
-  const markNotificationRead = useCallback((id) => {
+  const markNotificationRead = useCallback(async (id) => {
     setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
+    if (getAccessToken()) {
+      try {
+        await notificationsApi.markRead(id);
+      } catch {
+        // ignore
+      }
+    }
   }, []);
 
-  const markAllNotificationsRead = useCallback(() => {
+  const markAllNotificationsRead = useCallback(async () => {
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+    if (getAccessToken()) {
+      try {
+        await notificationsApi.markAllRead();
+      } catch {
+        // ignore
+      }
+    }
+  }, []);
+
+  const deleteNotification = useCallback(async (id) => {
+    setNotifications((prev) => prev.filter((n) => n.id !== id));
+    if (getAccessToken()) {
+      try {
+        await notificationsApi.remove(id);
+      } catch {
+        // ignore
+      }
+    }
   }, []);
 
   const inCompare = useCallback((id) => compareList.some((p) => p.id === id), [compareList]);
@@ -143,18 +213,23 @@ export const StoreProvider = ({ children }) => {
 
   const login = useCallback(async (email, password, { remember = true } = {}) => {
     const data = await authApi.login({ email, password }, { remember });
-    return applyAuthResult(data);
-  }, [applyAuthResult]);
+    const nextUser = applyAuthResult(data);
+    await refreshNotifications();
+    return nextUser;
+  }, [applyAuthResult, refreshNotifications]);
 
   const register = useCallback(async (payload, { remember = true } = {}) => {
     const data = await authApi.register(payload, { remember });
-    return applyAuthResult(data);
-  }, [applyAuthResult]);
+    const nextUser = applyAuthResult(data);
+    await refreshNotifications();
+    return nextUser;
+  }, [applyAuthResult, refreshNotifications]);
 
   const logout = useCallback(async () => {
     await authApi.logout();
     setUser(null);
     setProfiles(null);
+    setNotifications([]);
   }, []);
 
   const refreshProfile = useCallback(async () => {
@@ -190,6 +265,8 @@ export const StoreProvider = ({ children }) => {
       notifications,
       markNotificationRead,
       markAllNotificationsRead,
+      deleteNotification,
+      refreshNotifications,
       pushNotification,
       compareList,
       inCompare,

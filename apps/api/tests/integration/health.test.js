@@ -20,12 +20,14 @@ test('GET /health returns service metadata', async () => {
   assert.ok(res.body.data.database);
 });
 
-test('GET /api/v1 returns commerce-core root', async () => {
+test('GET /api/v1 returns production root', async () => {
   const res = await request(app).get('/api/v1');
   assert.equal(res.status, 200);
-  assert.equal(res.body.data.phase, 'commerce-core');
+  assert.equal(res.body.data.phase, 'production');
   assert.ok(Array.isArray(res.body.data.modules));
   assert.ok(res.body.data.modules.includes('orders'));
+  assert.ok(res.body.data.modules.includes('notifications'));
+  assert.ok(res.body.data.modules.includes('admin'));
 });
 
 test('GET /unknown returns 404', async () => {

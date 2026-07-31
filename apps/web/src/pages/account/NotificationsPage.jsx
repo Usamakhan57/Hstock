@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Bell, ShoppingBag, ArrowDownCircle, Truck, ShieldCheck, MessageCircle, AlertTriangle, CheckCheck } from 'lucide-react';
+import { Bell, ShoppingBag, ArrowDownCircle, Truck, ShieldCheck, MessageCircle, AlertTriangle, CheckCheck, Trash2 } from 'lucide-react';
 import Seo from '../../components/Seo';
 import AccountLayout from './AccountLayout';
 import EmptyState from '../../components/EmptyState';
@@ -27,7 +27,7 @@ const timeAgo = (iso) => {
 };
 
 const NotificationsPage = () => {
-  const { notifications, markNotificationRead, markAllNotificationsRead } = useStore();
+  const { notifications, markNotificationRead, markAllNotificationsRead, deleteNotification } = useStore();
   const [tab, setTab] = useState('All');
 
   const filtered = notifications.filter((n) => tab === 'All' || (tab === 'Unread' ? !n.read : n.read));
@@ -67,13 +67,31 @@ const NotificationsPage = () => {
                 </>
               );
               return n.link ? (
-                <Link key={n.id} to={n.link} onClick={() => markNotificationRead(n.id)} className="w-full text-left flex items-start gap-3 p-4 hover:bg-secondary/40 transition-colors">
+                <Link key={n.id} to={n.link} onClick={() => markNotificationRead(n.id)} className="w-full text-left flex items-start gap-3 p-4 hover:bg-secondary/40 transition-colors group">
                   {content}
+                  <button
+                    type="button"
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); deleteNotification(n.id); }}
+                    className="opacity-0 group-hover:opacity-100 p-1 rounded-lg hover:bg-red-50 text-red-600 shrink-0"
+                    aria-label="Delete notification"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
                 </Link>
               ) : (
-                <button key={n.id} onClick={() => markNotificationRead(n.id)} className="w-full text-left flex items-start gap-3 p-4 hover:bg-secondary/40 transition-colors">
-                  {content}
-                </button>
+                <div key={n.id} className="w-full text-left flex items-start gap-3 p-4 hover:bg-secondary/40 transition-colors group">
+                  <button type="button" onClick={() => markNotificationRead(n.id)} className="flex items-start gap-3 flex-1 min-w-0 text-left">
+                    {content}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => deleteNotification(n.id)}
+                    className="opacity-0 group-hover:opacity-100 p-1 rounded-lg hover:bg-red-50 text-red-600 shrink-0"
+                    aria-label="Delete notification"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
               );
             })}
           </div>

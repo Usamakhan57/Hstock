@@ -129,6 +129,10 @@ export function patch(url, data, config = {}) {
   return apiRequest({ ...config, method: 'PATCH', url, data });
 }
 
+export function put(url, data, config = {}) {
+  return apiRequest({ ...config, method: 'PUT', url, data });
+}
+
 export function del(url, config = {}) {
   return apiRequest({ ...config, method: 'DELETE', url });
 }

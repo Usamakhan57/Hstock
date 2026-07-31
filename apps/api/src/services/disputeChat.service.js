@@ -40,6 +40,8 @@ import {
 import { logActivity } from './activity.service.js';
 import { extractTextFromImage } from './ocr.service.js';
 import * as disputeTimelineService from './disputeTimeline.service.js';
+import { emitDomainEvent } from '../events/bus.js';
+import { DOMAIN_EVENTS } from '../constants/events.js';
 
 function isSuperAdmin(actor) {
   return actor?.roles?.includes(USER_ROLES.SUPER_ADMIN);
@@ -676,7 +678,19 @@ export async function sendMessage(disputeId, payload, actor, requestMeta = {}) {
     });
   }
 
-  return presentMessageForActor(message, chat, actor);
+  const presented = presentMessageForActor(message, chat, actor);
+  const recipients = [chat.buyer, chat.sellerUser, chat.assignedAdmin]
+    .filter(Boolean)
+    .map(String)
+    .filter((id) => id !== String(actorId(actor)));
+
+  emitDomainEvent(DOMAIN_EVENTS.DISPUTE_CHAT_MESSAGE, {
+    disputeId: String(chat.dispute),
+    message: presented,
+    recipients,
+  });
+
+  return presented;
 }
 
 export async function editMessage(disputeId, messageId, payload, actor, requestMeta = {}) {

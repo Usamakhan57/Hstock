@@ -5,6 +5,7 @@ import {
   FilePlus2, FolderOpen, Tags, MessageSquare, Sliders, Trash2, UserSquare2,
   LayoutTemplate, PanelTop, PanelBottom, ListTree, Megaphone, FileStack,
   HelpCircle, Quote, Mail, Bell, Search, MailPlus, Palette,
+  CreditCard, Wallet, ArrowDownToLine, AlertTriangle, Replace, ScanLine, Activity,
 } from 'lucide-react';
 
 export const adminNavSections = [
@@ -31,6 +32,19 @@ export const adminNavSections = [
       { label: 'Customers', to: '/admin/customers', icon: Users },
       { label: 'Sellers', to: '/admin/sellers', icon: Store },
       { label: 'Coupons', to: '/admin/coupons', icon: TicketPercent },
+    ],
+  },
+  {
+    label: 'Marketplace Ops',
+    items: [
+      { label: 'Payments', to: '/admin/payments', icon: CreditCard },
+      { label: 'Escrow', to: '/admin/escrow', icon: ShieldCheck },
+      { label: 'Wallets', to: '/admin/wallets', icon: Wallet },
+      { label: 'Withdrawals', to: '/admin/withdrawals', icon: ArrowDownToLine },
+      { label: 'Disputes', to: '/admin/disputes', icon: AlertTriangle },
+      { label: 'Replacement Reviews', to: '/admin/replacements', icon: Replace },
+      { label: 'OCR Review', to: '/admin/ocr-review', icon: ScanLine },
+      { label: 'System Health', to: '/admin/system-health', icon: Activity },
     ],
   },
   {

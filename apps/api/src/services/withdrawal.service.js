@@ -16,6 +16,8 @@ import { getPlatformConfig } from './config.service.js';
 import { logActivity } from './activity.service.js';
 import { parsePagination, buildPaginationMeta } from '../utils/pagination.js';
 import { USER_ROLES } from '../constants/roles.js';
+import { emitDomainEvent } from '../events/bus.js';
+import { DOMAIN_EVENTS } from '../constants/events.js';
 
 function isAdmin(actor) {
   return actor?.roles?.some((r) => [USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN].includes(r));
@@ -122,7 +124,9 @@ export async function requestWithdrawal(payload, actor, requestMeta = {}) {
       session,
     });
 
-    return withdrawal.toObject();
+    const withdrawalObj = withdrawal.toObject();
+    emitDomainEvent(DOMAIN_EVENTS.WITHDRAWAL_REQUESTED, { withdrawal: withdrawalObj });
+    return withdrawalObj;
   });
 }
 
@@ -192,7 +196,9 @@ export async function approveWithdrawal(id, actor, { note = null } = {}) {
       session,
     });
 
-    return withdrawal.toObject();
+    const withdrawalObj = withdrawal.toObject();
+    emitDomainEvent(DOMAIN_EVENTS.WITHDRAWAL_APPROVED, { withdrawal: withdrawalObj });
+    return withdrawalObj;
   });
 }
 
@@ -256,7 +262,9 @@ export async function markWithdrawalPaid(id, actor, {
       session,
     });
 
-    return withdrawal.toObject();
+    const withdrawalObj = withdrawal.toObject();
+    emitDomainEvent(DOMAIN_EVENTS.WITHDRAWAL_PAID, { withdrawal: withdrawalObj });
+    return withdrawalObj;
   });
 }
 
@@ -307,7 +315,12 @@ export async function rejectWithdrawal(id, actor, { reason = 'Rejected by admin'
       session,
     });
 
-    return withdrawal.toObject();
+    const withdrawalObj = withdrawal.toObject();
+    emitDomainEvent(DOMAIN_EVENTS.WITHDRAWAL_REJECTED, {
+      withdrawal: withdrawalObj,
+      reason,
+    });
+    return withdrawalObj;
   });
 }
 

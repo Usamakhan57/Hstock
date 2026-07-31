@@ -23,7 +23,7 @@ import { USER_ROLES, ADMIN_LOGIN_ROLES } from '../constants/roles.js';
 import { UserStatusEnum, VerificationStatusEnum } from '../constants/enums.js';
 import { jwtConfig } from '../config/jwt.js';
 import { env } from '../config/env.js';
-import { sendEmail } from '../emails/email.service.js';
+import { sendTemplatedEmail } from '../emails/email.service.js';
 import { logActivity } from './activity.service.js';
 import { getSellerRegistrationFee } from './config.service.js';
 
@@ -106,11 +106,9 @@ async function createEmailVerification(user, session = null) {
   }
 
   const verifyUrl = `${env.APP_URL}${env.API_PREFIX}/auth/verify-email?token=${raw}`;
-  await sendEmail({
+  await sendTemplatedEmail('verification', {
     to: user.email,
-    subject: 'Verify your HStock email',
-    text: `Verify your email: ${verifyUrl}`,
-    html: `<p>Verify your email:</p><p><a href="${verifyUrl}">${verifyUrl}</a></p>`,
+    data: { name: user.name, verifyUrl },
   });
 
   return { token: raw, expiresAt, verifyUrl };
@@ -177,6 +175,10 @@ export async function registerBuyer(payload, meta = {}) {
 
   const verification = await createEmailVerification(user);
   const tokens = await issueTokenPair(user, meta);
+  await sendTemplatedEmail('registration', {
+    to: user.email,
+    data: { name: user.name },
+  }).catch(() => null);
 
   return {
     user: publicUser(user),
@@ -463,12 +465,10 @@ export async function forgotPassword(email) {
     expiresAt,
   });
 
-  const resetUrl = `${env.APP_URL}/reset-password?token=${raw}`;
-  await sendEmail({
+  const resetUrl = `${env.FRONTEND_URL || env.APP_URL}/reset-password?token=${raw}`;
+  await sendTemplatedEmail('password_reset', {
     to: user.email,
-    subject: 'Reset your HStock password',
-    text: `Reset password: ${resetUrl}`,
-    html: `<p>Reset your password:</p><p><a href="${resetUrl}">${resetUrl}</a></p>`,
+    data: { name: user.name, resetUrl },
   });
 
   return {

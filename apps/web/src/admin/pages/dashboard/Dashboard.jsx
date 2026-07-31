@@ -5,15 +5,18 @@ import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianG
 import PageHeader from '../../components/PageHeader';
 import StatCard from '../../components/StatCard';
 import StatusBadge from '../../components/StatusBadge';
+import { getDashboard } from '../../api/adminOps';
 import { getOrders } from '../../api/orders';
 import { getCustomers } from '../../api/customers';
 import { getInventory } from '../../api/inventory';
 import { getProducts } from '../../api/products';
+import { mapAdminOrder } from '../../api/adminMappers';
 
 const fmtMoney = (n) => `$${Number(n || 0).toFixed(2)}`;
 const fmtDate = (iso) => new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 
 const Dashboard = () => {
+  const [dashboard, setDashboard] = useState(null);
   const [orders, setOrders] = useState([]);
   const [customers, setCustomers] = useState([]);
   const [inventory, setInventory] = useState([]);
@@ -21,7 +24,14 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([getOrders(), getCustomers(), getInventory(), getProducts()]).then(([o, c, i, p]) => {
+    Promise.all([
+      getDashboard().catch(() => null),
+      getOrders().catch(() => []),
+      getCustomers().catch(() => []),
+      getInventory().catch(() => []),
+      getProducts().catch(() => []),
+    ]).then(([dash, o, c, i, p]) => {
+      setDashboard(dash);
       setOrders(o);
       setCustomers(c);
       setInventory(i);
@@ -30,18 +40,31 @@ const Dashboard = () => {
     });
   }, []);
 
-  const revenue = useMemo(() => orders.filter((o) => o.paymentStatus === 'paid').reduce((s, o) => s + o.total, 0), [orders]);
+  const stats = dashboard?.stats;
+  const revenue = stats?.revenue30d ?? orders.filter((o) => o.paymentStatus === 'paid').reduce((s, o) => s + o.total, 0);
   const lowStock = useMemo(() => inventory.filter((i) => i.status !== 'in_stock'), [inventory]);
-  const recentOrders = useMemo(() => [...orders].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 6), [orders]);
+
+  const recentOrders = useMemo(() => {
+    if (dashboard?.recentOrders?.length) {
+      return dashboard.recentOrders.map((o) => mapAdminOrder(o));
+    }
+    return [...orders].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 6);
+  }, [dashboard, orders]);
 
   const chartData = useMemo(() => {
+    if (dashboard?.revenueByDay?.length) {
+      return dashboard.revenueByDay.map((row) => ({
+        day: fmtDate(row.day),
+        total: Math.round(Number(row.total || 0) * 100) / 100,
+      }));
+    }
     const byDay = {};
     orders.forEach((o) => {
       const day = fmtDate(o.createdAt);
       byDay[day] = (byDay[day] || 0) + o.total;
     });
     return Object.entries(byDay).map(([day, total]) => ({ day, total: Math.round(total * 100) / 100 }));
-  }, [orders]);
+  }, [dashboard, orders]);
 
   return (
     <div>
@@ -49,9 +72,9 @@ const Dashboard = () => {
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <StatCard label="Total Revenue" value={fmtMoney(revenue)} icon={DollarSign} trend={12.4} />
-        <StatCard label="Total Orders" value={orders.length} icon={ShoppingCart} trend={8.1} />
-        <StatCard label="Customers" value={customers.length} icon={Users} trend={4.3} />
-        <StatCard label="Products" value={products.length} icon={Package} trend={-1.2} />
+        <StatCard label="Total Orders" value={stats?.ordersTotal ?? orders.length} icon={ShoppingCart} trend={8.1} />
+        <StatCard label="Customers" value={stats?.buyers ?? customers.length} icon={Users} trend={4.3} />
+        <StatCard label="Products" value={stats?.productsTotal ?? products.length} icon={Package} trend={-1.2} />
       </div>
 
       <div className="grid lg:grid-cols-3 gap-4 mb-6">
@@ -122,7 +145,7 @@ const Dashboard = () => {
               {recentOrders.map((o) => (
                 <tr key={o.id} className="border-b border-border last:border-0 hover:bg-secondary/30">
                   <td className="px-5 py-3">
-                    <Link to={`/admin/orders/${o.id}`} className="font-medium text-primary">#{o.id.replace('ord-', '')}</Link>
+                    <Link to={`/admin/orders/${o.id}`} className="font-medium text-primary">#{String(o.id).replace('ord-', '')}</Link>
                   </td>
                   <td className="px-5 py-3">{o.customerName}</td>
                   <td className="px-5 py-3 text-muted-foreground">{fmtDate(o.createdAt)}</td>

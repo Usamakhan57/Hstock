@@ -1,0 +1,293 @@
+import { logger } from '../config/logger.js';
+import { DOMAIN_EVENTS, SOCKET_EVENTS } from '../constants/events.js';
+import { createNotification, notifyUsers } from '../services/notification.service.js';
+import {
+  emitOrderUpdate,
+  emitPaymentUpdate,
+  emitEscrowUpdate,
+  emitWithdrawalUpdate,
+  emitDisputeUpdate,
+  emitToRoom,
+  emitToAdmins,
+} from '../realtime/socket.server.js';
+
+/**
+ * Register domain event → notification / realtime fan-out.
+ */
+export function registerEventHandlers(eventBus) {
+  eventBus.on(DOMAIN_EVENTS.ORDER_CREATED, async (payload) => {
+    try {
+      const { order } = payload;
+      if (!order) return;
+      emitOrderUpdate(order);
+      if (order.buyer) {
+        await createNotification({
+          userId: order.buyer,
+          type: 'order_created',
+          title: 'Order created',
+          body: `Order ${order.orderNumber} was created. Complete payment to continue.`,
+          link: `/orders/${order.orderNumber}`,
+          meta: { orderId: String(order._id), orderNumber: order.orderNumber },
+          sendEmail: true,
+          emailType: 'order_created',
+          emailData: {
+            orderNumber: order.orderNumber,
+            amount: order.totalAmount,
+            currency: order.currency,
+          },
+          notifyAdmins: true,
+        });
+      }
+      if (order.sellerUser) {
+        await createNotification({
+          userId: order.sellerUser,
+          type: 'order_created',
+          title: 'New order',
+          body: `Buyer placed order ${order.orderNumber}.`,
+          link: '/seller/orders',
+          meta: { orderId: String(order._id), orderNumber: order.orderNumber },
+        });
+      }
+    } catch (error) {
+      logger.error('ORDER_CREATED handler failed', { message: error.message });
+    }
+  });
+
+  eventBus.on(DOMAIN_EVENTS.PAYMENT_SUCCESS, async (payload) => {
+    try {
+      const { payment, order } = payload;
+      if (payment) emitPaymentUpdate(payment);
+      if (order) emitOrderUpdate(order);
+      const targets = [payment?.buyer, order?.buyer, payment?.sellerUser, order?.sellerUser].filter(Boolean);
+      await notifyUsers(targets, {
+        type: 'payment_success',
+        title: 'Payment successful',
+        body: `Payment confirmed for order ${order?.orderNumber || ''}.`,
+        link: order?.orderNumber ? `/orders/${order.orderNumber}` : null,
+        meta: {
+          paymentId: payment?._id ? String(payment._id) : null,
+          orderNumber: order?.orderNumber,
+        },
+        sendEmail: true,
+        emailType: 'payment_success',
+        emailData: { orderNumber: order?.orderNumber },
+        notifyAdmins: true,
+      });
+    } catch (error) {
+      logger.error('PAYMENT_SUCCESS handler failed', { message: error.message });
+    }
+  });
+
+  eventBus.on(DOMAIN_EVENTS.PAYMENT_FAILED, async (payload) => {
+    try {
+      const { payment, order, reason } = payload;
+      if (payment) emitPaymentUpdate(payment);
+      if (order?.buyer || payment?.buyer) {
+        await createNotification({
+          userId: order?.buyer || payment?.buyer,
+          type: 'payment_failed',
+          title: 'Payment failed',
+          body: `Payment failed for order ${order?.orderNumber || ''}${reason ? `: ${reason}` : '.'}`,
+          link: order?.orderNumber ? `/orders/${order.orderNumber}` : null,
+          sendEmail: true,
+          emailType: 'payment_failed',
+          emailData: { orderNumber: order?.orderNumber, reason },
+          notifyAdmins: true,
+        });
+      }
+    } catch (error) {
+      logger.error('PAYMENT_FAILED handler failed', { message: error.message });
+    }
+  });
+
+  eventBus.on(DOMAIN_EVENTS.ESCROW_RELEASED, async (payload) => {
+    try {
+      const { escrow, order } = payload;
+      if (escrow) emitEscrowUpdate(escrow);
+      if (order) emitOrderUpdate(order);
+      const targets = [escrow?.buyer, escrow?.sellerUser, order?.buyer, order?.sellerUser].filter(Boolean);
+      await notifyUsers(targets, {
+        type: 'escrow_released',
+        title: 'Escrow released',
+        body: `Escrow released for order ${order?.orderNumber || ''}.`,
+        link: order?.orderNumber ? `/orders/${order.orderNumber}` : '/wallet',
+        sendEmail: true,
+        emailType: 'escrow_released',
+        emailData: { orderNumber: order?.orderNumber },
+        notifyAdmins: true,
+      });
+    } catch (error) {
+      logger.error('ESCROW_RELEASED handler failed', { message: error.message });
+    }
+  });
+
+  eventBus.on(DOMAIN_EVENTS.WITHDRAWAL_REQUESTED, async (payload) => {
+    try {
+      const { withdrawal } = payload;
+      if (!withdrawal) return;
+      emitWithdrawalUpdate(withdrawal);
+      const userId = withdrawal.sellerUser || withdrawal.user;
+      if (userId) {
+        await createNotification({
+          userId,
+          type: 'withdrawal_requested',
+          title: 'Withdrawal requested',
+          body: `Your withdrawal of ${withdrawal.amount} ${withdrawal.currency || 'USD'} is pending review.`,
+          link: '/seller/earnings',
+          sendEmail: true,
+          emailType: 'withdrawal_requested',
+          emailData: { amount: withdrawal.amount, currency: withdrawal.currency },
+          notifyAdmins: true,
+        });
+      }
+      emitToAdmins(SOCKET_EVENTS.ADMIN_DASHBOARD, { type: 'withdrawal', withdrawal });
+    } catch (error) {
+      logger.error('WITHDRAWAL_REQUESTED handler failed', { message: error.message });
+    }
+  });
+
+  eventBus.on(DOMAIN_EVENTS.WITHDRAWAL_APPROVED, async (payload) => {
+    try {
+      const { withdrawal } = payload;
+      if (!withdrawal) return;
+      emitWithdrawalUpdate(withdrawal);
+      const userId = withdrawal.sellerUser || withdrawal.user;
+      if (userId) {
+        await createNotification({
+          userId,
+          type: 'withdrawal_approved',
+          title: 'Withdrawal approved',
+          body: `Your withdrawal of ${withdrawal.amount} ${withdrawal.currency || 'USD'} was approved.`,
+          link: '/seller/earnings',
+          sendEmail: true,
+          emailType: 'withdrawal_approved',
+          emailData: { amount: withdrawal.amount, currency: withdrawal.currency },
+        });
+      }
+    } catch (error) {
+      logger.error('WITHDRAWAL_APPROVED handler failed', { message: error.message });
+    }
+  });
+
+  eventBus.on(DOMAIN_EVENTS.WITHDRAWAL_REJECTED, async (payload) => {
+    try {
+      const { withdrawal, reason } = payload;
+      if (!withdrawal) return;
+      emitWithdrawalUpdate(withdrawal);
+      const userId = withdrawal.sellerUser || withdrawal.user;
+      if (userId) {
+        await createNotification({
+          userId,
+          type: 'withdrawal_rejected',
+          title: 'Withdrawal rejected',
+          body: `Your withdrawal was rejected${reason ? `: ${reason}` : '.'}`,
+          link: '/seller/earnings',
+          sendEmail: true,
+          emailType: 'withdrawal_rejected',
+          emailData: { reason },
+        });
+      }
+    } catch (error) {
+      logger.error('WITHDRAWAL_REJECTED handler failed', { message: error.message });
+    }
+  });
+
+  eventBus.on(DOMAIN_EVENTS.WITHDRAWAL_PAID, async (payload) => {
+    try {
+      const { withdrawal } = payload;
+      if (!withdrawal) return;
+      emitWithdrawalUpdate(withdrawal);
+      const userId = withdrawal.sellerUser || withdrawal.user;
+      if (userId) {
+        await createNotification({
+          userId,
+          type: 'withdrawal_paid',
+          title: 'Withdrawal paid',
+          body: `Your withdrawal of ${withdrawal.amount} ${withdrawal.currency || 'USD'} was paid.`,
+          link: '/seller/earnings',
+          sendEmail: true,
+          emailType: 'withdrawal_paid',
+          emailData: { amount: withdrawal.amount, currency: withdrawal.currency },
+        });
+      }
+    } catch (error) {
+      logger.error('WITHDRAWAL_PAID handler failed', { message: error.message });
+    }
+  });
+
+  eventBus.on(DOMAIN_EVENTS.DISPUTE_OPENED, async (payload) => {
+    try {
+      const { dispute, order } = payload;
+      if (dispute) emitDisputeUpdate(dispute);
+      const targets = [dispute?.buyer, dispute?.sellerUser].filter(Boolean);
+      await notifyUsers(targets, {
+        type: 'dispute_opened',
+        title: 'Dispute opened',
+        body: `A dispute was opened for order ${order?.orderNumber || dispute?.orderNumber || ''}.`,
+        link: dispute?._id ? `/disputes/${dispute._id}` : '/disputes',
+        sendEmail: true,
+        emailType: 'dispute_opened',
+        emailData: {
+          orderNumber: order?.orderNumber || dispute?.orderNumber,
+          disputeId: dispute?._id ? String(dispute._id) : null,
+        },
+        notifyAdmins: true,
+      });
+    } catch (error) {
+      logger.error('DISPUTE_OPENED handler failed', { message: error.message });
+    }
+  });
+
+  eventBus.on(DOMAIN_EVENTS.DISPUTE_RESOLVED, async (payload) => {
+    try {
+      const { dispute, order, resolution } = payload;
+      if (dispute) emitDisputeUpdate(dispute, { resolution });
+      const targets = [dispute?.buyer, dispute?.sellerUser].filter(Boolean);
+      await notifyUsers(targets, {
+        type: 'dispute_resolved',
+        title: 'Dispute resolved',
+        body: `Dispute resolved${resolution ? ` (${resolution})` : ''} for order ${order?.orderNumber || ''}.`,
+        link: dispute?._id ? `/disputes/${dispute._id}` : '/disputes',
+        sendEmail: true,
+        emailType: 'dispute_resolved',
+        emailData: {
+          orderNumber: order?.orderNumber,
+          resolution,
+        },
+        notifyAdmins: true,
+      });
+    } catch (error) {
+      logger.error('DISPUTE_RESOLVED handler failed', { message: error.message });
+    }
+  });
+
+  eventBus.on(DOMAIN_EVENTS.DISPUTE_CHAT_MESSAGE, async (payload) => {
+    try {
+      const { disputeId, message, recipients = [] } = payload;
+      if (disputeId) {
+        emitToRoom(`dispute:${disputeId}`, SOCKET_EVENTS.DISPUTE_CHAT_MESSAGE, {
+          disputeId,
+          message,
+          at: new Date().toISOString(),
+        });
+      }
+      for (const userId of recipients) {
+        // eslint-disable-next-line no-await-in-loop
+        await createNotification({
+          userId,
+          type: 'dispute_message',
+          title: 'New dispute message',
+          body: 'You have a new message in a dispute chat.',
+          link: `/disputes/${disputeId}`,
+          meta: { disputeId, messageId: message?._id },
+        });
+      }
+    } catch (error) {
+      logger.error('DISPUTE_CHAT_MESSAGE handler failed', { message: error.message });
+    }
+  });
+
+  logger.info('Domain event handlers registered');
+}
+
+export default { registerEventHandlers };

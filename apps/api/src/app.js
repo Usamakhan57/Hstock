@@ -26,7 +26,22 @@ app.set('trust proxy', 1);
 app.disable('x-powered-by');
 
 app.use(requestIdMiddleware);
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: env.isProduction
+    ? {
+      useDefaults: true,
+      directives: {
+        defaultSrc: ["'self'"],
+        connectSrc: ["'self'", ...env.corsOrigins, 'wss:', 'ws:'],
+        imgSrc: ["'self'", 'data:', 'https:'],
+        scriptSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        frameAncestors: ["'none'"],
+      },
+    }
+    : false,
+  crossOriginEmbedderPolicy: false,
+}));
 app.use(cors(corsOptions));
 app.use(compression());
 app.use(express.json({ limit: '1mb' }));
@@ -53,9 +68,10 @@ app.get('/', (_req, res) => {
     success: true,
     message: 'HStock API',
     data: {
-      phase: 'commerce-core',
+      phase: 'production',
       docs: '/api/v1',
       health: '/health',
+      socket: '/socket.io',
     },
     errors: null,
     meta: null,
