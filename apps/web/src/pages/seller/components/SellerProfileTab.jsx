@@ -1,22 +1,51 @@
 import React, { useState } from 'react';
-import { Users, Package, CalendarDays } from 'lucide-react';
+import { Loader2, Users, Package, CalendarDays } from 'lucide-react';
 import ImageUploadInput from '../../../admin/components/ImageUploadInput';
 import { inputClass, textareaClass } from '../../../admin/components/FormSheet';
 import { useToast } from '../../../hooks/use-toast';
+import { usersApi } from '../../../services/usersApi';
 
 const SellerProfileTab = ({ seller, productsCount, joinedDate }) => {
   const { toast } = useToast();
+  const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
-    avatar: '', cover: '',
-    name: seller?.name || '', bio: '',
-    website: '', instagram: '', twitter: '',
+    avatar: seller?.avatar || '',
+    cover: seller?.banner || seller?.cover || '',
+    name: seller?.ownerName || seller?.name || '',
+    bio: seller?.bio || '',
+    website: seller?.website || '',
+    instagram: seller?.social?.instagram || '',
+    twitter: seller?.social?.twitter || '',
   });
 
   const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    toast({ title: 'Profile saved', description: 'Your public seller profile was updated.' });
+    setSaving(true);
+    try {
+      const payload = {
+        ownerName: form.name.trim() || undefined,
+        bio: form.bio,
+        website: form.website.trim() || null,
+        social: {
+          instagram: form.instagram.trim() || null,
+          twitter: form.twitter.trim() || null,
+        },
+      };
+      if (form.avatar && (form.avatar.startsWith('http') || form.avatar.startsWith('data:'))) {
+        payload.avatar = form.avatar;
+      }
+      if (form.cover && (form.cover.startsWith('http') || form.cover.startsWith('data:'))) {
+        payload.banner = form.cover;
+      }
+      await usersApi.updateSellerProfile(payload);
+      toast({ title: 'Profile saved', description: 'Your public seller profile was updated.' });
+    } catch (err) {
+      toast({ title: 'Could not save profile', description: err.message, variant: 'destructive' });
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -83,7 +112,8 @@ const SellerProfileTab = ({ seller, productsCount, joinedDate }) => {
           </div>
         </div>
 
-        <button type="submit" className="px-6 py-3 rounded-full brand-gradient text-white text-sm font-semibold soft-shadow hover:opacity-95 transition-all">
+        <button type="submit" disabled={saving} className="inline-flex items-center gap-2 px-6 py-3 rounded-full brand-gradient text-white text-sm font-semibold soft-shadow hover:opacity-95 transition-all disabled:opacity-60">
+          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
           Save Profile
         </button>
       </div>
@@ -100,7 +130,7 @@ const SellerProfileTab = ({ seller, productsCount, joinedDate }) => {
           <span className="w-10 h-10 rounded-xl bg-secondary grid place-items-center shrink-0"><Users className="w-4.5 h-4.5 text-primary" /></span>
           <div>
             <p className="text-xs text-muted-foreground">Followers</p>
-            <p className="font-bold">248</p>
+            <p className="font-bold">{seller?.followersCount ?? 0}</p>
           </div>
         </div>
         <div className="bg-white rounded-3xl border border-border soft-shadow p-5 flex items-center gap-3">

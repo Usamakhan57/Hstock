@@ -64,6 +64,17 @@ export function mapBackendOrder(order) {
     escrowStatusLabel: escrowStatusRaw ? (ESCROW_STATUS_LABEL[escrowStatusRaw] || escrowStatusRaw) : '—',
     deliveryStatus: order.deliveryStatus || 'pending',
     disputeOpen: status === 'disputed' || !!order.dispute,
+    disputeId: idOf(order.dispute) || null,
+    accounts: Array.isArray(order.accounts)
+      ? order.accounts.map((account) => ({
+        id: idOf(account),
+        _id: idOf(account),
+        index: account.index ?? 0,
+        identifier: account.identifier || null,
+        label: account.label || account.identifier || null,
+        status: account.status || 'active',
+      }))
+      : [],
     paymentId: idOf(payment) || idOf(order.payment),
     paymentUrl: payment?.invoiceUrl || null,
     escrowId: idOf(escrow) || idOf(order.escrow),

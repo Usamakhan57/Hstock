@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
+import { Loader2 } from 'lucide-react';
 import ImageUploadInput from '../../../admin/components/ImageUploadInput';
 import { inputClass, textareaClass } from '../../../admin/components/FormSheet';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../../../components/ui/select';
 import { Switch } from '../../../components/ui/switch';
 import { useToast } from '../../../hooks/use-toast';
+import { usersApi } from '../../../services/usersApi';
 
 const NOTIFICATION_TOGGLES = [
   { key: 'newOrders', label: 'New order emails', hint: 'Get notified whenever a customer buys one of your products.' },
@@ -14,24 +16,74 @@ const NOTIFICATION_TOGGLES = [
 
 const SellerStoreSettingsTab = ({ seller }) => {
   const { toast } = useToast();
+  const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
-    logo: '', banner: '',
-    storeName: seller?.storeName || '', description: '',
-    email: seller?.email || '', phone: '', website: '',
-    facebook: '', instagram: '', twitter: '', youtube: '', linkedin: '',
-    address: '',
-    payoutMethod: 'Bitcoin', payoutWalletAddress: seller?.email || '',
-    notifications: { newOrders: true, newReviews: true, payouts: true, marketing: false },
-    shippingPolicy: '', defaultProcessingTime: '1-2 business days', defaultShippingCost: '0',
-    freeShippingEnabled: true, freeShippingThreshold: '', countriesServed: 'Worldwide',
+    logo: seller?.logo || '',
+    banner: seller?.banner || '',
+    storeName: seller?.storeName || '',
+    description: seller?.bio || '',
+    email: seller?.email || '',
+    phone: seller?.phone || '',
+    website: seller?.website || '',
+    facebook: seller?.social?.facebook || '',
+    instagram: seller?.social?.instagram || '',
+    twitter: seller?.social?.twitter || '',
+    youtube: seller?.social?.youtube || '',
+    linkedin: seller?.social?.linkedin || '',
+    address: seller?.address || '',
+    payoutMethod: seller?.payout?.asset || 'USDT',
+    payoutWalletAddress: seller?.payout?.walletAddress || '',
+    notifications: {
+      newOrders: seller?.notifications?.newOrders ?? true,
+      newReviews: seller?.notifications?.newReviews ?? true,
+      payouts: seller?.notifications?.payouts ?? true,
+      marketing: seller?.notifications?.marketing ?? false,
+    },
+    shippingPolicy: seller?.shippingPolicy || '',
+    defaultProcessingTime: seller?.defaultProcessingTime || 'Instant access after checkout',
+    defaultShippingCost: '0',
+    freeShippingEnabled: true,
+    freeShippingThreshold: '',
+    countriesServed: 'Worldwide',
   });
 
   const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
   const toggleNotification = (key) => setForm((f) => ({ ...f, notifications: { ...f.notifications, [key]: !f.notifications[key] } }));
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    toast({ title: 'Store settings saved', description: 'Your storefront settings were updated.' });
+    setSaving(true);
+    try {
+      const payload = {
+        storeName: form.storeName.trim() || undefined,
+        bio: form.description,
+        phone: form.phone.trim() || null,
+        website: form.website.trim() || null,
+        address: form.address.trim() || null,
+        social: {
+          facebook: form.facebook.trim() || null,
+          instagram: form.instagram.trim() || null,
+          twitter: form.twitter.trim() || null,
+          youtube: form.youtube.trim() || null,
+          linkedin: form.linkedin.trim() || null,
+        },
+        payout: {
+          asset: form.payoutMethod || null,
+          walletAddress: form.payoutWalletAddress.trim() || null,
+        },
+        shippingPolicy: form.shippingPolicy || null,
+        defaultProcessingTime: form.defaultProcessingTime || null,
+        notifications: form.notifications,
+      };
+      if (form.logo && (form.logo.startsWith('http') || form.logo.startsWith('data:'))) payload.logo = form.logo;
+      if (form.banner && (form.banner.startsWith('http') || form.banner.startsWith('data:'))) payload.banner = form.banner;
+      await usersApi.updateSellerProfile(payload);
+      toast({ title: 'Store settings saved', description: 'Your storefront settings were updated.' });
+    } catch (err) {
+      toast({ title: 'Could not save settings', description: err.message, variant: 'destructive' });
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -114,11 +166,11 @@ const SellerStoreSettingsTab = ({ seller }) => {
             <Select value={form.payoutMethod} onValueChange={(v) => setForm((f) => ({ ...f, payoutMethod: v }))}>
               <SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="Bitcoin">Bitcoin</SelectItem>
-                <SelectItem value="Ethereum">Ethereum</SelectItem>
-                <SelectItem value="Tether">Tether (USDT)</SelectItem>
-                <SelectItem value="Solana">Solana</SelectItem>
-                <SelectItem value="BNB Chain">BNB Chain</SelectItem>
+                <SelectItem value="BTC">Bitcoin</SelectItem>
+                <SelectItem value="ETH">Ethereum</SelectItem>
+                <SelectItem value="USDT">Tether (USDT)</SelectItem>
+                <SelectItem value="SOL">Solana</SelectItem>
+                <SelectItem value="BNB">BNB Chain</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -156,7 +208,8 @@ const SellerStoreSettingsTab = ({ seller }) => {
           ))}
         </div>
 
-        <button type="submit" className="w-full px-5 py-3 rounded-full brand-gradient text-white text-sm font-semibold soft-shadow hover:opacity-95 transition-all">
+        <button type="submit" disabled={saving} className="inline-flex w-full items-center justify-center gap-2 px-5 py-3 rounded-full brand-gradient text-white text-sm font-semibold soft-shadow hover:opacity-95 transition-all disabled:opacity-60">
+          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
           Save Changes
         </button>
       </div>

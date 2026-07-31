@@ -108,7 +108,9 @@ const SellerProductEditorPage = () => {
         salePrice: Number(form.salePrice || 0),
       };
 
-      const saved = isEditing ? await updateSellerProduct(id, payload) : await createSellerProduct(payload);
+      const saved = isEditing
+        ? await updateSellerProduct(id, payload, { publish })
+        : await createSellerProduct(payload, { publish });
       toast({ title: publish ? 'Product published' : 'Product saved', description: publish ? 'You can upload accounts and make it live.' : 'Your draft is now available in My Products.' });
       if (publish) {
         navigate(`/seller/upload-accounts/${saved.id}`);

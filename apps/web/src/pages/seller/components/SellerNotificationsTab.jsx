@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Bell, ShoppingCart, MessageSquare, Wallet, Info } from 'lucide-react';
 import EmptyState from '../../../admin/components/EmptyState';
 
@@ -12,9 +12,13 @@ const fmtRelative = (iso) => {
   return `${Math.round(hours / 24)}d ago`;
 };
 
-const SellerNotificationsTab = ({ notifications: initial }) => {
+const SellerNotificationsTab = ({ notifications: initial = [] }) => {
   const [notifications, setNotifications] = useState(initial);
   const [filter, setFilter] = useState('all');
+
+  useEffect(() => {
+    setNotifications(initial || []);
+  }, [initial]);
 
   const unreadCount = notifications.filter((n) => !n.read).length;
   const filtered = filter === 'all' ? notifications : notifications.filter((n) => (filter === 'unread' ? !n.read : n.read));

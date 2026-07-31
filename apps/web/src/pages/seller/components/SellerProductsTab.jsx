@@ -34,10 +34,22 @@ const SellerProductsTab = () => {
   const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
-    getSellerProducts().then((data) => {
-      setProducts(data);
-      setLoading(false);
-    });
+    let alive = true;
+    setLoading(true);
+    getSellerProducts()
+      .then((data) => {
+        if (!alive) return;
+        setProducts(data);
+      })
+      .catch((err) => {
+        if (!alive) return;
+        setProducts([]);
+        toast({ title: 'Could not load products', description: err.message, variant: 'destructive' });
+      })
+      .finally(() => {
+        if (alive) setLoading(false);
+      });
+    return () => { alive = false; };
   }, []);
 
   const categoryOptions = useMemo(() => [...new Set(products.map((p) => p.category).filter(Boolean))], [products]);

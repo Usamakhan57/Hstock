@@ -231,9 +231,27 @@ const OrderDetailPage = () => {
               </div>
 
               {order.disputeOpen && (
-                <p className="flex items-center gap-1.5 text-sm font-semibold text-destructive mt-5 pt-5 border-t border-border">
-                  <AlertTriangle className="w-4 h-4" /> Dispute open — support will review this order in a later phase.
-                </p>
+                <div className="mt-5 flex flex-wrap items-center gap-3 border-t border-border pt-5">
+                  <p className="flex items-center gap-1.5 text-sm font-semibold text-destructive">
+                    <AlertTriangle className="w-4 h-4" /> Dispute open for this order.
+                  </p>
+                  <Link
+                    to={order.disputeId ? `/disputes/${order.disputeId}` : '/disputes'}
+                    className="rounded-full border border-destructive/30 px-4 py-2 text-xs font-semibold text-destructive hover:bg-destructive/10"
+                  >
+                    View dispute
+                  </Link>
+                </div>
+              )}
+              {!order.disputeOpen && [ORDER_STATUS.PAID, ORDER_STATUS.ESCROW, ORDER_STATUS.DELIVERED].includes(order.status) && (
+                <div className="mt-5 flex flex-wrap items-center gap-3 border-t border-border pt-5">
+                  <Link
+                    to={`/orders/${order.id}/dispute`}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-destructive/40 px-5 py-2.5 text-sm font-semibold text-destructive hover:bg-destructive/10"
+                  >
+                    <AlertTriangle className="w-4 h-4" /> Open Dispute
+                  </Link>
+                </div>
               )}
               {order.escrowStatus === ESCROW_STATUS.RELEASED && (
                 <p className="flex items-center gap-1.5 text-sm font-semibold text-emerald-600 mt-5 pt-5 border-t border-border">

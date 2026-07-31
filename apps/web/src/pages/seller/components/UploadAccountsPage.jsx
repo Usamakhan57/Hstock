@@ -105,16 +105,15 @@ const UploadAccountsPage = () => {
   const saveAndPublish = async () => {
     if (!productId) return;
     try {
+      const liveStock = accounts.filter((account) => account.status === 'uploaded').length;
       await updateSellerProduct(productId, {
+        ...product,
         status: 'live',
-        accounts: accounts.map((account) => ({ id: account.id, fields: account.fields || {}, status: account.status, validation: account.validation || 'ready' })),
-        stock: accounts.filter((account) => account.status === 'uploaded').length,
-        uploadedCount: summary.live,
-        soldCount: summary.sold,
-        reservedCount: summary.reserved,
-        failedCount: summary.failed,
-      });
-      toast({ title: 'Product is live', description: 'Your uploaded accounts are now available to buyers.' });
+        stock: liveStock,
+        stockType: 'limited',
+        inventoryType: 'tracked',
+      }, { publish: true });
+      toast({ title: 'Product is live', description: `${liveStock} accounts are ready for delivery inventory.` });
       navigate('/seller/products');
     } catch (error) {
       toast({ title: 'Could not publish stock', description: error.message, variant: 'destructive' });

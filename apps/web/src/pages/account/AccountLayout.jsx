@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, User, Package, Download, Settings, LogOut, Wallet,
   Star, ShieldCheck, Bell, MapPin, CreditCard, LifeBuoy, FileText, Ticket, Users, Clock,
-  Menu, X, ChevronRight,
+  Menu, X, ChevronRight, AlertTriangle,
 } from 'lucide-react';
 import Header from '../../components/Header';
 import Footer from '../../components/Footer';
@@ -20,6 +20,7 @@ const groups = [
     label: 'Shopping',
     links: [
       { to: '/orders', label: 'Orders', icon: Package },
+      { to: '/disputes', label: 'Disputes', icon: AlertTriangle },
       { to: '/downloads', label: 'Downloads', icon: Download },
       { to: '/wallet', label: 'Wallet', icon: Wallet },
       { to: '/coupons', label: 'Coupons', icon: Ticket },
