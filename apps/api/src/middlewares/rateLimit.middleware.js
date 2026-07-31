@@ -9,7 +9,25 @@ export const globalRateLimiter = rateLimit({
   message: {
     success: false,
     message: 'Too many requests, please try again later.',
+    data: null,
+    errors: null,
+    meta: null,
     code: 'RATE_LIMITED',
+  },
+});
+
+export const authRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: env.isProduction ? 30 : 200,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    message: 'Too many authentication attempts, please try again later.',
+    data: null,
+    errors: null,
+    meta: null,
+    code: 'AUTH_RATE_LIMITED',
   },
 });
 

@@ -2,23 +2,35 @@ import { env } from '../config/env.js';
 import { logger } from '../config/logger.js';
 
 /**
- * Email infrastructure placeholder.
- * Templates and SMTP sending will be implemented in a later phase.
+ * Email infrastructure for verification / password reset.
+ * SMTP transport can be wired later; messages are logged when SMTP is unset.
  */
 export async function sendEmail({ to, subject, html, text }) {
-  logger.info('Email service scaffold invoked (not sending)', {
+  const smtpConfigured = Boolean(env.SMTP_HOST && env.SMTP_USER);
+
+  logger.info('Email dispatch', {
     to,
     subject,
     hasHtml: Boolean(html),
     hasText: Boolean(text),
-    smtpConfigured: Boolean(env.SMTP_HOST && env.SMTP_USER),
+    smtpConfigured,
   });
 
+  if (!smtpConfigured) {
+    return {
+      queued: false,
+      sent: false,
+      provider: 'log',
+      message: 'SMTP not configured — email content logged for development',
+    };
+  }
+
+  // SMTP transport intentionally deferred — infrastructure + call sites are ready.
   return {
-    queued: false,
+    queued: true,
     sent: false,
-    provider: 'scaffold',
-    message: 'Email sending is not implemented in Phase 1',
+    provider: 'smtp-pending',
+    message: 'SMTP credentials present; transport wiring reserved for ops phase',
   };
 }
 

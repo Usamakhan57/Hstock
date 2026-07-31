@@ -1,67 +1,52 @@
-# HStock API — Folder Structure (Phase 1)
+# HStock API — Folder Structure (Phase 2)
 
 ```
 apps/api/
-├── deploy/nginx/              # Nginx reverse-proxy template for Hostinger VPS
-├── docs/                      # Backend documentation
-├── logs/                      # Runtime logs (gitignored content)
-│   ├── app/                   # Application logs
-│   ├── error/                 # Error logs
-│   └── http/                  # HTTP access logs
-├── uploads/                   # Local upload storage
-│   ├── avatars/
-│   ├── documents/
-│   ├── products/
-│   └── temp/
+├── deploy/nginx/
+├── docs/
+│   ├── API.md
+│   ├── ENVIRONMENT.md
+│   ├── FOLDER_STRUCTURE.md
+│   ├── PHASE1_DELIVERABLES.md
+│   └── PHASE2_DELIVERABLES.md
+├── logs/
+├── uploads/
 ├── tests/
+│   ├── helpers/
 │   ├── integration/
 │   └── unit/
 ├── src/
-│   ├── config/                # Env, DB, logger, CORS, JWT, cookies, uploads
-│   ├── constants/             # Roles, statuses, currencies, enums
-│   ├── controllers/           # Route handlers (health only in Phase 1)
-│   ├── database/              # DB docs / re-exports
-│   ├── emails/                # Email service scaffold
-│   ├── events/                # In-process event bus scaffold
-│   ├── helpers/               # Date / wallet helpers
-│   ├── jobs/                  # Escrow, notification, cleanup, withdrawal scaffolds
-│   ├── middlewares/           # Auth/role placeholders, errors, validation, upload, rate limit
-│   ├── models/                # Reserved for Phase 2+ Mongoose models
-│   ├── queues/                # Queue layer scaffold
-│   ├── repositories/          # Reserved for Phase 2+ data access
-│   ├── routes/                # /health + /api/v1
-│   ├── scripts/               # Ops scripts (Phase 2+)
-│   ├── services/              # Reserved for Phase 2+ domain services
-│   ├── templates/             # Email/HTML templates (Phase 2+)
-│   ├── utils/                 # AppError, asyncHandler, response, pagination, crypto placeholder
-│   ├── validators/            # Zod validation schemas
-│   ├── app.js                 # Express app
-│   └── server.js              # HTTP bootstrap + graceful shutdown
+│   ├── config/                # Phase 1 foundation (env, DB, logger, CORS, JWT, cookies)
+│   ├── constants/             # Roles, permissions, product types, coins/networks
+│   ├── controllers/           # auth, users, config, catalog, products
+│   ├── database/
+│   ├── emails/                # Email infrastructure hooks
+│   ├── events/                # Phase 1 scaffold (untouched logic)
+│   ├── helpers/
+│   ├── jobs/                  # Phase 1 scaffolds (no business logic)
+│   ├── middlewares/           # Auth/RBAC implemented; security stack preserved
+│   ├── models/                # Phase 2 Mongoose models
+│   ├── queues/                # Phase 1 scaffold
+│   ├── repositories/          # Reserved for deeper data-access split
+│   ├── routes/                # /health + /api/v1/*
+│   ├── scripts/               # seed.js
+│   ├── services/              # Domain services
+│   ├── templates/
+│   ├── utils/                 # response envelope, password, token, slug
+│   ├── validators/            # Reusable Zod validators
+│   ├── app.js
+│   └── server.js
 ├── .env.example
-├── .gitignore
-├── Dockerfile
-├── docker-compose.yml
-├── ecosystem.config.cjs       # PM2 process file
 ├── package.json
 └── README.md
 ```
 
-## Phase 1 boundaries
+## Phase 1 remains the foundation
 
-Implemented:
+Unchanged in purpose:
 
-- Production-ready Express bootstrap
+- Express bootstrap + security middleware stack
 - MongoDB connection layer
-- Security middleware stack
-- Logging
+- Winston/Morgan logging
 - Health endpoints
-- Job / email / upload / queue scaffolds
-
-Not implemented (intentionally):
-
-- Auth business logic
-- Cryptomus payments
-- Escrow release logic
-- Seller wallet ledger
-- Domain CRUD APIs
-- Email templates
+- Job / queue / event scaffolds (still no payment/escrow/wallet logic)

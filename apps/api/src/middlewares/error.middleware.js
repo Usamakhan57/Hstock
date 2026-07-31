@@ -70,6 +70,7 @@ export function errorHandler(err, req, res, _next) {
       ? 'Internal server error'
       : message,
     code,
+    errors: env.isProduction && statusCode >= 500 ? null : (details ?? null),
     details: env.isProduction && statusCode >= 500 ? undefined : details,
   });
 }

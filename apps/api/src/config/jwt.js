@@ -1,7 +1,7 @@
 import { env } from './env.js';
 
 /**
- * JWT configuration placeholder for Phase 2 auth implementation.
+ * JWT configuration.
  * Secrets are loaded from environment variables only.
  */
 export const jwtConfig = {

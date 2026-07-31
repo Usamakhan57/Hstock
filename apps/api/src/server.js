@@ -5,12 +5,14 @@ import { connectDatabase, disconnectDatabase } from './config/database.js';
 import { initializeJobs } from './jobs/index.js';
 import { initializeQueues } from './queues/index.js';
 import { initializeEvents } from './events/index.js';
+import { ensureDefaultConfigs } from './services/config.service.js';
 import app from './app.js';
 
 let server;
 
 async function bootstrap() {
   await connectDatabase();
+  await ensureDefaultConfigs();
   initializeEvents();
   initializeQueues();
   initializeJobs();

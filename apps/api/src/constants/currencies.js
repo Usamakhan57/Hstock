@@ -1,6 +1,6 @@
 /**
  * Listing / ledger currency is USD.
- * Cryptomus payment currencies are provider-defined and resolved at payment time (Phase 2+).
+ * Cryptomus payment currencies are provider-defined and resolved at payment time (later phase).
  */
 export const LEDGER_CURRENCY = 'USD';
 
@@ -12,8 +12,11 @@ export const CRYPTOMUS_COMMON_ASSETS = Object.freeze([
   'USDT',
   'TRX',
   'BNB',
+  'DOGE',
+  'SOL',
   'LTC',
   'TON',
+  'XRP',
 ]);
 
 export default {
