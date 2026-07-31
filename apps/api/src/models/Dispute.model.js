@@ -111,6 +111,25 @@ const disputeSchema = new mongoose.Schema(
       default: null,
       min: 0,
     },
+
+    // ---- Partial dispute quantities / amounts ----
+    orderQuantity: { type: Number, required: true, min: 1 },
+    disputedQuantity: { type: Number, required: true, min: 1 },
+    resolvedQuantity: { type: Number, default: 0, min: 0 },
+    replacementQuantity: { type: Number, default: 0, min: 0 },
+    refundQuantity: { type: Number, default: 0, min: 0 },
+    releasedQuantity: { type: Number, default: 0, min: 0 },
+    heldQuantity: { type: Number, default: 0, min: 0 },
+    remainingQuantity: { type: Number, default: 0, min: 0 },
+    unitPrice: { type: Number, required: true, min: 0 },
+    disputedAmount: { type: Number, required: true, min: 0 },
+    disputedAccountIds: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+      },
+    ],
+    isPartial: { type: Boolean, default: false, index: true },
+
     messages: {
       type: [disputeMessageSchema],
       default: [],
@@ -126,6 +145,41 @@ const disputeSchema = new mongoose.Schema(
     resolvedBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
+      default: null,
+    },
+    chat: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'DisputeChat',
+      default: null,
+      index: true,
+    },
+    assignedAdmin: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+      index: true,
+    },
+    assignedAt: {
+      type: Date,
+      default: null,
+    },
+    latestReplacementVersion: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    ocrFlagCount: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    violationCountSnapshot: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    credentialsExpireAt: {
+      type: Date,
       default: null,
     },
     metadata: {

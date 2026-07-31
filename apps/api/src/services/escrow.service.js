@@ -1,6 +1,7 @@
 import { AppError } from '../utils/AppError.js';
 import { withTransaction } from '../utils/transaction.js';
 import { addHours } from '../helpers/date.helper.js';
+import { roundMoney } from '../helpers/money.helper.js';
 import {
   ESCROW_STATUS,
   ORDER_STATUS,
@@ -13,6 +14,8 @@ import { getPlatformConfig } from './config.service.js';
 import { logActivity } from './activity.service.js';
 import { parsePagination, buildPaginationMeta } from '../utils/pagination.js';
 import { Order, Escrow } from '../models/index.js';
+import { DISPUTE_TIMELINE_EVENTS } from '../constants/disputeFinal.js';
+import * as disputeTimelineService from './disputeTimeline.service.js';
 
 /**
  * Create escrow in pending state (linked to order/payment before lock).
@@ -244,7 +247,20 @@ export async function releaseEscrow(escrowId, {
   return withTransaction(run);
 }
 
-export async function markEscrowDisputed(escrowId, disputeId, session = null) {
+/**
+ * Apply full or partial dispute hold.
+ * Partial: only disputedAmount is frozen; undisputed continues normal release timer.
+ * Full: entire escrow frozen (status=disputed).
+ */
+export async function markEscrowDisputed(
+  escrowId,
+  disputeId,
+  session = null,
+  {
+    disputedAmount = null,
+    isPartial = false,
+  } = {},
+) {
   const escrow = await escrowRepository.findEscrowById(escrowId, { session });
   if (!escrow) {
     throw new AppError('Escrow not found', 404, { code: 'ESCROW_NOT_FOUND' });
@@ -252,12 +268,191 @@ export async function markEscrowDisputed(escrowId, disputeId, session = null) {
   if (escrow.status === ESCROW_STATUS.RELEASED || escrow.status === ESCROW_STATUS.REFUNDED) {
     throw new AppError('Cannot dispute a closed escrow', 400, { code: 'ESCROW_CLOSED' });
   }
-  escrow.status = ESCROW_STATUS.DISPUTED;
-  escrow.disputedAt = new Date();
+
+  const total = roundMoney(escrow.amount);
+  const held = disputedAmount == null ? total : roundMoney(disputedAmount);
+  if (!(held > 0) || held > total) {
+    throw new AppError('Invalid disputed escrow amount', 400, { code: 'INVALID_DISPUTED_AMOUNT' });
+  }
+
   escrow.dispute = disputeId;
+  escrow.disputedAt = new Date();
+  escrow.disputedAmount = held;
+  escrow.heldAmount = held;
+  escrow.undisputedAmount = roundMoney(total - held);
+  escrow.partialDispute = Boolean(isPartial && held < total);
+
+  if (escrow.partialDispute) {
+    // Keep LOCKED so undisputed portion can still auto-release
+    escrow.status = ESCROW_STATUS.LOCKED;
+  } else {
+    escrow.status = ESCROW_STATUS.DISPUTED;
+  }
+
   if (session) await escrow.save({ session });
   else await escrow.save();
   return escrow;
+}
+
+/**
+ * Release only the undisputed escrow portion to the seller (partial dispute path).
+ */
+export async function releaseUndisputedEscrowPortion(escrowId, {
+  reason = 'undisputed_auto_release',
+  actor = null,
+  session = null,
+} = {}) {
+  const run = async (activeSession) => {
+    const escrow = await escrowRepository.findEscrowById(escrowId, { session: activeSession });
+    if (!escrow) throw new AppError('Escrow not found', 404, { code: 'ESCROW_NOT_FOUND' });
+    if (!escrow.partialDispute || escrow.undisputedReleasedAt) {
+      return escrow;
+    }
+
+    const gross = roundMoney(escrow.undisputedAmount);
+    if (!(gross > 0)) {
+      escrow.undisputedReleasedAt = new Date();
+      if (activeSession) await escrow.save({ session: activeSession });
+      else await escrow.save();
+      return escrow;
+    }
+
+    const commission = roundMoney((gross * escrow.commissionPercent) / 100);
+    const sellerNet = roundMoney(gross - commission);
+
+    const wallet = await walletService.getOrCreateSellerWallet(
+      escrow.seller,
+      escrow.sellerUser,
+      activeSession,
+    );
+
+    await walletService.releaseEscrowToSeller({
+      wallet,
+      grossAmount: gross,
+      commissionAmount: commission,
+      sellerAmount: sellerNet,
+      context: {
+        order: escrow.order,
+        payment: escrow.payment,
+        escrow: escrow._id,
+        buyer: escrow.buyer,
+        currency: escrow.currency,
+        dispute: escrow.dispute,
+      },
+      session: activeSession,
+      createdBy: actor?.id || null,
+    });
+
+    escrow.releasedAmount = roundMoney((escrow.releasedAmount || 0) + gross);
+    escrow.undisputedAmount = 0;
+    escrow.undisputedReleasedAt = new Date();
+    // Keep held disputed funds; status remains locked/partial until dispute resolves
+    if (activeSession) await escrow.save({ session: activeSession });
+    else await escrow.save();
+
+    if (escrow.dispute) {
+      await disputeTimelineService.appendTimelineEvent({
+        disputeId: escrow.dispute,
+        orderId: escrow.order,
+        event: DISPUTE_TIMELINE_EVENTS.ESCROW_RELEASED,
+        actor,
+        role: 'system',
+        message: 'Undisputed escrow portion released to seller',
+        meta: { amount: gross, reason },
+        session: activeSession,
+      });
+    }
+
+    return escrow;
+  };
+
+  if (session) return run(session);
+  return withTransaction(run);
+}
+
+/**
+ * Release disputed held portion after replacement accept / seller-wins.
+ */
+export async function releaseDisputedEscrowPortion(escrowId, {
+  reason = 'dispute_resolved_release',
+  actor = null,
+  session = null,
+  dispute = null,
+} = {}) {
+  const run = async (activeSession) => {
+    // Always clear any remaining undisputed portion first (partial disputes).
+    await releaseUndisputedEscrowPortion(escrowId, {
+      reason: 'undisputed_on_dispute_resolution',
+      actor,
+      session: activeSession,
+    });
+
+    const escrow = await escrowRepository.findEscrowById(escrowId, { session: activeSession });
+    if (!escrow) throw new AppError('Escrow not found', 404, { code: 'ESCROW_NOT_FOUND' });
+
+    const gross = roundMoney(escrow.heldAmount || escrow.disputedAmount || 0);
+    if (gross > 0) {
+      const commission = roundMoney((gross * escrow.commissionPercent) / 100);
+      const sellerNet = roundMoney(gross - commission);
+      const wallet = await walletService.getOrCreateSellerWallet(
+        escrow.seller,
+        escrow.sellerUser,
+        activeSession,
+      );
+      await walletService.releaseEscrowToSeller({
+        wallet,
+        grossAmount: gross,
+        commissionAmount: commission,
+        sellerAmount: sellerNet,
+        context: {
+          order: escrow.order,
+          payment: escrow.payment,
+          escrow: escrow._id,
+          buyer: escrow.buyer,
+          currency: escrow.currency,
+          dispute: escrow.dispute,
+        },
+        session: activeSession,
+        createdBy: actor?.id || null,
+      });
+      escrow.releasedAmount = roundMoney((escrow.releasedAmount || 0) + gross);
+    }
+
+    escrow.heldAmount = 0;
+    escrow.disputedAmount = 0;
+    escrow.status = ESCROW_STATUS.RELEASED;
+    escrow.releasedAt = new Date();
+    escrow.releaseReason = reason;
+    escrow.releaseJobProcessedAt = new Date();
+    if (activeSession) await escrow.save({ session: activeSession });
+    else await escrow.save();
+
+    const order = await orderRepository.findOrderById(escrow.order, { session: activeSession });
+    if (order) {
+      order.status = ORDER_STATUS.COMPLETED;
+      order.completedAt = new Date();
+      if (activeSession) await order.save({ session: activeSession });
+      else await order.save();
+    }
+
+    if (dispute || escrow.dispute) {
+      await disputeTimelineService.appendTimelineEvent({
+        disputeId: dispute?._id || escrow.dispute,
+        orderId: escrow.order,
+        event: DISPUTE_TIMELINE_EVENTS.ESCROW_RELEASED,
+        actor,
+        role: actor ? 'admin' : 'system',
+        message: 'Disputed escrow portion released to seller',
+        meta: { amount: gross, reason },
+        session: activeSession,
+      });
+    }
+
+    return escrow;
+  };
+
+  if (session) return run(session);
+  return withTransaction(run);
 }
 
 export async function markEscrowRefunded(escrowId, session = null) {
@@ -274,13 +469,24 @@ export async function markEscrowRefunded(escrowId, session = null) {
 }
 
 export async function processDueEscrowReleases({ limit = 100 } = {}) {
-  const candidates = await escrowRepository.findReleaseCandidates(new Date(), limit);
+  const now = new Date();
+  const fullCandidates = await escrowRepository.findReleaseCandidates(now, limit);
+  const partialCandidates = await Escrow.find({
+    status: ESCROW_STATUS.LOCKED,
+    partialDispute: true,
+    undisputedReleasedAt: null,
+    undisputedAmount: { $gt: 0 },
+    releaseAt: { $lte: now },
+  })
+    .sort({ releaseAt: 1 })
+    .limit(limit)
+    .lean();
+
   const results = { processed: 0, succeeded: 0, failed: 0, errors: [] };
 
-  for (const escrow of candidates) {
+  for (const escrow of fullCandidates) {
     results.processed += 1;
     try {
-      // Claim the row so concurrent workers skip it
       const claimed = await Escrow.findOneAndUpdate(
         {
           _id: escrow._id,
@@ -305,6 +511,19 @@ export async function processDueEscrowReleases({ limit = 100 } = {}) {
         );
         throw error;
       }
+    } catch (error) {
+      results.failed += 1;
+      results.errors.push({ escrowId: String(escrow._id), message: error.message });
+    }
+  }
+
+  for (const escrow of partialCandidates) {
+    results.processed += 1;
+    try {
+      await releaseUndisputedEscrowPortion(escrow._id, {
+        reason: 'undisputed_auto_release_24h',
+      });
+      results.succeeded += 1;
     } catch (error) {
       results.failed += 1;
       results.errors.push({ escrowId: String(escrow._id), message: error.message });
@@ -379,6 +598,8 @@ export default {
   releaseEscrow,
   markEscrowDisputed,
   markEscrowRefunded,
+  releaseUndisputedEscrowPortion,
+  releaseDisputedEscrowPortion,
   processDueEscrowReleases,
   listEscrows,
   getEscrow,

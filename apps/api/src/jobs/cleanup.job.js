@@ -1,8 +1,9 @@
 import { logger } from '../config/logger.js';
 import { JobRun, WebhookEvent, RefreshToken } from '../models/index.js';
+import * as disputeChatService from '../services/disputeChat.service.js';
 
 /**
- * Cleanup stale webhook events and expired refresh tokens.
+ * Cleanup stale webhook events, expired refresh tokens, and expired credentials.
  */
 export async function runCleanup() {
   const run = await JobRun.create({
@@ -13,7 +14,7 @@ export async function runCleanup() {
 
   try {
     const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-    const [webhooks, tokens] = await Promise.all([
+    const [webhooks, tokens, credentials] = await Promise.all([
       WebhookEvent.deleteMany({
         status: 'processed',
         createdAt: { $lt: cutoff },
@@ -24,14 +25,19 @@ export async function runCleanup() {
           { revokedAt: { $ne: null, $lt: cutoff } },
         ],
       }),
+      disputeChatService.expireDueCredentials({ limit: 1000 }),
     ]);
 
+    const credentialCount = (credentials.expiredMessages || 0)
+      + (credentials.expiredReplacements || 0);
+
     const results = {
-      processed: (webhooks.deletedCount || 0) + (tokens.deletedCount || 0),
-      succeeded: (webhooks.deletedCount || 0) + (tokens.deletedCount || 0),
+      processed: (webhooks.deletedCount || 0) + (tokens.deletedCount || 0) + credentialCount,
+      succeeded: (webhooks.deletedCount || 0) + (tokens.deletedCount || 0) + credentialCount,
       failed: 0,
       webhooksDeleted: webhooks.deletedCount || 0,
       tokensDeleted: tokens.deletedCount || 0,
+      credentialsExpired: credentials,
     };
 
     run.status = 'success';

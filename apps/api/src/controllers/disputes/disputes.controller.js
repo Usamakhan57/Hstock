@@ -9,7 +9,9 @@ export const openDispute = asyncHandler(async (req, res) => {
   });
   return sendSuccess(res, {
     statusCode: 201,
-    message: 'Dispute opened — escrow frozen',
+    message: data.isPartial
+      ? 'Partial dispute opened — only disputed quantity held in escrow'
+      : 'Dispute opened — escrow frozen',
     data,
   });
 });
@@ -29,8 +31,17 @@ export const getDispute = asyncHandler(async (req, res) => {
 });
 
 export const addMessage = asyncHandler(async (req, res) => {
-  const data = await disputeService.addDisputeMessage(req.params.id, req.body, req.user);
-  return sendSuccess(res, { message: 'Message added', data });
+  const data = await disputeService.addDisputeMessage(
+    req.params.id,
+    req.body,
+    req.user,
+    { ip: req.ip, userAgent: req.get('user-agent') },
+  );
+  return sendSuccess(res, {
+    statusCode: 201,
+    message: 'Message added',
+    data,
+  });
 });
 
 export const resolveDispute = asyncHandler(async (req, res) => {

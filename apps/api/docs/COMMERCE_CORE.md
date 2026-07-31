@@ -24,9 +24,10 @@ Production commerce layer for HStock Marketplace (`apps/api` only).
 - `GET /api/v1/orders` / `GET /api/v1/orders/:id`
 - `POST /api/v1/orders/:id/cancel`
 - `GET /api/v1/payments` / `GET /api/v1/payments/:id`
-- `POST /api/v1/disputes`
+- `POST /api/v1/disputes` (auto-creates secure dispute chat)
 - `GET /api/v1/disputes` / `GET /api/v1/disputes/:id`
-- `POST /api/v1/disputes/:id/messages`
+- `POST /api/v1/disputes/:id/messages` (secure content filter)
+- `GET/POST /api/v1/disputes/:id/chat*` — see `docs/SECURE_DISPUTE_CHAT.md`
 
 ### Seller
 - `GET /api/v1/orders?scope=seller`
@@ -46,6 +47,10 @@ Production commerce layer for HStock Marketplace (`apps/api` only).
 - `GET /api/v1/escrow` / `POST /api/v1/escrow/:id/release`
 - `POST /api/v1/withdrawals/:id/approve|reject|pay`
 - `POST /api/v1/disputes/:id/resolve`
+- `POST /api/v1/disputes/:id/chat/assign`
+- `GET /api/v1/disputes/:id/chat/blocked-attempts`
+- `GET /api/v1/disputes/:id/chat/audit`
+- `GET /api/v1/disputes/violations`
 - `POST /api/v1/refunds`
 - `GET /api/v1/refunds` / `GET /api/v1/refunds/:id`
 - `POST /api/v1/wallet/adjust`
@@ -94,12 +99,20 @@ Every financial action writes balanced debit+credit `LedgerEntry` rows sharing o
 ## Dispute flow
 
 ```
-Buyer opens dispute → Escrow disputed (auto-release blocked)
+Buyer opens dispute (optional disputedQuantity / disputedAccountIds)
+→ Partial: hold only disputed $; undisputed follows normal release timer
+→ Full: escrow status=disputed (auto-release blocked)
+→ Secure dispute chat auto-created
+→ Seller may send versioned replacement accounts
+→ Buyer accept → release disputed hold + resolve + chat read-only
+→ Buyer reject → dispute stays open
 → Admin resolves:
-   seller_wins|release → release to seller
-   buyer_wins → full escrow refund
-   partial_refund → refund amount + release remainder
+   seller_wins|release → release disputed hold to seller
+   buyer_wins → refund disputed hold only (+ release undisputed)
+   partial_refund → refund ≤ held disputed amount + release remainder
 ```
+
+Details: `docs/DISPUTE_SYSTEM.md`, `docs/ESCROW_PARTIAL.md`, `docs/SECURE_DISPUTE_CHAT.md`.
 
 ## Background jobs (`ENABLE_JOBS=true`)
 

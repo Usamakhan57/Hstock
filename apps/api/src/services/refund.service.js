@@ -97,8 +97,14 @@ export async function createEscrowRefund({
       if (session) await payment.save({ session });
       else await payment.save();
     }
+  } else if (escrow.partialDispute || (escrow.heldAmount || 0) > 0) {
+    // Partial dispute refunds: caller owns held/refunded/released fields.
+    // Never freeze/refund unaffected (undisputed) accounts.
+    order.refund = refund._id;
+    if (session) await order.save({ session });
+    else await order.save();
   } else {
-    // Partial: reduce escrow remaining tracked amounts
+    // Legacy partial: reduce escrow remaining tracked amounts
     escrow.amount = roundMoney(escrow.amount - value);
     escrow.commissionAmount = roundMoney((escrow.amount * escrow.commissionPercent) / 100);
     escrow.sellerAmount = roundMoney(escrow.amount - escrow.commissionAmount);

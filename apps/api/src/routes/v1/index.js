@@ -42,6 +42,7 @@ router.get('/', (_req, res) => {
         'wallet',
         'withdrawals',
         'disputes',
+        'dispute-chat',
         'refunds',
       ],
       health: '/health',

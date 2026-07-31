@@ -27,6 +27,16 @@ const envSchema = z.object({
   JWT_ACCESS_EXPIRES_IN: z.string().default('15m'),
   JWT_REFRESH_EXPIRES_IN: z.string().default('7d'),
 
+  /** AES-256 key material for dispute credentials (hex/string). Falls back to derived JWT secret. */
+  CREDENTIALS_ENCRYPTION_KEY: z
+    .string()
+    .optional()
+    .default('')
+    .refine((v) => !v || v.length >= 32, {
+      message: 'CREDENTIALS_ENCRYPTION_KEY must be empty or at least 32 characters',
+    }),
+  DISPUTE_CREDENTIAL_TTL_DAYS: z.coerce.number().positive().default(30),
+
   COOKIE_SECURE: z
     .string()
     .optional()

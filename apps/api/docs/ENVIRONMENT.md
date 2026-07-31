@@ -26,6 +26,8 @@ Edit `.env`:
 | `ENABLE_JOBS` | No | Keep `false` in Phase 1 |
 | `CRYPTOMUS_*` | No | Reserved for Phase 2+ |
 | `SMTP_*` | No | Reserved for later email phase |
+| `CREDENTIALS_ENCRYPTION_KEY` | Recommended | ≥32 chars; AES key material for dispute credentials (falls back to hashed JWT secret) |
+| `DISPUTE_CREDENTIAL_TTL_DAYS` | No | Days before encrypted dispute credentials expire (default `30`) |
 
 Never hardcode credentials in source files.
 

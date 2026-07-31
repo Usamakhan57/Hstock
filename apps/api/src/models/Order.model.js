@@ -6,6 +6,21 @@ import {
   DELIVERY_STATUS,
   DELIVERY_STATUS_VALUES,
 } from '../constants/statuses.js';
+import { ORDER_ACCOUNT_STATUS_VALUES } from '../constants/disputeFinal.js';
+
+const orderAccountSchema = new mongoose.Schema(
+  {
+    index: { type: Number, required: true, min: 0 },
+    identifier: { type: String, default: null, trim: true, maxlength: 200 },
+    status: {
+      type: String,
+      enum: ORDER_ACCOUNT_STATUS_VALUES,
+      default: 'active',
+    },
+    label: { type: String, default: null, maxlength: 200 },
+  },
+  { _id: true },
+);
 
 const orderSchema = new mongoose.Schema(
   {
@@ -53,7 +68,15 @@ const orderSchema = new mongoose.Schema(
       type: Number,
       default: 1,
       min: 1,
-      max: 1,
+      max: 500,
+    },
+    /**
+     * Line items for multi-account digital orders.
+     * Enables partial disputes against specific accounts.
+     */
+    accounts: {
+      type: [orderAccountSchema],
+      default: [],
     },
     unitPrice: {
       type: Number,
