@@ -16,9 +16,10 @@ describe('catalogMappers', () => {
       compareAtPrice: 120,
       thumbnail: 'https://cdn.example/img.jpg',
       category: { _id: 'c1', name: 'Instagram Accounts', slug: 'instagram' },
-      seller: { _id: 's1', storeName: 'Digital Pro', storeSlug: 'digital-pro', status: 'approved' },
+      seller: { _id: 's1', storeName: 'Digital Pro', storeSlug: 'digital-pro', status: 'approved', verified: true },
       featured: true,
       salesCount: 42,
+      deliveryType: 'instant',
     });
 
     expect(product.id).toBe('p1');
@@ -30,11 +31,19 @@ describe('catalogMappers', () => {
     expect(product.old).toBe(120);
     expect(product.downloads).toBe(42);
     expect(product.badge).toBe('Featured');
+    expect(product.verifiedSeller).toBe(true);
+    expect(product.deliveryType).toBe('instant');
+    expect(product.rating).toBeNull();
   });
 
   it('maps categories, collections, and sellers', () => {
     expect(mapBackendCategory({ _id: 'c1', name: 'Domains', slug: 'domains' }).slug).toBe('domains');
-    expect(mapBackendCollection({ _id: 'col1', name: 'Starter Pack', slug: 'starter' }).name).toBe('Starter Pack');
+    expect(mapBackendCollection({
+      _id: 'col1',
+      name: 'Starter Pack',
+      slug: 'starter',
+      products: ['p1', 'p2'],
+    }).productIds).toEqual(['p1', 'p2']);
     expect(mapBackendSeller({ _id: 's1', storeName: 'Acme', storeSlug: 'acme', status: 'approved' }).verified).toBe(true);
   });
 });

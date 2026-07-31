@@ -6,11 +6,9 @@ import { useStore } from '../context/StoreContext';
 import { useToast } from '../hooks/use-toast';
 
 /**
- * HStock.store's single purchase surface: Product → Buy Now opens this modal →
- * Wallet Balance → Confirm Purchase → redirect to Order Details.
- * There is no cart and no multi-step checkout — every purchase is one
- * product, paid instantly from the buyer's wallet balance, with funds
- * held in escrow until the buyer confirms receipt.
+ * Purchase flow entry (Phase 4): Product → Buy Now opens this modal.
+ * Payment / Cryptomus / full checkout belong to later commerce phases.
+ * Until then this surface remains the authenticated Buy Now entry point.
  */
 const PurchaseModal = ({ product, license, open, onOpenChange }) => {
   const { wallet, confirmPurchase } = useStore();

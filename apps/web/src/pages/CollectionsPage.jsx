@@ -36,7 +36,7 @@ const CollectionsPage = () => {
         {collections.map((c) => (
           <Link
             key={c.slug}
-            to={`/shop?search=${encodeURIComponent(c.title)}`}
+            to={`/collection/${c.slug}`}
             className="group relative bg-white rounded-3xl overflow-hidden border border-border soft-shadow hover:soft-shadow-lg transition-all duration-300"
           >
             <div className="relative h-56 overflow-hidden bg-secondary">

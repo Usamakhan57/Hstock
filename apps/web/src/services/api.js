@@ -9,7 +9,7 @@ export { productsApi, categoriesApi, collectionsApi };
 
 export const newsletterApi = {
   async subscribe(email) {
-    // Backend newsletter endpoint is not part of Phase 4.1 scope.
+    // Backend newsletter endpoint is not part of Phase 4 marketplace scope.
     return { ok: true, email };
   },
 };

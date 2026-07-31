@@ -8,32 +8,18 @@ import {
   Zap,
   BadgeCheck,
   Star,
-  Quote,
-  Instagram,
-  Mail,
-  Facebook,
-  Layers,
-  Youtube,
-  Send,
-  MessageCircle,
-  Cpu,
-  Code,
-  Globe2,
   BookOpen,
-  GraduationCap,
-  Smartphone,
-  Gamepad,
 } from 'lucide-react';
-import { FaReddit } from 'react-icons/fa';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import ProductCard from '../components/ProductCard';
 import HeroSection from '../components/HeroSection';
 import Seo from '../components/Seo';
 import { ProductGridSkeleton } from '../components/Skeletons';
+import { NetworkErrorState } from '../components/ErrorState';
 import { getStorefrontSellers } from '../services/sellerRepository';
-import { getStorefrontTestimonials } from '../services/testimonialRepository';
 import { getStorefrontCollections } from '../services/collectionRepository';
+import { getHomepageCategories } from '../services/categoryRepository';
 import { productsApi } from '../services/api';
 import { useFetch } from '../hooks/useFetch';
 import { SITE } from '../constants';
@@ -63,28 +49,6 @@ const Section = ({ eyebrow, title, cta, ctaTo = '/shop', children }) => (
     {children}
   </section>
 );
-
-const POPULAR_CATEGORIES = [
-  { title: 'Instagram Accounts', icon: Instagram, query: 'Instagram Accounts' },
-  { title: 'Gmail Accounts', icon: Mail, query: 'Gmail Accounts' },
-  { title: 'Facebook Accounts', icon: Facebook, query: 'Facebook Accounts' },
-  { title: 'TikTok Accounts', icon: Layers, query: 'TikTok Accounts' },
-  { title: 'YouTube Accounts', icon: Youtube, query: 'YouTube Accounts' },
-  { title: 'Telegram Accounts', icon: Send, query: 'Telegram Accounts' },
-  { title: 'Discord Accounts', icon: MessageCircle, query: 'Discord Accounts' },
-  { title: 'Reddit Accounts', icon: FaReddit, query: 'Reddit Accounts' },
-  { title: 'AI Tools', icon: Cpu, query: 'AI Tools' },
-  { title: 'Source Code', icon: Code, query: 'Source Code' },
-  { title: 'SaaS', icon: Layers, query: 'SaaS' },
-  { title: 'Websites', icon: Globe2, query: 'Websites' },
-  { title: 'Domains', icon: Globe2, query: 'Domains' },
-  { title: 'Templates', icon: Code, query: 'Templates' },
-  { title: 'Courses', icon: GraduationCap, query: 'Courses' },
-  { title: 'eBooks', icon: BookOpen, query: 'eBooks' },
-  { title: 'Mobile Apps', icon: Smartphone, query: 'Mobile Apps' },
-  { title: 'VPN', icon: ShieldCheck, query: 'VPN' },
-  { title: 'Gaming Accounts', icon: Gamepad, query: 'Gaming Accounts' },
-];
 
 const STORE_STATS = [
   { value: 100, suffix: 'K+', label: 'Products' },
@@ -144,19 +108,50 @@ const AnimatedCounter = ({ end, suffix = '' }) => {
   return <span>{value.toLocaleString()}{suffix}</span>;
 };
 
+const ProductSection = ({ eyebrow, title, cta, ctaTo, loading, error, retry, products, badge }) => {
+  if (!loading && !error && (!products || products.length === 0)) return null;
+
+  return (
+    <Section eyebrow={eyebrow} title={title} cta={cta} ctaTo={ctaTo}>
+      {loading ? (
+        <ProductGridSkeleton count={10} className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5" />
+      ) : error ? (
+        <NetworkErrorState onRetry={retry} message="We couldn't load products right now. Please try again." />
+      ) : (
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5">
+          {products.map((product) => (
+            badge ? (
+              <div key={product.id} className="relative">
+                <span className="absolute left-3 top-3 z-10 rounded-full bg-primary/95 px-3 py-1 text-[11px] font-semibold text-white shadow-sm">{badge}</span>
+                <ProductCard p={product} />
+              </div>
+            ) : (
+              <ProductCard key={product.id} p={product} />
+            )
+          ))}
+        </div>
+      )}
+    </Section>
+  );
+};
+
 const HomePage = () => {
   const { catalogVersion } = useStore();
-  const { data: popular, loading: popularLoading } = useFetch(() => productsApi.popular(10), []);
-  const { data: featuredProducts, loading: featuredLoading } = useFetch(() => productsApi.featured(8), []);
-  const { data: latestProducts, loading: latestLoading } = useFetch(() => productsApi.latest(10), []);
+  const { data: popular, loading: popularLoading, error: popularError, retry: retryPopular } = useFetch(() => productsApi.popular(10), []);
+  const { data: featuredProducts, loading: featuredLoading, error: featuredError, retry: retryFeatured } = useFetch(() => productsApi.featured(8), []);
+  const { data: latestProducts, loading: latestLoading, error: latestError, retry: retryLatest } = useFetch(() => productsApi.latest(10), []);
   const featuredStores = useMemo(() => getStorefrontSellers().slice(0, 6), [catalogVersion]);
   const collections = useMemo(() => getStorefrontCollections().slice(0, 6), [catalogVersion]);
-  const testimonials = getStorefrontTestimonials().slice(0, 6);
+  const popularCategories = useMemo(() => getHomepageCategories().slice(0, 20), [catalogVersion]);
   const [recentlyViewed, setRecentlyViewed] = useState([]);
 
   useEffect(() => {
-    const stored = window?.localStorage ? JSON.parse(localStorage.getItem('recentlyViewed') || '[]') : [];
-    setRecentlyViewed(stored.slice(0, 6));
+    try {
+      const stored = JSON.parse(localStorage.getItem('pm_recently_viewed') || localStorage.getItem('recentlyViewed') || '[]');
+      setRecentlyViewed(Array.isArray(stored) ? stored.slice(0, 6) : []);
+    } catch {
+      setRecentlyViewed([]);
+    }
   }, []);
 
   return (
@@ -167,108 +162,138 @@ const HomePage = () => {
       <main id="main-content">
         <HeroSection />
 
-        <Section eyebrow="Popular categories" title="Browse top digital categories" cta="View all" ctaTo="/categories">
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 xl:grid-cols-8 2xl:grid-cols-10 gap-4">
-            {POPULAR_CATEGORIES.map((category) => {
-              const Icon = category.icon;
-              return (
-                <Link
-                  key={category.title}
-                  to={`/shop?search=${encodeURIComponent(category.query)}`}
-                  className="group flex flex-col gap-4 rounded-[1.75rem] border border-border bg-white p-6 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-primary hover:shadow-lg"
-                >
-                  <span className="grid h-14 w-14 place-items-center rounded-3xl bg-primary/10 text-primary transition-colors group-hover:bg-primary/15">
-                    <Icon className="h-6 w-6" aria-hidden="true" />
-                  </span>
-                  <span className="text-sm font-semibold text-foreground">{category.title}</span>
-                </Link>
-              );
-            })}
-          </div>
-        </Section>
-
-        <Section eyebrow="Featured stores" title="Premium seller storefronts" cta="Browse all sellers" ctaTo="/sellers">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {featuredStores.map((seller) => (
-              <Link
-                key={seller.slug}
-                to={`/seller/${seller.slug}`}
-                className="group block overflow-hidden rounded-[2rem] border border-border bg-white p-6 shadow-sm transition-transform duration-300 hover:-translate-y-1 hover:shadow-lg"
-              >
-                <div className="flex items-center justify-between gap-4">
-                  <div className="grid h-14 w-14 place-items-center rounded-3xl bg-primary/10 text-primary text-lg font-bold">{seller.initials}</div>
-                  <div className="rounded-full border border-primary/15 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">Verified</div>
-                </div>
-                <h3 className="mt-5 text-xl font-semibold text-foreground transition-colors group-hover:text-primary">{seller.name}</h3>
-                <p className="mt-2 text-sm text-muted-foreground leading-relaxed line-clamp-2">{seller.specialty || 'High-quality digital products from a trusted creator.'}</p>
-                <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                  <div className="rounded-2xl bg-secondary/70 px-4 py-3 text-xs font-semibold text-foreground">{seller.productCount || 0} products</div>
-                  <div className="rounded-2xl bg-secondary/70 px-4 py-3 text-xs font-semibold text-foreground">{seller.rating?.toFixed(1) ?? '4.9'} ★ rating</div>
-                </div>
-                <span className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-primary group-hover:gap-3 transition-all">
-                  Visit store <ArrowRight className="w-4 h-4" aria-hidden="true" />
-                </span>
-              </Link>
-            ))}
-          </div>
-        </Section>
-
-        <Section eyebrow="New arrivals" title="Latest products" cta="View all products" ctaTo="/shop">
-          {latestLoading ? (
-            <ProductGridSkeleton count={10} className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5" />
-          ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5">
-              {(latestProducts || []).map((product) => <ProductCard key={product.id} p={product} />)}
+        {popularCategories.length > 0 && (
+          <Section eyebrow="Popular categories" title="Browse top digital categories" cta="View all" ctaTo="/categories">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 xl:grid-cols-8 2xl:grid-cols-10 gap-4">
+              {popularCategories.map((category) => {
+                const Icon = category.icon;
+                return (
+                  <Link
+                    key={category.id || category.slug}
+                    to={`/category/${category.slug}`}
+                    className="group flex flex-col gap-4 rounded-[1.75rem] border border-border bg-white p-6 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-primary hover:shadow-lg"
+                  >
+                    <span className="grid h-14 w-14 place-items-center rounded-3xl bg-primary/10 text-primary transition-colors group-hover:bg-primary/15">
+                      <Icon className="h-6 w-6" aria-hidden="true" />
+                    </span>
+                    <span className="text-sm font-semibold text-foreground">{category.name}</span>
+                  </Link>
+                );
+              })}
             </div>
-          )}
-        </Section>
+          </Section>
+        )}
 
-        <Section eyebrow="Trending now" title="Trending products" cta="Shop trending" ctaTo="/shop">
-          {popularLoading ? (
-            <ProductGridSkeleton count={10} className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5" />
-          ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5">
-              {(popular || []).slice(0, 10).map((product) => (
-                <div key={product.id} className="relative">
-                  <span className="absolute left-3 top-3 z-10 rounded-full bg-primary/95 px-3 py-1 text-[11px] font-semibold text-white shadow-sm">Trending</span>
-                  <ProductCard p={product} />
-                </div>
+        {featuredStores.length > 0 && (
+          <Section eyebrow="Featured stores" title="Premium seller storefronts" cta="Browse marketplace" ctaTo="/shop">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+              {featuredStores.map((seller) => (
+                <Link
+                  key={seller.slug}
+                  to={`/seller/${seller.slug}`}
+                  className="group block overflow-hidden rounded-[2rem] border border-border bg-white p-6 shadow-sm transition-transform duration-300 hover:-translate-y-1 hover:shadow-lg"
+                >
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="grid h-14 w-14 place-items-center rounded-3xl bg-primary/10 text-primary text-lg font-bold">{seller.initials}</div>
+                    {seller.verified && (
+                      <div className="rounded-full border border-primary/15 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">Verified</div>
+                    )}
+                  </div>
+                  <h3 className="mt-5 text-xl font-semibold text-foreground transition-colors group-hover:text-primary">{seller.name}</h3>
+                  <p className="mt-2 text-sm text-muted-foreground leading-relaxed line-clamp-2">{seller.specialty || seller.bio || 'High-quality digital products from a trusted creator.'}</p>
+                  <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                    <div className="rounded-2xl bg-secondary/70 px-4 py-3 text-xs font-semibold text-foreground">{seller.productCount || 0} products</div>
+                    <div className="rounded-2xl bg-secondary/70 px-4 py-3 text-xs font-semibold text-foreground">
+                      {seller.rating != null ? `${Number(seller.rating).toFixed(1)} ★ rating` : 'New seller'}
+                    </div>
+                  </div>
+                  <span className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-primary group-hover:gap-3 transition-all">
+                    Visit store <ArrowRight className="w-4 h-4" aria-hidden="true" />
+                  </span>
+                </Link>
               ))}
             </div>
-          )}
-        </Section>
+          </Section>
+        )}
 
-        <Section eyebrow="Hand-picked" title="Featured products" cta="Explore featured" ctaTo="/shop">
-          {featuredLoading ? (
-            <ProductGridSkeleton count={6} className="grid grid-cols-2 lg:grid-cols-3 gap-5" />
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-              {(featuredProducts || []).slice(0, 6).map((product) => <ProductCard key={product.id} p={product} />)}
+        <ProductSection
+          eyebrow="Recently added"
+          title="Latest products"
+          cta="View all products"
+          ctaTo="/shop?sort=newest"
+          loading={latestLoading}
+          error={latestError}
+          retry={retryLatest}
+          products={latestProducts || []}
+        />
+
+        <ProductSection
+          eyebrow="Trending now"
+          title="Trending products"
+          cta="Shop trending"
+          ctaTo="/shop?sort=most-popular"
+          loading={popularLoading}
+          error={popularError}
+          retry={retryPopular}
+          products={(popular || []).slice(0, 10)}
+          badge="Trending"
+        />
+
+        <ProductSection
+          eyebrow="Most popular"
+          title="Popular products"
+          cta="Browse popular"
+          ctaTo="/shop?sort=most-popular"
+          loading={popularLoading}
+          error={popularError}
+          retry={retryPopular}
+          products={(popular || []).slice(0, 8)}
+        />
+
+        <ProductSection
+          eyebrow="Hand-picked"
+          title="Featured products"
+          cta="Explore featured"
+          ctaTo="/shop"
+          loading={featuredLoading}
+          error={featuredError}
+          retry={retryFeatured}
+          products={(featuredProducts || []).slice(0, 6)}
+        />
+
+        {recentlyViewed.length > 0 && (
+          <Section eyebrow="Continue browsing" title="Recently viewed" cta="View shop" ctaTo="/shop">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-5">
+              {recentlyViewed.map((product) => (
+                <ProductCard key={product.id} p={product} />
+              ))}
             </div>
-          )}
-        </Section>
+          </Section>
+        )}
 
-        <Section eyebrow="Popular collections" title="Collections for every creator" cta="See all collections" ctaTo="/collections">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-5">
-            {collections.map((collection) => (
-              <Link
-                key={collection.slug}
-                to={`/shop?search=${encodeURIComponent(collection.title)}`}
-                className="group relative overflow-hidden rounded-[2rem] p-7 text-white shadow-lg transition-all duration-300 hover:-translate-y-1"
-                style={{ background: 'linear-gradient(135deg, rgba(108,59,255,0.95), rgba(255,79,216,0.9))' }}
-              >
-                <div className="flex h-14 w-14 items-center justify-center rounded-3xl bg-white/15 text-white mb-5">
-                  <BookOpen className="h-6 w-6" aria-hidden="true" />
-                </div>
-                <h3 className="text-xl font-semibold">{collection.title}</h3>
-                <p className="mt-3 text-sm text-white/85 leading-relaxed line-clamp-3">{collection.description || 'A premium curated collection for your next digital purchase.'}</p>
-                <span className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-white/90 group-hover:text-white">
-                  Explore <ArrowRight className="h-4 w-4" aria-hidden="true" />
-                </span>
-              </Link>
-            ))}
-          </div>
-        </Section>
+        {collections.length > 0 && (
+          <Section eyebrow="Popular collections" title="Collections for every creator" cta="See all collections" ctaTo="/collections">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-5">
+              {collections.map((collection) => (
+                <Link
+                  key={collection.slug}
+                  to={`/collection/${collection.slug}`}
+                  className="group relative overflow-hidden rounded-[2rem] p-7 text-white shadow-lg transition-all duration-300 hover:-translate-y-1"
+                  style={{ background: 'linear-gradient(135deg, rgba(108,59,255,0.95), rgba(255,79,216,0.9))' }}
+                >
+                  <div className="flex h-14 w-14 items-center justify-center rounded-3xl bg-white/15 text-white mb-5">
+                    <BookOpen className="h-6 w-6" aria-hidden="true" />
+                  </div>
+                  <h3 className="text-xl font-semibold">{collection.title}</h3>
+                  <p className="mt-3 text-sm text-white/85 leading-relaxed line-clamp-3">{collection.description || 'A premium curated collection for your next digital purchase.'}</p>
+                  <span className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-white/90 group-hover:text-white">
+                    Explore <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                  </span>
+                </Link>
+              ))}
+            </div>
+          </Section>
+        )}
 
         <section className="mx-auto max-w-[90rem] px-5 lg:px-8 mt-24">
           <div className="grid gap-5 rounded-[2.5rem] bg-white border border-border soft-shadow p-10 lg:grid-cols-4 lg:p-12">
@@ -312,49 +337,26 @@ const HomePage = () => {
               </div>
               <div className="rounded-[2rem] border border-white/15 bg-white/10 p-7 shadow-2xl backdrop-blur-xl">
                 <div className="flex items-center gap-4 text-sm text-white/90">
-                  <span className="grid place-items-center h-12 w-12 rounded-3xl bg-white/15 text-white">SL</span>
+                  <span className="grid place-items-center h-12 w-12 rounded-3xl bg-white/15 text-white">HS</span>
                   <div>
-                    <p className="font-semibold">Seller Labs</p>
-                    <p className="text-xs text-white/80">Top rated seller with 1.8k sales</p>
+                    <p className="font-semibold">HStock Sellers</p>
+                    <p className="text-xs text-white/80">Grow with a marketplace built for digital goods</p>
                   </div>
                 </div>
                 <div className="mt-7 grid gap-4">
                   <div className="rounded-3xl bg-white/10 p-4">
-                    <p className="text-xs uppercase tracking-[0.25em] text-white/70">Monthly revenue</p>
-                    <p className="mt-2 text-2xl font-black">$24.3K</p>
+                    <p className="text-xs uppercase tracking-[0.25em] text-white/70">Secure escrow</p>
+                    <p className="mt-2 text-2xl font-black">Built-in</p>
                   </div>
                   <div className="rounded-3xl bg-white/10 p-4">
-                    <p className="text-xs uppercase tracking-[0.25em] text-white/70">Live listings</p>
-                    <p className="mt-2 text-2xl font-black">128</p>
+                    <p className="text-xs uppercase tracking-[0.25em] text-white/70">Instant listings</p>
+                    <p className="mt-2 text-2xl font-black">Go live fast</p>
                   </div>
                 </div>
               </div>
             </div>
           </div>
         </section>
-
-        <Section eyebrow="Customer reviews" title="What buyers say" cta="Read more" ctaTo="/testimonials">
-          <div className="-mx-5 px-5 overflow-x-auto no-scrollbar sm:-mx-8 sm:px-8 py-2">
-            <div className="flex gap-5 min-w-[110%] snap-x snap-mandatory">
-              {testimonials.map((t) => (
-                <article key={t.name} className="snap-start min-w-[20rem] shrink-0 rounded-[2rem] border border-border bg-white p-6 shadow-sm transition-all hover:-translate-y-1 hover:shadow-lg">
-                  <div className="flex items-center justify-between gap-3 text-xs uppercase tracking-[0.3em] text-muted-foreground">
-                    <span>Review</span>
-                    <span className="inline-flex items-center gap-1 text-primary"><Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" aria-hidden="true" />{t.rating.toFixed(1)}</span>
-                  </div>
-                  <p className="mt-4 text-sm leading-relaxed text-foreground/90">"{t.text}"</p>
-                  <div className="mt-6 flex items-center gap-3">
-                    <div className="grid place-items-center h-12 w-12 rounded-full bg-secondary text-primary font-bold">{t.initials}</div>
-                    <div>
-                      <p className="font-semibold">{t.name}</p>
-                      <p className="text-xs text-muted-foreground">{t.role}</p>
-                    </div>
-                  </div>
-                </article>
-              ))}
-            </div>
-          </div>
-        </Section>
       </main>
 
       <Footer />
