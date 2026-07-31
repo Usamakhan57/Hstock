@@ -3,6 +3,10 @@ import { env } from '../config/env.js';
 import { logger } from '../config/logger.js';
 import { AppError } from '../utils/AppError.js';
 import { sendError } from '../utils/response.js';
+import {
+  ASSET_DUPLICATE_CODE,
+  ASSET_DUPLICATE_MESSAGE,
+} from '../constants/assetUniqueness.js';
 
 export function notFoundHandler(req, res, next) {
   next(
@@ -36,8 +40,14 @@ export function errorHandler(err, req, res, _next) {
 
   if (err.code === 11000) {
     statusCode = 409;
-    message = 'Duplicate key conflict';
-    code = 'DUPLICATE_KEY';
+    const keyPattern = err.keyPattern || {};
+    if (keyPattern.assetIdentifierNormalized) {
+      message = ASSET_DUPLICATE_MESSAGE;
+      code = ASSET_DUPLICATE_CODE;
+    } else {
+      message = 'Duplicate key conflict';
+      code = 'DUPLICATE_KEY';
+    }
   }
 
   if (err.message?.includes('not allowed by CORS')) {

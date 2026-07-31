@@ -1,5 +1,5 @@
 # Repositories
 
-Phase 2 services currently use Mongoose models directly with transactional boundaries where needed.
+Commerce Core uses a thin repository layer under `src/repositories/` for Order, Payment, Escrow, Wallet, Ledger, Withdrawal, Dispute, Refund, and WebhookEvent persistence.
 
-A deeper repository split can be introduced later without changing route/controller contracts.
+Services own business rules and call repositories for data access. Controllers never talk to repositories or models directly.

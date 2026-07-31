@@ -2,6 +2,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import dotenv from 'dotenv';
 import { z } from 'zod';
+import { CRYPTOMUS_DEFAULT_BASE_URL } from '../constants/cryptomus.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -25,6 +26,16 @@ const envSchema = z.object({
   JWT_REFRESH_SECRET: z.string().min(32, 'JWT_REFRESH_SECRET must be at least 32 characters'),
   JWT_ACCESS_EXPIRES_IN: z.string().default('15m'),
   JWT_REFRESH_EXPIRES_IN: z.string().default('7d'),
+
+  /** AES-256 key material for dispute credentials (hex/string). Falls back to derived JWT secret. */
+  CREDENTIALS_ENCRYPTION_KEY: z
+    .string()
+    .optional()
+    .default('')
+    .refine((v) => !v || v.length >= 32, {
+      message: 'CREDENTIALS_ENCRYPTION_KEY must be empty or at least 32 characters',
+    }),
+  DISPUTE_CREDENTIAL_TTL_DAYS: z.coerce.number().positive().default(30),
 
   COOKIE_SECURE: z
     .string()
@@ -54,6 +65,15 @@ const envSchema = z.object({
   CRYPTOMUS_MERCHANT_ID: z.string().optional().default(''),
   CRYPTOMUS_API_KEY: z.string().optional().default(''),
   CRYPTOMUS_WEBHOOK_SECRET: z.string().optional().default(''),
+  CRYPTOMUS_BASE_URL: z.string().url().optional().default(CRYPTOMUS_DEFAULT_BASE_URL),
+  CRYPTOMUS_MODE: z.enum(['sandbox', 'production']).default('sandbox'),
+  CRYPTOMUS_URL_RETURN: z.string().optional().default(''),
+  CRYPTOMUS_URL_SUCCESS: z.string().optional().default(''),
+  CRYPTOMUS_ENFORCE_IP_WHITELIST: z
+    .string()
+    .optional()
+    .transform((v) => v === 'true'),
+  FRONTEND_URL: z.string().optional().default('http://localhost:3000'),
 
   SMTP_HOST: z.string().optional().default(''),
   SMTP_PORT: z.coerce.number().int().positive().default(587),
@@ -91,6 +111,7 @@ export const env = {
     ? data.LOG_DIR
     : path.join(API_ROOT, data.LOG_DIR),
   uploadMaxFileSizeBytes: Math.floor(data.UPLOAD_MAX_FILE_SIZE_MB * 1024 * 1024),
+  cryptomusConfigured: Boolean(data.CRYPTOMUS_MERCHANT_ID && data.CRYPTOMUS_API_KEY),
 };
 
 export default env;

@@ -4,3 +4,4 @@ export * from './user.validator.js';
 export * from './config.validator.js';
 export * from './catalog.validator.js';
 export * from './product.validator.js';
+export * from './commerce.validator.js';

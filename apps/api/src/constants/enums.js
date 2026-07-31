@@ -1,6 +1,6 @@
 /**
  * Central enums used across domain modules.
- * Values align with the approved architecture document + Phase 2 extensions.
+ * Values align with the approved architecture document + Commerce Core.
  */
 
 export const RoleEnum = Object.freeze({
@@ -13,13 +13,13 @@ export const RoleEnum = Object.freeze({
 });
 
 export const StatusEnum = Object.freeze({
-  Pending: 'Pending',
-  Completed: 'Completed',
-  Rejected: 'Rejected',
-  Paid: 'Paid',
-  Released: 'Released',
-  Disputed: 'Disputed',
-  Cancelled: 'Cancelled',
+  Pending: 'pending',
+  Completed: 'completed',
+  Rejected: 'rejected',
+  Paid: 'paid',
+  Released: 'released',
+  Disputed: 'disputed',
+  Cancelled: 'cancelled',
 });
 
 export const UserStatusEnum = Object.freeze({
@@ -45,25 +45,44 @@ export const SellerStatusEnum = Object.freeze({
 });
 
 export const EscrowStatusEnum = Object.freeze({
-  None: 'None',
-  Held: 'Held',
-  Released: 'Released',
-  Disputed: 'Disputed',
-  Refunded: 'Refunded',
+  Pending: 'pending',
+  Locked: 'locked',
+  Released: 'released',
+  Refunded: 'refunded',
+  Disputed: 'disputed',
 });
 
 export const WithdrawalStatusEnum = Object.freeze({
-  Pending: 'Pending',
-  Paid: 'Paid',
-  Rejected: 'Rejected',
+  Pending: 'pending',
+  Approved: 'approved',
+  Rejected: 'rejected',
+  Paid: 'paid',
+  Cancelled: 'cancelled',
 });
 
 export const PaymentStatusEnum = Object.freeze({
-  AwaitingPayment: 'awaiting_payment',
+  Pending: 'pending',
+  Processing: 'processing',
   Paid: 'paid',
+  Partial: 'partial',
   Failed: 'failed',
   Expired: 'expired',
   Refunded: 'refunded',
+  Cancelled: 'cancelled',
+});
+
+export const DisputeStatusEnum = Object.freeze({
+  Open: 'open',
+  UnderReview: 'under_review',
+  Resolved: 'resolved',
+  Closed: 'closed',
+});
+
+export const DisputeResolutionEnum = Object.freeze({
+  SellerWins: 'seller_wins',
+  BuyerWins: 'buyer_wins',
+  PartialRefund: 'partial_refund',
+  Release: 'release',
 });
 
 export default {
@@ -75,4 +94,6 @@ export default {
   EscrowStatusEnum,
   WithdrawalStatusEnum,
   PaymentStatusEnum,
+  DisputeStatusEnum,
+  DisputeResolutionEnum,
 };
