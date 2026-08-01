@@ -18,6 +18,11 @@ npm ci
 npm run lint
 npm run build
 
+if [[ ! -f "$WEB_ROOT/dist/google49282e45f4e0d7bd.html" ]]; then
+  echo "ERROR: Google Search Console verification file missing from web dist" >&2
+  exit 1
+fi
+
 if [[ -d "$WEB_DIST_TARGET" ]]; then
   echo "==> Syncing web dist → $WEB_DIST_TARGET"
   rsync -a --delete "$WEB_ROOT/dist/" "$WEB_DIST_TARGET/"
