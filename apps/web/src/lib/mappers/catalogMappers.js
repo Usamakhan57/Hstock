@@ -173,7 +173,6 @@ export function mapBackendSeller(seller) {
     joined: seller.joinedAt
       ? new Date(seller.joinedAt).getFullYear().toString()
       : (seller.joined || null),
-    website: seller.website || null,
     country: seller.country || null,
   };
 }

@@ -14,13 +14,20 @@ export const NOTIFICATION_TYPES = Object.freeze([
   'withdrawal_rejected',
   'withdrawal_paid',
   'dispute_opened',
+  'dispute_updated',
   'dispute_resolved',
   'dispute_message',
+  'refund_approved',
+  'refund_completed',
+  'replacement_requested',
+  'replacement_accepted',
+  'replacement_rejected',
   'product_moderated',
   'system',
   'purchase',
   'delivery',
   'message',
+  'announcement',
 ]);
 
 const notificationSchema = new mongoose.Schema(

@@ -34,3 +34,6 @@ export { default as Refund } from './Refund.model.js';
 export { default as WebhookEvent } from './WebhookEvent.model.js';
 export { default as JobRun } from './JobRun.model.js';
 export { default as Notification } from './Notification.model.js';
+export { default as TelegramConnectToken } from './TelegramConnectToken.model.js';
+export { default as TelegramMessageLog } from './TelegramMessageLog.model.js';
+export { default as TelegramBroadcast } from './TelegramBroadcast.model.js';

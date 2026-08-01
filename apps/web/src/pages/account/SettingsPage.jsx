@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import Seo from '../../components/Seo';
 import AccountLayout from './AccountLayout';
+import TelegramConnectSection from '../../components/telegram/TelegramConnectSection';
 import { useToast } from '../../hooks/use-toast';
 import { useStore } from '../../context/StoreContext';
 import { usersApi } from '../../services/usersApi';
@@ -56,30 +57,33 @@ const SettingsPage = () => {
     <>
       <Seo title="Account Settings" description="Manage your ApnaStore notification and account preferences." noIndex />
       <AccountLayout title="Settings" subtitle="Control how ApnaStore communicates with you.">
-        <form onSubmit={save} className="bg-white rounded-3xl border border-border soft-shadow p-6 max-w-lg">
-          <h3 className="font-bold text-sm mb-1">Notifications</h3>
-          <Toggle
-            checked={prefs.orderUpdates}
-            onChange={(e) => setPrefs({ ...prefs, orderUpdates: e.target.checked })}
-            label="Order updates"
-            description="Receipts, download links, and order status changes."
-          />
-          <Toggle
-            checked={prefs.newArrivals}
-            onChange={(e) => setPrefs({ ...prefs, newArrivals: e.target.checked })}
-            label="New arrivals"
-            description="Get notified about new products in categories you follow."
-          />
-          <Toggle
-            checked={prefs.marketing}
-            onChange={(e) => setPrefs({ ...prefs, marketing: e.target.checked })}
-            label="Marketing emails"
-            description="Occasional deals, promotions, and creator spotlights."
-          />
-          <button type="submit" disabled={saving} className="mt-6 brand-gradient text-white font-semibold px-6 py-2.5 rounded-full hover:opacity-95 transition-all disabled:opacity-60">
-            {saving ? 'Saving…' : 'Save preferences'}
-          </button>
-        </form>
+        <div className="space-y-5 max-w-lg">
+          <TelegramConnectSection />
+          <form onSubmit={save} className="bg-white rounded-3xl border border-border soft-shadow p-6">
+            <h3 className="font-bold text-sm mb-1">Email Notifications</h3>
+            <Toggle
+              checked={prefs.orderUpdates}
+              onChange={(e) => setPrefs({ ...prefs, orderUpdates: e.target.checked })}
+              label="Order updates"
+              description="Receipts, download links, and order status changes."
+            />
+            <Toggle
+              checked={prefs.newArrivals}
+              onChange={(e) => setPrefs({ ...prefs, newArrivals: e.target.checked })}
+              label="New arrivals"
+              description="Get notified about new products in categories you follow."
+            />
+            <Toggle
+              checked={prefs.marketing}
+              onChange={(e) => setPrefs({ ...prefs, marketing: e.target.checked })}
+              label="Marketing emails"
+              description="Occasional deals, promotions, and creator spotlights."
+            />
+            <button type="submit" disabled={saving} className="mt-6 brand-gradient text-white font-semibold px-6 py-2.5 rounded-full hover:opacity-95 transition-all disabled:opacity-60">
+              {saving ? 'Saving…' : 'Save preferences'}
+            </button>
+          </form>
+        </div>
       </AccountLayout>
     </>
   );

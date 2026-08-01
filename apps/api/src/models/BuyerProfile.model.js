@@ -48,19 +48,11 @@ const buyerProfileSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
-    website: {
-      type: String,
-      default: null,
-    },
-    social: {
-      instagram: { type: String, default: null },
-      twitter: { type: String, default: null },
-      facebook: { type: String, default: null },
-    },
     preferences: {
       marketing: { type: Boolean, default: false },
       orderUpdates: { type: Boolean, default: true },
       newArrivals: { type: Boolean, default: false },
+      telegramNotifications: { type: Boolean, default: true },
     },
   },
   { timestamps: true },

@@ -101,17 +101,6 @@ const sellerProfileSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
-    website: {
-      type: String,
-      default: null,
-    },
-    social: {
-      facebook: { type: String, default: null },
-      instagram: { type: String, default: null },
-      twitter: { type: String, default: null },
-      youtube: { type: String, default: null },
-      linkedin: { type: String, default: null },
-    },
     address: {
       type: String,
       default: null,

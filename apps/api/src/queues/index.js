@@ -67,6 +67,7 @@ const queues = {
   payments: new MemoryQueue('payments'),
   escrow: new MemoryQueue('escrow'),
   notifications: new MemoryQueue('notifications'),
+  telegram: new MemoryQueue('telegram'),
 };
 
 export function getQueue(name) {
@@ -94,6 +95,10 @@ export function initializeQueues() {
   queues.notifications.process(async (job) => {
     const { processNotificationJob } = await import('../services/notification.service.js');
     await processNotificationJob(job);
+  });
+  queues.telegram.process(async (job) => {
+    const { processTelegramJob } = await import('../services/telegram.service.js');
+    await processTelegramJob(job);
   });
 
   logger.info('In-process commerce queues initialized', {

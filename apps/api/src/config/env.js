@@ -83,6 +83,17 @@ const envSchema = z.object({
 
   /** Optional Redis URL for multi-instance Socket.io / queue backends */
   REDIS_URL: z.string().optional().default(''),
+
+  /** Telegram bot notifications */
+  TELEGRAM_ENABLED: z
+    .string()
+    .optional()
+    .transform((v) => v === 'true'),
+  TELEGRAM_BOT_TOKEN: z.string().optional().default(''),
+  TELEGRAM_BOT_USERNAME: z.string().optional().default(''),
+  TELEGRAM_WEBHOOK_SECRET: z.string().optional().default(''),
+  TELEGRAM_WEBHOOK_URL: z.string().optional().default(''),
+  TELEGRAM_MODE: z.enum(['webhook', 'polling']).default('polling'),
 });
 
 const parsed = envSchema.safeParse(process.env);
@@ -144,6 +155,7 @@ export const env = {
   uploadMaxFileSizeBytes: Math.floor(data.UPLOAD_MAX_FILE_SIZE_MB * 1024 * 1024),
   cryptomusConfigured: Boolean(data.CRYPTOMUS_MERCHANT_ID && data.CRYPTOMUS_API_KEY),
   cookieSecure: data.COOKIE_SECURE === true || data.NODE_ENV === 'production',
+  telegramConfigured: Boolean(data.TELEGRAM_ENABLED && data.TELEGRAM_BOT_TOKEN),
 };
 
 export default env;

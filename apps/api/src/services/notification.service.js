@@ -8,6 +8,7 @@ import { emitToUser, emitToAdmins } from '../realtime/socket.server.js';
 import { sendTemplatedEmail } from '../emails/email.service.js';
 import { User } from '../models/index.js';
 import { logger } from '../config/logger.js';
+import { queueUserTelegramNotification } from './telegram.service.js';
 
 function mapNotification(doc) {
   if (!doc) return null;
@@ -74,6 +75,22 @@ export async function createNotification({
       emailType: emailType || type,
       emailData: { ...emailData, title, body },
     });
+  }
+
+  // Mirror in-app notifications to Telegram when the user is connected.
+  // Failures are isolated inside the Telegram queue/service.
+  try {
+    queueUserTelegramNotification({
+      userId,
+      title,
+      body,
+      link,
+      eventType: type,
+      notificationId: String(notification._id),
+      meta,
+    });
+  } catch (error) {
+    logger.warn('Telegram notification enqueue skipped', { message: error.message });
   }
 
   eventBus.emit(DOMAIN_EVENTS.NOTIFICATION_CREATED, {

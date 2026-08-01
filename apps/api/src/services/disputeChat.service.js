@@ -688,6 +688,7 @@ export async function sendMessage(disputeId, payload, actor, requestMeta = {}) {
     disputeId: String(chat.dispute),
     message: presented,
     recipients,
+    actorRole: role,
   });
 
   return presented;
@@ -830,6 +831,15 @@ export async function assignAdmin(disputeId, actor, requestMeta = {}) {
     ip: requestMeta.ip,
     userAgent: requestMeta.userAgent,
   });
+
+  const dispute = await Dispute.findById(disputeId).lean();
+  if (dispute) {
+    emitDomainEvent(DOMAIN_EVENTS.DISPUTE_UPDATED, {
+      dispute,
+      order: { _id: dispute.order, orderNumber: dispute.orderNumber },
+      note: 'A moderator joined the dispute.',
+    });
+  }
 
   return chat.toObject();
 }

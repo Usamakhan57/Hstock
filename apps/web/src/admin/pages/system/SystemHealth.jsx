@@ -56,6 +56,11 @@ const SystemHealth = () => {
           </div>
           <StatusRow label="Email" value={health.email?.ok ? 'ok' : (health.email?.status || 'unknown')} ok={health.email?.ok !== false} />
           <StatusRow label="Cryptomus" value={health.cryptomus?.configured ? health.cryptomus.mode : 'not configured'} />
+          <StatusRow
+            label="Telegram"
+            value={health.telegram?.online ? `@${health.telegram?.bot?.username || health.telegram?.botUsername || 'bot'}` : (health.telegram?.enabled ? 'offline' : 'disabled')}
+            ok={health.telegram?.enabled ? health.telegram?.online !== false : true}
+          />
           <StatusRow label="Jobs" value={health.jobsEnabled ? 'enabled' : 'disabled'} />
         </div>
 

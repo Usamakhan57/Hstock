@@ -43,6 +43,14 @@ cp .env.example .env
 | `COOKIE_SAME_SITE=lax` | CSRF-friendly cookie policy |
 | `REDIS_URL` | Optional — reserved for scaled Socket.io / rate-limit store |
 | `CRYPTOMUS_WEBHOOK_SECRET` | Webhook signing secret if used by provider config |
+| `TELEGRAM_ENABLED` | Enable Telegram marketplace notifications |
+| `TELEGRAM_BOT_TOKEN` | BotFather token (production Telegram API) |
+| `TELEGRAM_BOT_USERNAME` | Bot username used for connect deep links |
+| `TELEGRAM_WEBHOOK_SECRET` | Webhook secret header validation |
+| `TELEGRAM_WEBHOOK_URL` | Public webhook URL for production mode |
+| `TELEGRAM_MODE` | `webhook` (prod) or `polling` (dev) |
+
+See also: [TELEGRAM.md](./TELEGRAM.md)
 
 Never commit real secrets. Never hardcode credentials in source.
 
@@ -77,4 +85,5 @@ On boot with `NODE_ENV=production`, the API **exits** if:
 - `GET /health` — status + DB
 - `GET /health/live` — process alive
 - `GET /health/ready` — DB ready
-- `GET /api/v1/admin/system-health` — admin ops (SMTP, socket, queues, Cryptomus)
+- `GET /api/v1/admin/system-health` — admin ops (SMTP, socket, queues, Cryptomus, Telegram)
+- `GET /api/v1/admin/telegram` — Telegram bot stats / connected users / broadcasts

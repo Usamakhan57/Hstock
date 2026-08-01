@@ -141,6 +141,13 @@ export async function lockEscrowAfterPayment({
       session: activeSession,
     });
 
+    const escrowObj = escrow.toObject ? escrow.toObject() : escrow;
+    const orderObj = order.toObject ? order.toObject() : order;
+    emitDomainEvent(DOMAIN_EVENTS.ESCROW_LOCKED, {
+      escrow: escrowObj,
+      order: orderObj,
+    });
+
     return escrow;
   };
 
@@ -599,7 +606,10 @@ export async function markOrderDelivered(orderId, actor) {
     resourceId: order._id,
   });
 
-  return order.toObject();
+  const orderObj = order.toObject();
+  emitDomainEvent(DOMAIN_EVENTS.ORDER_DELIVERED, { order: orderObj });
+
+  return orderObj;
 }
 
 export default {

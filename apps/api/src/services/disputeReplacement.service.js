@@ -28,6 +28,8 @@ import * as disputeTimelineService from './disputeTimeline.service.js';
 import * as escrowService from './escrow.service.js';
 import { logActivity } from './activity.service.js';
 import { DisputeChatAuditLog } from '../models/index.js';
+import { emitDomainEvent } from '../events/bus.js';
+import { DOMAIN_EVENTS } from '../constants/events.js';
 
 function actorId(actor) {
   return actor?.id || actor?._id;
@@ -158,7 +160,14 @@ export async function sendReplacement(disputeId, payload, actor, requestMeta = {
     meta: { disputeId, version, accountCount: accounts.length },
   });
 
-  return serializeReplacement(replacement);
+  const serialized = serializeReplacement(replacement);
+  emitDomainEvent(DOMAIN_EVENTS.REPLACEMENT_REQUESTED, {
+    dispute: dispute.toObject ? dispute.toObject() : dispute,
+    replacement: serialized,
+    order: { orderNumber: dispute.orderNumber, _id: dispute.order },
+  });
+
+  return serialized;
 }
 
 export async function listReplacements(disputeId, actor) {
@@ -217,7 +226,14 @@ export async function respondToReplacement(
       meta: { version: replacement.version, replacementId },
     });
 
-    return serializeReplacement(replacement);
+    const serialized = serializeReplacement(replacement);
+    emitDomainEvent(DOMAIN_EVENTS.REPLACEMENT_REJECTED, {
+      dispute: dispute.toObject ? dispute.toObject() : dispute,
+      replacement: serialized,
+      order: { orderNumber: dispute.orderNumber, _id: dispute.order },
+    });
+
+    return serialized;
   }
 
   // Accepted — resolve disputed items & release disputed escrow to seller
@@ -297,7 +313,14 @@ export async function respondToReplacement(
       session,
     });
 
-    return serializeReplacement(replacement);
+    const serialized = serializeReplacement(replacement);
+    emitDomainEvent(DOMAIN_EVENTS.REPLACEMENT_ACCEPTED, {
+      dispute: dispute.toObject ? dispute.toObject() : dispute,
+      replacement: serialized,
+      order: order?.toObject ? order.toObject() : (order || { _id: dispute.order, orderNumber: dispute.orderNumber }),
+    });
+
+    return serialized;
   });
 }
 
