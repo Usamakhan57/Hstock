@@ -29,13 +29,33 @@ const apiClient = axios.create({
 
 let refreshPromise = null;
 
+export function isCredentialAuthRequest(url = '') {
+  // Never attempt silent refresh for credential auth endpoints — a 401 here
+  // means invalid credentials (or similar), not an expired access token.
+  return (
+    url.includes('/auth/login')
+    || url.includes('/auth/register')
+    || url.includes('/auth/seller/login')
+    || url.includes('/auth/seller/register')
+    || url.includes('/auth/admin/login')
+  );
+}
+
 async function refreshAccessToken() {
   if (!refreshPromise) {
     refreshPromise = (async () => {
       const refreshToken = getRefreshToken();
+      // Without a refresh cookie/token there is nothing to rotate — fail fast
+      // so callers see the original API error instead of "Refresh token required".
+      if (!refreshToken) {
+        throw new ApiError('Session expired. Please sign in again.', {
+          status: 401,
+          code: 'REFRESH_REQUIRED',
+        });
+      }
       const response = await axios.post(
         `${API_BASE_URL}/auth/refresh`,
-        refreshToken ? { refreshToken } : {},
+        { refreshToken },
         { withCredentials: true },
       );
       const payload = response.data?.data || {};
@@ -75,9 +95,13 @@ apiClient.interceptors.response.use(
     const status = error.response?.status;
     const url = String(original.url || '');
     const isAuthRefresh = url.includes('/auth/refresh');
-    const isLogin = url.includes('/auth/login') || url.includes('/auth/register');
+    const isCredentialAuth = isCredentialAuthRequest(url);
 
-    if (status === 401 && !original._retry && !isAuthRefresh && !isLogin) {
+    if (status === 401 && !original._retry && !isAuthRefresh && !isCredentialAuth) {
+      // Only attempt refresh when a refresh token is already present.
+      if (!getRefreshToken()) {
+        throw normalizeApiError(error);
+      }
       original._retry = true;
       try {
         const accessToken = await refreshAccessToken();
