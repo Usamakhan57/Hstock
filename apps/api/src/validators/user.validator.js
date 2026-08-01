@@ -111,7 +111,18 @@ export const adminUpdateSellerSchema = {
     status: z.enum(Object.values(SellerStatusEnum)).optional(),
     verified: z.boolean().optional(),
     verificationStatus: z.enum(Object.values(VerificationStatusEnum)).optional(),
+    commissionRate: z.coerce.number().min(0).max(100).optional(),
+    storeName: z.string().trim().min(2).max(160).optional(),
+    ownerName: z.string().trim().max(160).optional(),
+    email: z.string().trim().email().optional(),
+    phone: z.string().trim().max(40).optional().nullable(),
+    specialty: z.string().trim().max(160).optional().nullable(),
+    bio: z.string().trim().max(5000).optional(),
   }),
+};
+
+export const adminSellerIdSchema = {
+  params: z.object({ id: objectIdSchema }),
 };
 
 export default {
@@ -122,4 +133,5 @@ export default {
   listUsersSchema,
   adminUpdateUserSchema,
   adminUpdateSellerSchema,
+  adminSellerIdSchema,
 };

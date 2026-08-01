@@ -120,6 +120,21 @@ const sellerProfileSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    commissionRate: {
+      type: Number,
+      min: 0,
+      max: 100,
+      default: 15,
+    },
+    approvedAt: {
+      type: Date,
+      default: null,
+    },
+    approvedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+    },
     /**
      * Future wallet payout destinations.
      * Withdrawal execution is NOT implemented in this phase.

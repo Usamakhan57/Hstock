@@ -15,7 +15,11 @@ import {
   listUsersSchema,
   adminUpdateUserSchema,
   adminUpdateSellerSchema,
+  adminSellerIdSchema,
 } from '../../validators/user.validator.js';
+import { paginationSchema } from '../../validators/common.validator.js';
+import { z } from 'zod';
+import { SellerStatusEnum } from '../../constants/enums.js';
 import * as usersController from '../../controllers/users/users.controller.js';
 
 const router = Router();
@@ -49,18 +53,55 @@ router.get(
   usersController.listUsers,
 );
 
+const adminSellerGuards = [
+  requireRole(USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
+];
+
+const listSellersSchema = {
+  query: paginationSchema.extend({
+    status: z.enum(Object.values(SellerStatusEnum)).optional(),
+    search: z.string().trim().optional(),
+  }),
+};
+
+// Seller admin routes before /:id so "sellers" is never treated as a user id.
+router.get(
+  '/sellers',
+  ...adminSellerGuards,
+  validate(listSellersSchema),
+  usersController.adminListSellers,
+);
+router.get(
+  '/sellers/:id',
+  ...adminSellerGuards,
+  validate(adminSellerIdSchema),
+  usersController.adminGetSeller,
+);
+router.patch(
+  '/sellers/:id',
+  ...adminSellerGuards,
+  validate(adminUpdateSellerSchema),
+  usersController.adminUpdateSeller,
+);
+// Singular aliases used by some admin clients / network traces.
+router.get(
+  '/seller/:id',
+  ...adminSellerGuards,
+  validate(adminSellerIdSchema),
+  usersController.adminGetSeller,
+);
+router.patch(
+  '/seller/:id',
+  ...adminSellerGuards,
+  validate(adminUpdateSellerSchema),
+  usersController.adminUpdateSeller,
+);
+
 router.patch(
   '/:id',
   requirePermission(PERMISSIONS.USERS_MANAGE),
   validate(adminUpdateUserSchema),
   usersController.adminUpdateUser,
-);
-
-router.patch(
-  '/sellers/:id',
-  requireRole(USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
-  validate(adminUpdateSellerSchema),
-  usersController.adminUpdateSeller,
 );
 
 export default router;

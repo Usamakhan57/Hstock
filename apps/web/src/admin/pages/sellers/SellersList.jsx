@@ -6,13 +6,13 @@ import StatusBadge from '../../components/StatusBadge';
 import ConfirmDeleteDialog from '../../components/ConfirmDeleteDialog';
 import FormSheet, { inputClass } from '../../components/FormSheet';
 import {
-  getSellers, createSeller, updateSeller, deleteSeller,
+  getSellers, getSeller, createSeller, updateSeller, deleteSeller,
   approveSeller, rejectSeller, suspendSeller, reinstateSeller,
 } from '../../api/sellers';
 import { useToast } from '../../../hooks/use-toast';
 
 const EMPTY = { storeName: '', ownerName: '', email: '', phone: '', commissionRate: '15', status: 'pending' };
-const fmtDate = (iso) => new Date(iso).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+const fmtDate = (iso) => (iso ? new Date(iso).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : '—');
 const fmtMoney = (n) => `$${Number(n || 0).toFixed(2)}`;
 
 const SellersList = () => {
@@ -26,28 +26,89 @@ const SellersList = () => {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [busy, setBusy] = useState(false);
 
-  const load = () => { setLoading(true); getSellers().then((s) => { setSellers(s); setLoading(false); }); };
+  const load = () => {
+    setLoading(true);
+    getSellers()
+      .then((s) => { setSellers(s); setLoading(false); })
+      .catch((error) => {
+        setLoading(false);
+        toast({
+          title: 'Unable to load sellers',
+          description: error?.message || 'Please try again.',
+          variant: 'destructive',
+        });
+      });
+  };
   useEffect(load, []);
 
   const openAdd = () => { setEditing(null); setForm(EMPTY); setSheetOpen(true); };
-  const openEdit = (row) => { setEditing(row); setForm({ ...row, commissionRate: String(row.commissionRate) }); setSheetOpen(true); };
+  const openEdit = async (row) => {
+    setSheetOpen(true);
+    setEditing(row);
+    setForm({ ...row, commissionRate: String(row.commissionRate ?? 15) });
+    try {
+      const fresh = await getSeller(row.sellerProfileId || row.id || row.userId);
+      setEditing(fresh);
+      setForm({
+        storeName: fresh.storeName || '',
+        ownerName: fresh.ownerName || '',
+        email: fresh.email || '',
+        phone: fresh.phone || '',
+        commissionRate: String(fresh.commissionRate ?? 15),
+        status: fresh.status || 'pending',
+      });
+    } catch (error) {
+      toast({
+        title: 'Unable to load seller',
+        description: error?.message || 'Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
 
   const handleSubmit = async () => {
     if (!form.storeName.trim() || !form.email.trim()) { toast({ title: 'Store name and email are required', variant: 'destructive' }); return; }
     setSaving(true);
-    const payload = { ...form, commissionRate: Number(form.commissionRate || 15) };
-    if (editing) await updateSeller(editing.id, payload);
-    else await createSeller({ ...payload, productsCount: 0, totalSales: 0, joinedAt: new Date().toISOString() });
-    toast({ title: editing ? 'Seller updated' : 'Seller added', description: payload.storeName });
-    setSaving(false);
-    setSheetOpen(false);
-    load();
+    try {
+      const payload = {
+        storeName: form.storeName.trim(),
+        ownerName: form.ownerName?.trim() || '',
+        email: form.email.trim(),
+        phone: form.phone || '',
+        commissionRate: Number(form.commissionRate || 15),
+        status: form.status,
+      };
+      if (editing) {
+        await updateSeller(editing.sellerProfileId || editing.id || editing.userId, payload);
+      } else {
+        await createSeller({ ...payload, productsCount: 0, totalSales: 0, joinedAt: new Date().toISOString() });
+      }
+      toast({ title: editing ? 'Seller updated' : 'Seller added', description: payload.storeName });
+      setSheetOpen(false);
+      load();
+    } catch (error) {
+      toast({
+        title: 'Unable to save seller',
+        description: error?.message || 'Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setSaving(false);
+    }
   };
 
   const runAction = async (fn, row, message) => {
-    await fn(row.id);
-    toast({ title: message, description: row.storeName });
-    load();
+    try {
+      await fn(row.sellerProfileId || row.id || row.userId);
+      toast({ title: message, description: row.storeName });
+      load();
+    } catch (error) {
+      toast({
+        title: 'Action failed',
+        description: error?.message || 'Please try again.',
+        variant: 'destructive',
+      });
+    }
   };
 
   const handleDelete = async () => {
