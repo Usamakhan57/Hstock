@@ -29,7 +29,11 @@ describe('catalogMappers', () => {
     expect(product.price).toBe(99);
     expect(product.old).toBe(120);
     expect(product.downloads).toBe(42);
+    expect(product.soldCount).toBe(42);
+    expect(product.seller.name).toBe('Digital Pro');
+    expect(product.sellerName).toBe('Digital Pro');
     expect(product.badge).toBe('Featured');
+    expect(product.featured).toBe(true);
     expect(product.verifiedSeller).toBe(true);
     expect(product.deliveryType).toBe('instant');
     expect(product.rating).toBeNull();

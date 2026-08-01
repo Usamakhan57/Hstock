@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogTitle, DialogDescription } from './ui/dial
 import { useStore } from '../context/StoreContext';
 import { licenseCatalog } from '../data';
 import { resolveSellerVerified } from '../services/sellerRepository';
+import { getDeliveryTime, isManualHandover } from '../services/productMeta';
 import PurchaseModal from './PurchaseModal';
 
 /**
@@ -21,8 +22,9 @@ const QuickViewDialog = ({ product, open, onOpenChange }) => {
   if (!product) return null;
 
   const realId = product.baseId ?? product.id;
-  const productTypeLabel = 'Instant access';
+  const productTypeLabel = isManualHandover(product) ? getDeliveryTime(product) : 'Instant Access';
   const fileTypes = Array.isArray(product.fileTypes) ? product.fileTypes : [];
+  const sellerName = product.seller?.name || product.sellerName || product.artist || 'Seller';
   const defaultLicense = licenseCatalog[product.licenseIds?.[0]] || licenseCatalog.personal;
   const purchaseProduct = { ...product, id: realId };
   const purchaseLicense = {
@@ -63,8 +65,8 @@ const QuickViewDialog = ({ product, open, onOpenChange }) => {
             <DialogDescription className="sr-only">Quick view of {product.title}</DialogDescription>
 
             <div className="mt-2 text-sm text-muted-foreground flex flex-wrap gap-2 items-center">
-              <span>by {product.artist}</span>
-              {resolveSellerVerified(product.artist) && <BadgeCheck className="w-3.5 h-3.5 text-primary shrink-0" aria-label="Verified seller" />}
+              <span>by {sellerName}</span>
+              {(product.verifiedSeller || resolveSellerVerified(sellerName)) && <BadgeCheck className="w-3.5 h-3.5 text-primary shrink-0" aria-label="Verified seller" />}
             </div>
 
             <div className="mt-4 grid gap-2 text-sm text-muted-foreground">

@@ -6,6 +6,7 @@ import Footer from '../components/Footer';
 import Seo from '../components/Seo';
 import Breadcrumbs from '../components/Breadcrumbs';
 import ProductCard from '../components/ProductCard';
+import { PRODUCT_GRID_CLASS } from '../lib/productGrid';
 import ReportModal from '../components/ReportModal';
 import { ProductGridSkeleton } from '../components/Skeletons';
 import { NetworkErrorState } from '../components/ErrorState';
@@ -206,7 +207,7 @@ const SellerProfilePage = () => {
               <p className="text-lg font-semibold">No products listed yet</p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+            <div className={PRODUCT_GRID_CLASS}>
               {items.map((p) => <ProductCard key={p.id} p={p} />)}
             </div>
           )}

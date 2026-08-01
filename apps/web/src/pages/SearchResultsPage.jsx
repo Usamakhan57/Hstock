@@ -6,6 +6,7 @@ import Footer from '../components/Footer';
 import Seo from '../components/Seo';
 import Breadcrumbs from '../components/Breadcrumbs';
 import ProductCard from '../components/ProductCard';
+import { PRODUCT_GRID_CLASS } from '../lib/productGrid';
 import EmptyState from '../components/EmptyState';
 import { NetworkErrorState } from '../components/ErrorState';
 import { ProductGridSkeleton } from '../components/Skeletons';
@@ -137,7 +138,7 @@ const SearchResultsPage = () => {
               </div>
             ) : loading ? (
               <div className="mt-8">
-                <ProductGridSkeleton count={8} className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5" />
+                <ProductGridSkeleton count={12} className={PRODUCT_GRID_CLASS} />
               </div>
             ) : results.length === 0 ? (
               <div className="mt-10">
@@ -149,7 +150,7 @@ const SearchResultsPage = () => {
                 />
               </div>
             ) : (
-              <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 mt-8">
+              <div className={`${PRODUCT_GRID_CLASS} mt-8`}>
                 {results.map((p) => <ProductCard key={p.id} p={p} />)}
               </div>
             )}

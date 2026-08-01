@@ -6,6 +6,7 @@ import Footer from '../components/Footer';
 import Seo from '../components/Seo';
 import Breadcrumbs from '../components/Breadcrumbs';
 import ProductCard from '../components/ProductCard';
+import { PRODUCT_GRID_CLASS } from '../lib/productGrid';
 import FilterSidebar from '../components/FilterSidebar';
 import EmptyState from '../components/EmptyState';
 import { NetworkErrorState } from '../components/ErrorState';
@@ -165,7 +166,7 @@ const CategoryPage = () => {
               />
             ) : (
               <>
-                <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+                <div className={PRODUCT_GRID_CLASS}>
                   {paged.map((p) => <ProductCard key={p.id} p={p} />)}
                 </div>
 

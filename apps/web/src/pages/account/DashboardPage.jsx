@@ -4,6 +4,7 @@ import { Package, Wallet, CheckCircle2, AlertTriangle, ArrowRight, MessageCircle
 import Seo from '../../components/Seo';
 import AccountLayout from './AccountLayout';
 import ProductCard from '../../components/ProductCard';
+import { PRODUCT_GRID_CLASS } from '../../lib/productGrid';
 import { NetworkErrorState } from '../../components/ErrorState';
 import { ProductGridSkeleton } from '../../components/Skeletons';
 import { useStore } from '../../context/StoreContext';
@@ -201,14 +202,14 @@ const DashboardPage = () => {
 
         <div className="mb-10">
           <SectionHeader title="Recommended For You" to="/shop" />
-          <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+          <div className={PRODUCT_GRID_CLASS}>
             {recommended.map((p) => <ProductCard key={p.id} p={p} />)}
           </div>
         </div>
 
         <div>
           <SectionHeader title="Recently Viewed" to="/browsing-history" />
-          <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+          <div className={PRODUCT_GRID_CLASS}>
             {recentlyViewed.map((p) => <ProductCard key={p.id} p={p} />)}
           </div>
         </div>

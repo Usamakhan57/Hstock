@@ -12,6 +12,7 @@ import {
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import ProductCard from '../components/ProductCard';
+import { PRODUCT_GRID_CLASS } from '../lib/productGrid';
 import HeroSection from '../components/HeroSection';
 import Seo from '../components/Seo';
 import { ProductGridSkeleton } from '../components/Skeletons';
@@ -106,26 +107,19 @@ const AnimatedCounter = ({ end, suffix = '' }) => {
   return <span>{value.toLocaleString()}{suffix}</span>;
 };
 
-const ProductSection = ({ eyebrow, title, cta, ctaTo, loading, error, retry, products, badge }) => {
+const ProductSection = ({ eyebrow, title, cta, ctaTo, loading, error, retry, products }) => {
   if (!loading && !error && (!products || products.length === 0)) return null;
 
   return (
     <Section eyebrow={eyebrow} title={title} cta={cta} ctaTo={ctaTo}>
       {loading ? (
-        <ProductGridSkeleton count={10} className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5" />
+        <ProductGridSkeleton count={12} className={PRODUCT_GRID_CLASS} />
       ) : error ? (
         <NetworkErrorState onRetry={retry} message="We couldn't load products right now. Please try again." />
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5">
+        <div className={PRODUCT_GRID_CLASS}>
           {products.map((product) => (
-            badge ? (
-              <div key={product.id} className="relative">
-                <span className="absolute left-3 top-3 z-10 rounded-full bg-primary/95 px-3 py-1 text-[11px] font-semibold text-white shadow-sm">{badge}</span>
-                <ProductCard p={product} />
-              </div>
-            ) : (
-              <ProductCard key={product.id} p={product} />
-            )
+            <ProductCard key={product.id} p={product} />
           ))}
         </div>
       )}
@@ -233,7 +227,6 @@ const HomePage = () => {
           error={popularError}
           retry={retryPopular}
           products={(popular || []).slice(0, 10)}
-          badge="Trending"
         />
 
         <ProductSection
@@ -260,7 +253,7 @@ const HomePage = () => {
 
         {recentlyViewed.length > 0 && (
           <Section eyebrow="Continue browsing" title="Recently viewed" cta="View shop" ctaTo="/shop">
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-5">
+            <div className={PRODUCT_GRID_CLASS}>
               {recentlyViewed.map((product) => (
                 <ProductCard key={product.id} p={product} />
               ))}

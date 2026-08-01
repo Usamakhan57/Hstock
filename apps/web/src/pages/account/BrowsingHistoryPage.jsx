@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import Seo from '../../components/Seo';
 import AccountLayout from './AccountLayout';
 import ProductCard from '../../components/ProductCard';
+import { PRODUCT_GRID_CLASS } from '../../lib/productGrid';
 import EmptyState from '../../components/EmptyState';
 import { NetworkErrorState } from '../../components/ErrorState';
 import { ProductGridSkeleton } from '../../components/Skeletons';
@@ -45,7 +46,7 @@ const BrowsingHistoryPage = () => {
         ) : list.length === 0 ? (
           <EmptyState title="Nothing here yet" message={tab === TABS[0] ? 'Products you view will show up here.' : 'Products you download will show up here.'} actionLabel="Browse the Shop" actionTo="/shop" />
         ) : (
-          <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+          <div className={PRODUCT_GRID_CLASS}>
             {list.map((p) => <ProductCard key={p.id} p={p} />)}
           </div>
         )}

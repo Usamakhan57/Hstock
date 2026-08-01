@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import ProductCard from './ProductCard';
 import { getRecentlyViewed } from '../services/recentlyViewed';
+import { PRODUCT_GRID_CLASS } from '../lib/productGrid';
 
 /**
  * Renders nothing if there's no browsing history yet — safe to drop
@@ -19,7 +20,7 @@ const RecentlyViewedSection = ({ excludeId = null, title = 'Recently Viewed', li
   return (
     <div className={className}>
       <h2 className="text-2xl font-bold mb-6">{title}</h2>
-      <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-5">
+      <div className={PRODUCT_GRID_CLASS}>
         {items.map((p) => <ProductCard key={p.id} p={p} />)}
       </div>
     </div>

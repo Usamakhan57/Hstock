@@ -39,6 +39,8 @@ export function isManualHandover(product) {
  * Returns a stock status descriptor, or null when stock tracking doesn't
  * apply to this product (unlimited stock, or no inventory data at all —
  * most digital listings are unlimited and simply show no stock row).
+ *
+ * Card / marketplace badge format: "3 Left", "20 Left", "Out of Stock".
  */
 export function getStockStatus(product) {
   if (!product) return null;
@@ -48,7 +50,7 @@ export function getStockStatus(product) {
 
   if (stock <= 0) return { label: 'Out of Stock', tone: 'destructive' };
   if (product.lowStockThreshold != null && stock <= product.lowStockThreshold) {
-    return { label: `Only ${stock} left`, tone: 'warning' };
+    return { label: `${stock} Left`, tone: 'warning' };
   }
-  return { label: 'In Stock', tone: 'positive' };
+  return { label: `${stock} Left`, tone: 'positive' };
 }
