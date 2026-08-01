@@ -33,6 +33,9 @@ Errors may also include `code` (e.g. `VALIDATION_ERROR`, `UNAUTHORIZED`, `FORBID
 | POST | `/auth/reset-password` | Public | Complete password reset |
 | POST/GET | `/auth/verify-email` | Public | Email verification |
 | GET | `/auth/me` | Bearer | Current authenticated user |
+| GET | `/auth/google/status` | Public | Whether Google OAuth is configured |
+| GET | `/auth/google` | Public | Start Google OAuth (redirect) |
+| GET | `/auth/google/callback` | Public | Google OAuth callback → frontend with JWTs |
 
 Tokens:
 
@@ -125,6 +128,26 @@ See `docs/ASSET_UNIQUENESS.md` for architecture details.
 ## Commerce Core (orders / payments / escrow / wallet / disputes)
 
 See `docs/COMMERCE_CORE.md` for full commerce API surface.
+
+### Buyer wallet (Cryptomus-funded prepaid balance)
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/wallet` | Buyer | Buyer wallet balances |
+| GET | `/wallet/history` | Buyer | Wallet transaction history |
+| POST | `/wallet/deposit` | Buyer | Create Cryptomus deposit invoice |
+| POST | `/wallet/topup` | Buyer | Create Cryptomus top-up invoice |
+| POST | `/orders/buy-now` | Buyer | `paymentMethod`: `cryptomus` (default) or `wallet` |
+| GET | `/wallet/buyer/transactions` | Admin | Search buyer wallet transactions |
+| GET | `/wallet/buyer/transactions/export` | Admin | CSV export |
+| GET | `/wallet/buyer/:buyerId` | Admin | Buyer wallet detail |
+| POST | `/wallet/buyer/:buyerId/adjust` | Admin | Credit / debit |
+| POST | `/wallet/buyer/:buyerId/freeze` | Admin | Freeze wallet |
+| POST | `/wallet/buyer/:buyerId/unfreeze` | Admin | Unfreeze wallet |
+
+Seller wallet routes (`/wallet/me`, `/wallet/adjust` with `sellerId`, `/wallet/ledger`) are unchanged.
+
+Cryptomus webhook (`POST /payments/cryptomus/webhook`) settles both order payments and wallet deposits (idempotent).
 
 ### Disputes (final system)
 

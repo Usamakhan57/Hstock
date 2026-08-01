@@ -14,7 +14,9 @@ const userSchema = new mongoose.Schema(
     },
     passwordHash: {
       type: String,
-      required: true,
+      required() {
+        return !this.googleId;
+      },
       select: false,
     },
     name: {
@@ -86,8 +88,14 @@ const userSchema = new mongoose.Schema(
     },
     googleId: {
       type: String,
-      default: null,
+      // Omit when unset — sparse unique index rejects multiple explicit nulls
+      unique: true,
       sparse: true,
+    },
+    authProvider: {
+      type: String,
+      enum: ['local', 'google'],
+      default: 'local',
     },
     twoFactorEnabled: {
       type: Boolean,

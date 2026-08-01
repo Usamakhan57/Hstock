@@ -19,6 +19,8 @@
 3. Set `NODE_ENV=production`, strong JWT secrets, `CREDENTIALS_ENCRYPTION_KEY`, SMTP, Cryptomus production, `CORS_ORIGINS`, `FRONTEND_URL`
 4. Set `ENABLE_JOBS=true` and `CRYPTOMUS_ENFORCE_IP_WHITELIST=true`
 4b. Optional Telegram: `TELEGRAM_ENABLED=true`, bot token/username, `TELEGRAM_MODE=webhook`, webhook URL + secret (see `docs/TELEGRAM.md`)
+4c. Optional Google OAuth: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, authorized redirect `${APP_URL}/api/v1/auth/google/callback`
+4d. Buyer wallet limits (optional): `BUYER_WALLET_MIN_DEPOSIT`, `BUYER_WALLET_MAX_DEPOSIT`
 5. `npm ci` in `apps/api` and `apps/web`
 6. `npm run build` for web; sync `apps/web/dist` → `/var/www/apnastore/web`
 7. Install Nginx site from `deploy/nginx/apnastore.conf`
@@ -32,7 +34,9 @@
     - `curl https://apnastore.org/health`
     - `curl https://apnastore.org/health/ready`
     - Admin login + Socket.io (browser Network → WS)
-    - Cryptomus production webhook
+    - Cryptomus production webhook (orders + wallet deposits)
+    - Buyer wallet deposit/top-up + wallet checkout
+    - Google OAuth (if configured)
     - Telegram webhook + connect flow (if enabled)
     - SMTP delivery (registration / password reset)
 

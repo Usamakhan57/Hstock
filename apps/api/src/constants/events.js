@@ -26,6 +26,11 @@ export const DOMAIN_EVENTS = Object.freeze({
   REPLACEMENT_REJECTED: 'replacement.rejected',
   PRODUCT_MODERATED: 'product.moderated',
   NOTIFICATION_CREATED: 'notification.created',
+  BUYER_WALLET_CREDITED: 'buyer_wallet.credited',
+  BUYER_WALLET_DEBITED: 'buyer_wallet.debited',
+  BUYER_WALLET_DEPOSIT_PENDING: 'buyer_wallet.deposit_pending',
+  BUYER_WALLET_FROZEN: 'buyer_wallet.frozen',
+  BUYER_WALLET_UNFROZEN: 'buyer_wallet.unfrozen',
 });
 
 export const SOCKET_EVENTS = Object.freeze({

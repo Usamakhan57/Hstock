@@ -54,6 +54,8 @@ export async function lockEscrowAfterPayment({
   paymentId,
   actorId = null,
   session = null,
+  /** cryptomus (external invoice) or wallet (prepaid buyer balance) */
+  source = 'cryptomus',
 }) {
   const run = async (activeSession) => {
     const order = await orderRepository.findOrderById(orderId, { session: activeSession });
@@ -118,6 +120,7 @@ export async function lockEscrowAfterPayment({
       },
       session: activeSession,
       createdBy: actorId,
+      source,
     });
 
     order.status = ORDER_STATUS.ESCROW;

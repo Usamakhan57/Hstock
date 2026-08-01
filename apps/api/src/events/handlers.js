@@ -519,6 +519,113 @@ export function registerEventHandlers(eventBus) {
     }
   });
 
+  eventBus.on(DOMAIN_EVENTS.BUYER_WALLET_CREDITED, async (payload) => {
+    try {
+      const buyerId = payload.buyerId;
+      if (!buyerId) return;
+      const amount = payload.amount;
+      const purpose = payload.purpose || 'credit';
+      const typeMap = {
+        deposit: 'wallet_deposit',
+        topup: 'wallet_topup',
+        refund: 'wallet_refund',
+        adjustment: 'wallet_adjustment',
+      };
+      await createNotification({
+        userId: buyerId,
+        type: typeMap[purpose] || 'wallet_deposit',
+        title: purpose === 'refund' ? 'Refund credited to wallet' : 'Wallet balance updated',
+        body: `$${Number(amount || 0).toFixed(2)} was credited to your wallet (${purpose}).`,
+        link: '/wallet',
+        meta: { amount, purpose },
+        sendEmail: true,
+        emailType: 'system',
+        emailData: { amount, purpose },
+      });
+      emitToRoom(`user:${buyerId}`, SOCKET_EVENTS.BUYER_DASHBOARD, {
+        type: 'wallet_credited',
+        amount,
+        purpose,
+        wallet: payload.wallet || null,
+      });
+    } catch (error) {
+      logger.error('BUYER_WALLET_CREDITED handler failed', { message: error.message });
+    }
+  });
+
+  eventBus.on(DOMAIN_EVENTS.BUYER_WALLET_DEBITED, async (payload) => {
+    try {
+      const buyerId = payload.buyerId;
+      if (!buyerId) return;
+      await createNotification({
+        userId: buyerId,
+        type: 'wallet_purchase',
+        title: 'Wallet purchase',
+        body: `$${Number(payload.amount || 0).toFixed(2)} was spent from your wallet.`,
+        link: '/wallet',
+        meta: { amount: payload.amount, orderId: payload.orderId || null },
+        sendEmail: false,
+      });
+      emitToRoom(`user:${buyerId}`, SOCKET_EVENTS.BUYER_DASHBOARD, {
+        type: 'wallet_debited',
+        amount: payload.amount,
+        wallet: payload.wallet || null,
+      });
+    } catch (error) {
+      logger.error('BUYER_WALLET_DEBITED handler failed', { message: error.message });
+    }
+  });
+
+  eventBus.on(DOMAIN_EVENTS.BUYER_WALLET_DEPOSIT_PENDING, async (payload) => {
+    try {
+      const buyerId = payload.buyerId;
+      if (!buyerId) return;
+      await createNotification({
+        userId: buyerId,
+        type: payload.purpose === 'topup' ? 'wallet_topup' : 'wallet_deposit',
+        title: payload.purpose === 'topup' ? 'Top-up invoice created' : 'Deposit invoice created',
+        body: 'Complete Cryptomus payment to credit your wallet.',
+        link: '/wallet',
+        meta: { depositId: payload.deposit?._id || null },
+      });
+    } catch (error) {
+      logger.error('BUYER_WALLET_DEPOSIT_PENDING handler failed', { message: error.message });
+    }
+  });
+
+  eventBus.on(DOMAIN_EVENTS.BUYER_WALLET_FROZEN, async (payload) => {
+    try {
+      if (!payload.buyerId) return;
+      await createNotification({
+        userId: payload.buyerId,
+        type: 'wallet_frozen',
+        title: 'Wallet frozen',
+        body: payload.reason || 'Your wallet has been frozen by an administrator.',
+        link: '/wallet',
+        sendEmail: true,
+        emailType: 'system',
+        emailData: { reason: payload.reason },
+      });
+    } catch (error) {
+      logger.error('BUYER_WALLET_FROZEN handler failed', { message: error.message });
+    }
+  });
+
+  eventBus.on(DOMAIN_EVENTS.BUYER_WALLET_UNFROZEN, async (payload) => {
+    try {
+      if (!payload.buyerId) return;
+      await createNotification({
+        userId: payload.buyerId,
+        type: 'wallet_unfrozen',
+        title: 'Wallet unfrozen',
+        body: 'Your wallet is active again.',
+        link: '/wallet',
+      });
+    } catch (error) {
+      logger.error('BUYER_WALLET_UNFROZEN handler failed', { message: error.message });
+    }
+  });
+
   logger.info('Domain event handlers registered');
 }
 

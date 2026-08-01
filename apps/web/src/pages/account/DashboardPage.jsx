@@ -10,6 +10,7 @@ import { useStore } from '../../context/StoreContext';
 import { useFetch } from '../../hooks/useFetch';
 import { ordersApi } from '../../services/ordersApi';
 import { paymentsApi } from '../../services/paymentsApi';
+import { buyerWalletApi } from '../../services/buyerWalletApi';
 import { buildRecentlyViewed, buildRecommended } from '../../services/buyerDashboard';
 import { ORDER_STATUS, PAYMENT_STATUS } from '../../constants/commerce';
 
@@ -53,6 +54,11 @@ const DashboardPage = () => {
     () => paymentsApi.list({ page: 1, limit: 50, scope: 'buyer' }),
     [],
   );
+  const { data: wallet } = useFetch(() => buyerWalletApi.getWallet(), []);
+  const { data: walletHistory } = useFetch(
+    () => buyerWalletApi.getHistory({ page: 1, limit: 5 }),
+    [],
+  );
 
   const orders = ordersData?.items || [];
   const payments = paymentsData?.items || [];
@@ -71,6 +77,9 @@ const DashboardPage = () => {
   const paidTotal = payments
     .filter((p) => p.status === PAYMENT_STATUS.PAID)
     .reduce((sum, p) => sum + p.amount, 0);
+  const pendingPayments = payments.filter((p) => (
+    p.status === PAYMENT_STATUS.PENDING || p.status === PAYMENT_STATUS.PROCESSING
+  ));
 
   return (
     <>
@@ -82,12 +91,48 @@ const DashboardPage = () => {
           <NetworkErrorState onRetry={retry} message={error.message} />
         ) : (
           <>
+            <div className="bg-white rounded-3xl border border-border soft-shadow p-5 sm:p-6 mb-6">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-4 justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Wallet balance</p>
+                  <p className="text-3xl font-black tracking-tight mt-1">${Number(wallet?.availableBalance || 0).toFixed(2)}</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Pending ${Number(wallet?.pendingBalance || 0).toFixed(2)} · {wallet?.currency || 'USD'}
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Link to="/wallet" className="h-11 px-4 rounded-2xl brand-gradient text-white text-sm font-semibold inline-flex items-center">Deposit</Link>
+                  <Link to="/wallet" className="h-11 px-4 rounded-2xl border border-border bg-secondary text-sm font-semibold inline-flex items-center">Top Up</Link>
+                  <Link to="/wallet" className="h-11 px-4 rounded-2xl border border-border text-sm font-semibold inline-flex items-center">History</Link>
+                </div>
+              </div>
+            </div>
+
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
               <StatCard label="Active Orders" value={activeOrders.length} icon={Package} tone="primary" />
               <StatCard label="Completed Orders" value={completedOrders.length} icon={CheckCircle2} tone="emerald" />
-              <StatCard label="Paid Total" value={`$${paidTotal.toFixed(2)}`} icon={Wallet} tone="amber" />
-              <StatCard label="Disputes" value={disputedOrders.length} icon={AlertTriangle} tone="destructive" />
+              <StatCard label="Wallet / Paid" value={`$${Number(wallet?.availableBalance || paidTotal || 0).toFixed(2)}`} icon={Wallet} tone="amber" />
+              <StatCard label="Pending Payments" value={pendingPayments.length} icon={AlertTriangle} tone="destructive" />
             </div>
+
+            {(walletHistory?.items || []).length > 0 && (
+              <div className="mb-8">
+                <SectionHeader title="Recent wallet activity" to="/wallet" />
+                <div className="bg-white rounded-3xl border border-border soft-shadow divide-y divide-border overflow-hidden">
+                  {walletHistory.items.slice(0, 4).map((tx) => (
+                    <div key={tx.id} className="flex items-center gap-3 p-4">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold capitalize truncate">{tx.type}</p>
+                        <p className="text-xs text-muted-foreground truncate">{tx.reference || tx.description}</p>
+                      </div>
+                      <span className="text-sm font-bold shrink-0">
+                        {tx.direction === 'credit' ? '+' : '-'}${Number(tx.amount || 0).toFixed(2)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div className="grid lg:grid-cols-2 gap-6 mb-10">
               <div>

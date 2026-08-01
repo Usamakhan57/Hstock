@@ -94,6 +94,15 @@ const envSchema = z.object({
   TELEGRAM_WEBHOOK_SECRET: z.string().optional().default(''),
   TELEGRAM_WEBHOOK_URL: z.string().optional().default(''),
   TELEGRAM_MODE: z.enum(['webhook', 'polling']).default('polling'),
+
+  /** Google OAuth 2 (optional — disabled when client id/secret empty) */
+  GOOGLE_CLIENT_ID: z.string().optional().default(''),
+  GOOGLE_CLIENT_SECRET: z.string().optional().default(''),
+  GOOGLE_CALLBACK_URL: z.string().optional().default(''),
+
+  /** Buyer wallet Cryptomus deposit / top-up limits (USD) */
+  BUYER_WALLET_MIN_DEPOSIT: z.coerce.number().positive().default(5),
+  BUYER_WALLET_MAX_DEPOSIT: z.coerce.number().positive().default(10000),
 });
 
 const parsed = envSchema.safeParse(process.env);
@@ -156,6 +165,10 @@ export const env = {
   cryptomusConfigured: Boolean(data.CRYPTOMUS_MERCHANT_ID && data.CRYPTOMUS_API_KEY),
   cookieSecure: data.COOKIE_SECURE === true || data.NODE_ENV === 'production',
   telegramConfigured: Boolean(data.TELEGRAM_ENABLED && data.TELEGRAM_BOT_TOKEN),
+  googleOAuthConfigured: Boolean(data.GOOGLE_CLIENT_ID && data.GOOGLE_CLIENT_SECRET),
+  googleCallbackUrl:
+    data.GOOGLE_CALLBACK_URL
+    || `${data.APP_URL.replace(/\/$/, '')}${data.API_PREFIX}/auth/google/callback`,
 };
 
 export default env;

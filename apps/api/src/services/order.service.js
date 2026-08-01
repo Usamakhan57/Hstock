@@ -44,12 +44,15 @@ function isStaff(actor) {
 }
 
 /**
- * BUY NOW — one order = one product. Creates order + Cryptomus invoice.
+ * BUY NOW — one order = one product.
+ * paymentMethod: cryptomus (default invoice) | wallet (prepaid balance funded by Cryptomus).
  */
 export async function buyNow(payload, actor, requestMeta = {}) {
   if (!actor?.roles?.includes(USER_ROLES.BUYER) && !isStaff(actor)) {
     throw new AppError('Only buyers can purchase products', 403, { code: 'FORBIDDEN' });
   }
+
+  const paymentMethod = payload.paymentMethod === 'wallet' ? 'wallet' : 'cryptomus';
 
   const productId = payload.productId;
   const product = await Product.findById(productId);
@@ -95,6 +98,19 @@ export async function buyNow(payload, actor, requestMeta = {}) {
     sellerId: seller._id,
     categoryId: product.category,
   });
+
+  if (paymentMethod === 'wallet') {
+    return buyNowWithWallet({
+      actor,
+      product,
+      seller,
+      quantity,
+      unitPrice,
+      subtotal,
+      commission,
+      requestMeta,
+    });
+  }
 
   const platform = await getPlatformConfig();
   const lifetimeSeconds = platform?.orderPaymentLifetimeSeconds || 3600;
@@ -283,6 +299,200 @@ export async function buyNow(payload, actor, requestMeta = {}) {
   };
 
   emitDomainEvent(DOMAIN_EVENTS.ORDER_CREATED, {
+    order: response.order,
+    payment: response.payment,
+  });
+
+  return response;
+}
+
+/**
+ * Buy Now paid entirely from buyer wallet balance (Cryptomus-funded prepaid).
+ */
+async function buyNowWithWallet({
+  actor,
+  product,
+  seller,
+  quantity,
+  unitPrice,
+  subtotal,
+  commission,
+  requestMeta,
+}) {
+  const buyerWalletService = await import('./buyerWallet.service.js');
+  const walletPreview = await buyerWalletService.getMyWallet(actor);
+  if (walletPreview.frozen) {
+    throw new AppError('Wallet is frozen. Contact support or pay with Cryptomus.', 403, {
+      code: 'WALLET_FROZEN',
+    });
+  }
+  if (walletPreview.availableBalance + 1e-9 < subtotal) {
+    throw new AppError(
+      `Insufficient wallet balance. Available $${walletPreview.availableBalance.toFixed(2)}, required $${subtotal.toFixed(2)}. Please deposit or top up.`,
+      400,
+      {
+        code: 'INSUFFICIENT_WALLET_BALANCE',
+        details: {
+          availableBalance: walletPreview.availableBalance,
+          required: subtotal,
+        },
+      },
+    );
+  }
+
+  const orderNumber = generateOrderNumber();
+  const walletPaymentId = `wallet_${String(orderNumber).replace(/[^a-zA-Z0-9_-]/g, '_')}`;
+  const paidAt = new Date();
+
+  const result = await withTransaction(async (session) => {
+    if (product.stockType === STOCK_TYPES.LIMITED) {
+      const updateOpts = { new: true };
+      if (session) updateOpts.session = session;
+      const updated = await Product.findOneAndUpdate(
+        {
+          _id: product._id,
+          stock: { $gte: quantity },
+          status: PRODUCT_STATUS.LIVE,
+          deletedAt: null,
+        },
+        { $inc: { stock: -quantity } },
+        updateOpts,
+      );
+      if (!updated) {
+        throw new AppError('Product is out of stock', 400, { code: 'OUT_OF_STOCK' });
+      }
+      if (updated.stock === 0) {
+        updated.status = PRODUCT_STATUS.OUT_OF_STOCK;
+        if (session) await updated.save({ session });
+        else await updated.save();
+      }
+    }
+
+    const accounts = Array.from({ length: quantity }, (_, index) => ({
+      index,
+      identifier: `${orderNumber}-ACC-${index + 1}`,
+      status: 'active',
+      label: `Account ${index + 1}`,
+    }));
+
+    const order = await orderRepository.createOrder(
+      {
+        orderNumber,
+        buyer: actor.id,
+        seller: seller._id,
+        sellerUser: seller.user,
+        product: product._id,
+        productSnapshot: {
+          title: product.title,
+          slug: product.slug,
+          price: unitPrice,
+          currency: product.currency || LEDGER_CURRENCY,
+          productType: product.productType,
+          thumbnail: product.thumbnail,
+          deliveryType: product.deliveryType,
+        },
+        quantity,
+        accounts,
+        unitPrice,
+        subtotal,
+        commissionPercent: commission.percent,
+        commissionAmount: commission.commissionAmount,
+        sellerAmount: commission.sellerAmount,
+        totalAmount: subtotal,
+        currency: product.currency || LEDGER_CURRENCY,
+        status: ORDER_STATUS.PAID,
+        deliveryStatus: DELIVERY_STATUS.PENDING,
+        paidAt,
+        metadata: { paymentMethod: 'wallet' },
+      },
+      session,
+    );
+
+    const payment = await paymentRepository.createPayment(
+      {
+        order: order._id,
+        orderNumber,
+        buyer: actor.id,
+        seller: seller._id,
+        gateway: 'wallet',
+        amount: subtotal,
+        currency: order.currency,
+        status: PAYMENT_STATUS.PAID,
+        cryptomusUuid: null,
+        cryptomusOrderId: walletPaymentId,
+        invoiceUrl: null,
+        paidAt,
+        isFinal: true,
+        providerStatus: 'wallet_paid',
+        metadata: { paymentMethod: 'wallet' },
+      },
+      session,
+    );
+
+    order.payment = payment._id;
+    if (session) await order.save({ session });
+    else await order.save();
+
+    await buyerWalletService.spendForOrder({
+      buyerId: actor.id,
+      amount: subtotal,
+      orderId: order._id,
+      paymentId: payment._id,
+      session,
+      createdBy: actor.id,
+      description: `Purchase ${orderNumber} from wallet`,
+    });
+
+    const escrow = await escrowService.createPendingEscrow({
+      order,
+      payment,
+      session,
+    });
+    order.escrow = escrow._id;
+    if (session) await order.save({ session });
+    else await order.save();
+
+    await escrowService.lockEscrowAfterPayment({
+      orderId: order._id,
+      paymentId: payment._id,
+      actorId: actor.id,
+      session,
+      source: 'wallet',
+    });
+
+    await logActivity({
+      userId: actor.id,
+      action: 'orders.buy_now_wallet',
+      resource: 'Order',
+      resourceId: order._id,
+      ip: requestMeta.ip,
+      userAgent: requestMeta.userAgent,
+      meta: {
+        productId: product._id,
+        amount: subtotal,
+        quantity,
+        paymentMethod: 'wallet',
+      },
+      session,
+    });
+
+    return { order, payment, escrow };
+  });
+
+  const response = {
+    order: (await orderRepository.findOrderById(result.order._id, { lean: true })),
+    payment: await paymentRepository.findPaymentById(result.payment._id, { lean: true }),
+    escrow: (await escrowRepository.findEscrowById(result.escrow._id, { lean: true })),
+    paymentUrl: null,
+    paymentMethod: 'wallet',
+    wallet: await (await import('./buyerWallet.service.js')).getMyWallet(actor),
+  };
+
+  emitDomainEvent(DOMAIN_EVENTS.ORDER_CREATED, {
+    order: response.order,
+    payment: response.payment,
+  });
+  emitDomainEvent(DOMAIN_EVENTS.PAYMENT_SUCCESS, {
     order: response.order,
     payment: response.payment,
   });

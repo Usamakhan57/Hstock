@@ -63,8 +63,25 @@ export async function recordBuyerPaymentIntoEscrow({
   context,
   session,
   createdBy = null,
+  source = 'cryptomus',
 }) {
   const value = roundMoney(amount);
+
+  const fundingLine = source === 'wallet'
+    ? {
+      direction: LEDGER_DIRECTION.DEBIT,
+      account: LEDGER_ACCOUNT.BUYER_AVAILABLE,
+      amount: value,
+      entryType: LEDGER_ENTRY_TYPE.BUYER_SPEND,
+      description: 'Buyer wallet balance applied to purchase',
+    }
+    : {
+      direction: LEDGER_DIRECTION.DEBIT,
+      account: LEDGER_ACCOUNT.EXTERNAL_GATEWAY,
+      amount: value,
+      entryType: LEDGER_ENTRY_TYPE.BUYER_PAYMENT,
+      description: 'Buyer crypto payment received via Cryptomus',
+    };
 
   await ledgerService.recordTransfer({
     session,
@@ -74,15 +91,10 @@ export async function recordBuyerPaymentIntoEscrow({
       seller: wallet.seller,
       sellerUser: wallet.sellerUser,
       wallet: wallet._id,
+      buyerWallet: context?.buyerWallet || null,
     },
     lines: [
-      {
-        direction: LEDGER_DIRECTION.DEBIT,
-        account: LEDGER_ACCOUNT.EXTERNAL_GATEWAY,
-        amount: value,
-        entryType: LEDGER_ENTRY_TYPE.BUYER_PAYMENT,
-        description: 'Buyer crypto payment received via Cryptomus',
-      },
+      fundingLine,
       {
         direction: LEDGER_DIRECTION.CREDIT,
         account: LEDGER_ACCOUNT.ESCROW,
@@ -248,6 +260,7 @@ export async function refundFromEscrowPending({
     ],
   });
 
+  // Settle refund into buyer wallet available balance (not external gateway payout).
   await ledgerService.recordTransfer({
     session,
     createdBy,
@@ -256,6 +269,7 @@ export async function refundFromEscrowPending({
       seller: wallet.seller,
       sellerUser: wallet.sellerUser,
       wallet: wallet._id,
+      buyer: context?.buyer || null,
     },
     lines: [
       {
@@ -263,14 +277,14 @@ export async function refundFromEscrowPending({
         account: LEDGER_ACCOUNT.REFUND_PAYABLE,
         amount: value,
         entryType: LEDGER_ENTRY_TYPE.REFUND_DEBIT,
-        description: 'Refund paid out via gateway/manual',
+        description: 'Refund payable cleared to buyer wallet',
       },
       {
         direction: LEDGER_DIRECTION.CREDIT,
-        account: LEDGER_ACCOUNT.EXTERNAL_GATEWAY,
+        account: LEDGER_ACCOUNT.BUYER_AVAILABLE,
         amount: value,
-        entryType: LEDGER_ENTRY_TYPE.REFUND_CREDIT,
-        description: 'Buyer refund settlement',
+        entryType: LEDGER_ENTRY_TYPE.BUYER_REFUND_CREDIT,
+        description: 'Buyer refund credited to wallet',
       },
     ],
   });

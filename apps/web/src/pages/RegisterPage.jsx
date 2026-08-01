@@ -7,6 +7,7 @@ import Seo from '../components/Seo';
 import GoogleAuthButton from '../components/GoogleAuthButton';
 import { useStore } from '../context/StoreContext';
 import { useToast } from '../hooks/use-toast';
+import { authApi } from '../services/authApi';
 
 const RegisterPage = () => {
   const { register } = useStore();
@@ -21,14 +22,29 @@ const RegisterPage = () => {
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
 
-  const handleGoogleAuth = () => {
+  const handleGoogleAuth = async () => {
     if (googleLoading) return;
     setGoogleLoading(true);
-    toast({
-      title: 'Google sign-up unavailable',
-      description: 'Please create an account with email and password for now.',
-    });
-    setGoogleLoading(false);
+    try {
+      const status = await authApi.googleStatus();
+      if (!status?.enabled) {
+        toast({
+          title: 'Google sign-up not configured',
+          description: 'Ask an admin to set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET.',
+          variant: 'destructive',
+        });
+        setGoogleLoading(false);
+        return;
+      }
+      window.location.assign(authApi.getGoogleAuthUrl());
+    } catch (err) {
+      toast({
+        title: 'Google sign-up failed',
+        description: err.message || 'Please try again.',
+        variant: 'destructive',
+      });
+      setGoogleLoading(false);
+    }
   };
 
   const handleSubmit = async (e) => {
