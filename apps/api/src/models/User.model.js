@@ -112,7 +112,6 @@ const userSchema = new mongoose.Schema(
     telegramUserId: {
       type: String,
       default: null,
-      index: true,
     },
     telegramUsername: {
       type: String,
