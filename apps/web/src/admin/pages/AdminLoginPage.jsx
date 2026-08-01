@@ -54,7 +54,7 @@ const AdminLoginPage = () => {
               <label htmlFor="email" className="text-sm font-medium block mb-1.5">Email</label>
               <div className="flex items-center gap-2 bg-secondary/60 rounded-2xl px-4 py-3 border border-transparent focus-within:border-primary transition-colors">
                 <Mail className="w-4 h-4 text-muted-foreground shrink-0" />
-                <input id="email" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="admin@apnastore.org" className="bg-transparent outline-none text-sm w-full" />
+                <input id="email" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="admin.apnastore@gmail.com" className="bg-transparent outline-none text-sm w-full" />
               </div>
             </div>
             <div>
@@ -76,7 +76,7 @@ const AdminLoginPage = () => {
           </form>
 
           <p className="text-xs text-muted-foreground text-center mt-6">
-            Demo credentials: admin@apnastore.org / admin123
+            Demo credentials: admin.apnastore@gmail.com / admin123
           </p>
         </div>
         <p className="text-center mt-6">
