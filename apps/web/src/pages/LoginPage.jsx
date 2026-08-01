@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, ShieldCheck, Shield, Clock, Loader2 } from 'lucide-react';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
@@ -15,6 +15,7 @@ const LoginPage = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const { state } = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPw, setShowPw] = useState(false);
@@ -22,6 +23,23 @@ const LoginPage = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+
+  useEffect(() => {
+    if (searchParams.get('google') !== 'error') return;
+    const reason = searchParams.get('reason') || 'denied';
+    setError('Google sign-in was cancelled or failed. Please try again.');
+    toast({
+      title: 'Google sign-in failed',
+      description: reason === 'not_configured'
+        ? 'Google sign-in is not configured on this server.'
+        : 'Please try again or use email login.',
+      variant: 'destructive',
+    });
+    const next = new URLSearchParams(searchParams);
+    next.delete('google');
+    next.delete('reason');
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams, toast]);
 
   const validateEmail = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 
