@@ -26,6 +26,13 @@ router.get(
   validate(listProductsSchema),
   productsController.listProducts,
 );
+/** Alias for public catalog clients expecting /products/public */
+router.get(
+  '/public',
+  optionalAuthenticate,
+  validate(listProductsSchema),
+  productsController.listProducts,
+);
 router.get(
   '/:idOrSlug',
   optionalAuthenticate,

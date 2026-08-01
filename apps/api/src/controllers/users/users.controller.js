@@ -50,6 +50,20 @@ export const adminUpdateUser = asyncHandler(async (req, res) => {
   return sendSuccess(res, { message: 'User updated', data: { user } });
 });
 
+export const adminListSellers = asyncHandler(async (req, res) => {
+  const result = await userService.adminListSellers(req.query);
+  return sendSuccess(res, {
+    message: 'Sellers',
+    data: result.items,
+    meta: result.meta,
+  });
+});
+
+export const adminGetSeller = asyncHandler(async (req, res) => {
+  const seller = await userService.adminGetSeller(req.params.id);
+  return sendSuccess(res, { message: 'Seller', data: { seller } });
+});
+
 export const adminUpdateSeller = asyncHandler(async (req, res) => {
   const seller = await userService.adminUpdateSellerStatus(
     req.params.id,
@@ -68,5 +82,7 @@ export default {
   myActivity,
   listUsers,
   adminUpdateUser,
+  adminListSellers,
+  adminGetSeller,
   adminUpdateSeller,
 };

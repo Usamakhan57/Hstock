@@ -1,16 +1,45 @@
+import mongoose from 'mongoose';
 import {
   User,
   BuyerProfile,
   SellerProfile,
   AdminProfile,
+  Product,
 } from '../models/index.js';
 import { AppError } from '../utils/AppError.js';
 import { hashPassword, comparePassword } from '../utils/password.js';
 import { parsePagination, buildPaginationMeta } from '../utils/pagination.js';
 import { USER_ROLES, STAFF_ROLES } from '../constants/roles.js';
+import { SellerStatusEnum, VerificationStatusEnum } from '../constants/enums.js';
+import {
+  APPROVAL_STATUS,
+  PRODUCT_STATUS,
+  PRODUCT_VISIBILITY,
+} from '../constants/productTypes.js';
 import { publicUser } from './auth.service.js';
 import { logActivity } from './activity.service.js';
 import { listActivityLogs } from './activity.service.js';
+
+function serializeSeller(seller) {
+  if (!seller) return null;
+  const obj = typeof seller.toObject === 'function' ? seller.toObject() : { ...seller };
+  return {
+    ...obj,
+    id: String(obj._id || obj.id),
+    userId: obj.user ? String(obj.user._id || obj.user) : null,
+  };
+}
+
+/**
+ * Resolve a seller profile by SellerProfile _id OR owning User _id.
+ * Admin UI historically mixed both identifiers.
+ */
+export async function findSellerProfileByIdOrUserId(id) {
+  if (!id || !mongoose.isValidObjectId(id)) return null;
+  const byProfile = await SellerProfile.findById(id);
+  if (byProfile) return byProfile;
+  return SellerProfile.findOne({ user: id });
+}
 
 export async function getUserById(userId) {
   const user = await User.findById(userId);
@@ -177,29 +206,130 @@ export async function adminUpdateUser(userId, payload, actorId) {
   return publicUser(user);
 }
 
-export async function adminUpdateSellerStatus(sellerId, payload, actorId) {
-  const seller = await SellerProfile.findById(sellerId);
+export async function adminListSellers(query = {}) {
+  const { page, limit, skip } = parsePagination(query);
+  const filter = {};
+  if (query.status) filter.status = query.status;
+  if (query.search) {
+    filter.$or = [
+      { storeName: new RegExp(query.search, 'i') },
+      { ownerName: new RegExp(query.search, 'i') },
+      { email: new RegExp(query.search, 'i') },
+      { slug: new RegExp(query.search, 'i') },
+    ];
+  }
+
+  const [items, total] = await Promise.all([
+    SellerProfile.find(filter)
+      .populate('user', 'name email roles status')
+      .populate('approvedBy', 'name email')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean(),
+    SellerProfile.countDocuments(filter),
+  ]);
+
+  return {
+    items: items.map(serializeSeller),
+    meta: buildPaginationMeta({ page, limit, total }),
+  };
+}
+
+export async function adminGetSeller(sellerOrUserId) {
+  const seller = await findSellerProfileByIdOrUserId(sellerOrUserId);
   if (!seller) {
     throw new AppError('Seller not found', 404, { code: 'SELLER_NOT_FOUND' });
   }
+  await seller.populate([
+    { path: 'user', select: 'name email roles status' },
+    { path: 'approvedBy', select: 'name email' },
+  ]);
+  return serializeSeller(seller);
+}
+
+async function publishSellerProducts(sellerId) {
+  const now = new Date();
+  await Product.updateMany(
+    {
+      seller: sellerId,
+      deletedAt: null,
+      status: PRODUCT_STATUS.LIVE,
+      visibility: PRODUCT_VISIBILITY.PUBLIC,
+      approvalStatus: { $ne: APPROVAL_STATUS.REJECTED },
+    },
+    {
+      $set: {
+        approvalStatus: APPROVAL_STATUS.APPROVED,
+        publishedAt: now,
+      },
+    },
+  );
+}
+
+export async function adminUpdateSellerStatus(sellerOrUserId, payload, actorId) {
+  const seller = await findSellerProfileByIdOrUserId(sellerOrUserId);
+  if (!seller) {
+    throw new AppError('Seller not found', 404, { code: 'SELLER_NOT_FOUND' });
+  }
+
+  const previousStatus = seller.status;
 
   if (payload.status !== undefined) seller.status = payload.status;
   if (payload.verified !== undefined) seller.verified = payload.verified;
   if (payload.verificationStatus !== undefined) {
     seller.verificationStatus = payload.verificationStatus;
   }
+  if (payload.commissionRate !== undefined) seller.commissionRate = payload.commissionRate;
+  if (payload.storeName !== undefined) seller.storeName = payload.storeName;
+  if (payload.ownerName !== undefined) seller.ownerName = payload.ownerName;
+  if (payload.email !== undefined) seller.email = payload.email;
+  if (payload.phone !== undefined) seller.phone = payload.phone;
+  if (payload.specialty !== undefined) seller.specialty = payload.specialty;
+  if (payload.bio !== undefined) seller.bio = payload.bio;
+
+  const becomingApproved = seller.status === SellerStatusEnum.Approved
+    && previousStatus !== SellerStatusEnum.Approved;
+
+  if (becomingApproved || (payload.verified === true && seller.status === SellerStatusEnum.Approved)) {
+    seller.verified = true;
+    if (!seller.verificationStatus || seller.verificationStatus === VerificationStatusEnum.Unverified) {
+      seller.verificationStatus = VerificationStatusEnum.Verified;
+    }
+    seller.approvedAt = seller.approvedAt || new Date();
+    seller.approvedBy = actorId || seller.approvedBy;
+  }
+
+  if (
+    payload.status
+    && [SellerStatusEnum.Rejected, SellerStatusEnum.Suspended, SellerStatusEnum.Pending].includes(payload.status)
+  ) {
+    // Keep historical approvedAt for audit; only clear active verification flags when rejected/suspended.
+    if (payload.status !== SellerStatusEnum.Pending) {
+      seller.verified = false;
+    }
+  }
 
   await seller.save();
+
+  if (seller.status === SellerStatusEnum.Approved) {
+    await publishSellerProducts(seller._id);
+  }
 
   await logActivity({
     userId: actorId,
     action: 'sellers.admin.update',
     resource: 'SellerProfile',
-    resourceId: sellerId,
+    resourceId: seller._id,
     meta: payload,
   });
 
-  return seller.toObject();
+  await seller.populate([
+    { path: 'user', select: 'name email roles status' },
+    { path: 'approvedBy', select: 'name email' },
+  ]);
+
+  return serializeSeller(seller);
 }
 
 export async function getMyActivity(userId, query = {}) {
@@ -219,6 +349,9 @@ export default {
   changePassword,
   listUsers,
   adminUpdateUser,
+  adminListSellers,
+  adminGetSeller,
   adminUpdateSellerStatus,
+  findSellerProfileByIdOrUserId,
   getMyActivity,
 };
