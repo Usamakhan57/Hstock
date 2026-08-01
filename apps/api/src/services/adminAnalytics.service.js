@@ -213,7 +213,16 @@ export async function getSystemHealthDetailed() {
     payments: getQueue('payments')?.size?.() ?? 0,
     escrow: getQueue('escrow')?.size?.() ?? 0,
     notifications: getQueue('notifications')?.size?.() ?? 0,
+    telegram: getQueue('telegram')?.size?.() ?? 0,
   };
+
+  let telegram = { enabled: Boolean(env.TELEGRAM_ENABLED), configured: env.telegramConfigured };
+  try {
+    const { getBotStatus } = await import('./telegram.service.js');
+    telegram = await getBotStatus();
+  } catch {
+    // ignore
+  }
 
   const [walletCount, refundOpen, disputeOpen] = await Promise.all([
     Wallet.countDocuments({}),
@@ -242,6 +251,7 @@ export async function getSystemHealthDetailed() {
       configured: env.cryptomusConfigured,
       mode: env.CRYPTOMUS_MODE,
     },
+    telegram,
     redis: {
       configured: Boolean(env.REDIS_URL),
       note: env.REDIS_URL

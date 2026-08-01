@@ -98,6 +98,39 @@ const userSchema = new mongoose.Schema(
       default: null,
       select: false,
     },
+    /** Telegram account connection for marketplace notifications */
+    telegramConnected: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+    telegramChatId: {
+      type: String,
+      default: null,
+      select: false,
+    },
+    telegramUserId: {
+      type: String,
+      default: null,
+      index: true,
+    },
+    telegramUsername: {
+      type: String,
+      default: null,
+      trim: true,
+    },
+    telegramConnectedAt: {
+      type: Date,
+      default: null,
+    },
+    telegramLastNotificationAt: {
+      type: Date,
+      default: null,
+    },
+    telegramNotificationsEnabled: {
+      type: Boolean,
+      default: true,
+    },
   },
   {
     timestamps: true,
@@ -106,6 +139,7 @@ const userSchema = new mongoose.Schema(
       transform(_doc, ret) {
         delete ret.passwordHash;
         delete ret.twoFactorSecret;
+        delete ret.telegramChatId;
         delete ret.__v;
         return ret;
       },
@@ -115,6 +149,14 @@ const userSchema = new mongoose.Schema(
 
 userSchema.index({ createdAt: -1 });
 userSchema.index({ roles: 1, status: 1 });
+userSchema.index({ telegramConnected: 1, telegramNotificationsEnabled: 1 });
+userSchema.index(
+  { telegramUserId: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { telegramUserId: { $type: 'string' } },
+  },
+);
 
 const User = mongoose.models.User || mongoose.model('User', userSchema);
 

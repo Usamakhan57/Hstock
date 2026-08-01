@@ -4,6 +4,7 @@ import { Camera, Loader2 } from 'lucide-react';
 import Seo from '../../components/Seo';
 import AccountLayout from './AccountLayout';
 import EmptyState from '../../components/EmptyState';
+import TelegramConnectSection from '../../components/telegram/TelegramConnectSection';
 import { useStore } from '../../context/StoreContext';
 import { useToast } from '../../hooks/use-toast';
 import { usersApi } from '../../services/usersApi';
@@ -27,9 +28,6 @@ const ProfilePage = () => {
     city: '',
     postalCode: '',
     bio: '',
-    instagram: '',
-    twitter: '',
-    website: '',
     avatar: user?.avatar || '',
   });
   const [saving, setSaving] = useState(false);
@@ -46,9 +44,6 @@ const ProfilePage = () => {
       address: buyer.address?.line1 || buyer.address || '',
       city: buyer.address?.city || buyer.city || '',
       postalCode: buyer.address?.postalCode || buyer.postalCode || '',
-      instagram: buyer.social?.instagram || '',
-      twitter: buyer.social?.twitter || '',
-      website: buyer.social?.website || '',
       avatar: user?.avatar || buyer.avatar || '',
     }));
   }, [user, profiles]);
@@ -69,17 +64,10 @@ const ProfilePage = () => {
         username: details.username || undefined,
         bio: details.bio || undefined,
         avatar: details.avatar || undefined,
-        address: {
-          line1: details.address || undefined,
-          city: details.city || undefined,
-          postalCode: details.postalCode || undefined,
-          country: details.country || undefined,
-        },
-        social: {
-          instagram: details.instagram || undefined,
-          twitter: details.twitter || undefined,
-          website: details.website || undefined,
-        },
+        address: details.address || undefined,
+        city: details.city || undefined,
+        postalCode: details.postalCode || undefined,
+        country: details.country || undefined,
       });
       await refreshProfile();
       toast({ title: 'Profile saved', description: 'Your account details were updated.' });
@@ -155,14 +143,7 @@ const ProfilePage = () => {
                 </div>
               </div>
 
-              <div className="bg-white rounded-3xl border border-border soft-shadow p-6 space-y-4">
-                <h3 className="font-bold text-sm">Social Links</h3>
-                <div className="grid sm:grid-cols-2 gap-4">
-                  <Field label="Instagram" value={details.instagram} onChange={set('instagram')} placeholder="instagram.com/you" />
-                  <Field label="Twitter / X" value={details.twitter} onChange={set('twitter')} placeholder="x.com/you" />
-                  <Field label="Website" value={details.website} onChange={set('website')} placeholder="yoursite.com" />
-                </div>
-              </div>
+              <TelegramConnectSection />
 
               <button type="submit" disabled={saving} className="brand-gradient text-white font-semibold px-6 py-2.5 rounded-full hover:opacity-95 transition-all inline-flex items-center gap-2 disabled:opacity-60">
                 {saving && <Loader2 className="w-4 h-4 animate-spin" />}

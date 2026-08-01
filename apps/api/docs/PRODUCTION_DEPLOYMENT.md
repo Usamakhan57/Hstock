@@ -9,6 +9,7 @@
 - MongoDB (bind `127.0.0.1`)
 - Redis (optional — multi-instance Socket.io / queues)
 - Cryptomus webhooks → `https://apnastore.org/api/v1/payments/cryptomus/webhook`
+- Telegram webhooks → `https://apnastore.org/api/v1/telegram/webhook` (optional, when enabled)
 - SMTP for transactional email
 
 ## Checklist
@@ -17,6 +18,7 @@
 2. Copy `apps/api/.env.example` → `apps/api/.env` and fill secrets
 3. Set `NODE_ENV=production`, strong JWT secrets, `CREDENTIALS_ENCRYPTION_KEY`, SMTP, Cryptomus production, `CORS_ORIGINS`, `FRONTEND_URL`
 4. Set `ENABLE_JOBS=true` and `CRYPTOMUS_ENFORCE_IP_WHITELIST=true`
+4b. Optional Telegram: `TELEGRAM_ENABLED=true`, bot token/username, `TELEGRAM_MODE=webhook`, webhook URL + secret (see `docs/TELEGRAM.md`)
 5. `npm ci` in `apps/api` and `apps/web`
 6. `npm run build` for web; sync `apps/web/dist` → `/var/www/apnastore/web`
 7. Install Nginx site from `deploy/nginx/apnastore.conf`
@@ -31,6 +33,7 @@
     - `curl https://apnastore.org/health/ready`
     - Admin login + Socket.io (browser Network → WS)
     - Cryptomus production webhook
+    - Telegram webhook + connect flow (if enabled)
     - SMTP delivery (registration / password reset)
 
 Automated helper: `deploy/scripts/deploy.sh`

@@ -18,6 +18,8 @@ import * as escrowService from './escrow.service.js';
 import { logActivity } from './activity.service.js';
 import { parsePagination, buildPaginationMeta } from '../utils/pagination.js';
 import { USER_ROLES } from '../constants/roles.js';
+import { emitDomainEvent } from '../events/bus.js';
+import { DOMAIN_EVENTS } from '../constants/events.js';
 
 function isAdmin(actor) {
   return actor?.roles?.some((r) => [USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN].includes(r));
@@ -124,6 +126,11 @@ export async function createEscrowRefund({
     session,
   });
 
+  const refundObj = refund.toObject ? refund.toObject() : refund;
+  const orderObj = order.toObject ? order.toObject() : order;
+  emitDomainEvent(DOMAIN_EVENTS.REFUND_APPROVED, { refund: refundObj, order: orderObj });
+  emitDomainEvent(DOMAIN_EVENTS.REFUND_COMPLETED, { refund: refundObj, order: orderObj });
+
   return refund;
 }
 
@@ -203,7 +210,12 @@ export async function createManualRefund(payload, actor) {
       if (session) await order.save({ session });
       else await order.save();
 
-      return refund.toObject();
+      const refundObj = refund.toObject();
+      const orderObj = order.toObject ? order.toObject() : order;
+      emitDomainEvent(DOMAIN_EVENTS.REFUND_APPROVED, { refund: refundObj, order: orderObj });
+      emitDomainEvent(DOMAIN_EVENTS.REFUND_COMPLETED, { refund: refundObj, order: orderObj });
+
+      return refundObj;
     }
 
     const refund = await createEscrowRefund({

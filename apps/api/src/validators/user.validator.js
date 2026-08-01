@@ -25,19 +25,12 @@ export const updateBuyerProfileSchema = {
     address: z.string().max(300).nullable().optional(),
     city: z.string().max(120).nullable().optional(),
     postalCode: z.string().max(40).nullable().optional(),
-    website: z.string().url().nullable().optional(),
-    social: z
-      .object({
-        instagram: z.string().nullable().optional(),
-        twitter: z.string().nullable().optional(),
-        facebook: z.string().nullable().optional(),
-      })
-      .optional(),
     preferences: z
       .object({
         marketing: z.boolean().optional(),
         orderUpdates: z.boolean().optional(),
         newArrivals: z.boolean().optional(),
+        telegramNotifications: z.boolean().optional(),
       })
       .optional(),
   }),
@@ -55,17 +48,7 @@ export const updateSellerProfileSchema = {
     banner: z.string().url().nullable().optional(),
     bio: z.string().max(5000).optional(),
     specialty: z.string().max(160).nullable().optional(),
-    website: z.string().url().nullable().optional(),
     address: z.string().max(300).nullable().optional(),
-    social: z
-      .object({
-        facebook: z.string().nullable().optional(),
-        instagram: z.string().nullable().optional(),
-        twitter: z.string().nullable().optional(),
-        youtube: z.string().nullable().optional(),
-        linkedin: z.string().nullable().optional(),
-      })
-      .optional(),
     withdrawalWallets: z
       .array(
         z.object({

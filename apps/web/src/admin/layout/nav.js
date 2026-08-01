@@ -5,7 +5,7 @@ import {
   FilePlus2, FolderOpen, Tags, MessageSquare, Sliders, Trash2, UserSquare2,
   LayoutTemplate, PanelTop, PanelBottom, ListTree, Megaphone, FileStack,
   HelpCircle, Quote, Mail, Bell, Search, MailPlus, Palette,
-  CreditCard, Wallet, ArrowDownToLine, AlertTriangle, Replace, ScanLine, Activity,
+  CreditCard, Wallet, ArrowDownToLine, AlertTriangle, Replace, ScanLine, Activity, Send,
 } from 'lucide-react';
 
 export const adminNavSections = [
@@ -43,6 +43,7 @@ export const adminNavSections = [
       { label: 'Disputes', to: '/admin/disputes', icon: AlertTriangle },
       { label: 'Replacement Reviews', to: '/admin/replacements', icon: Replace },
       { label: 'OCR Review', to: '/admin/ocr-review', icon: ScanLine },
+      { label: 'Telegram', to: '/admin/telegram', icon: Send },
       { label: 'System Health', to: '/admin/system-health', icon: Activity },
     ],
   },

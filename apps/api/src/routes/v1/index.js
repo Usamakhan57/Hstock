@@ -15,6 +15,7 @@ import withdrawalsRoutes from './withdrawals.routes.js';
 import disputesRoutes from './disputes.routes.js';
 import refundsRoutes from './refunds.routes.js';
 import notificationsRoutes from './notifications.routes.js';
+import telegramRoutes from './telegram.routes.js';
 import adminRoutes from './admin.routes.js';
 
 const router = Router();
@@ -45,6 +46,7 @@ router.get('/', (_req, res) => {
         'dispute-chat',
         'refunds',
         'notifications',
+        'telegram',
         'admin',
       ],
       health: '/health',
@@ -68,6 +70,7 @@ router.use('/withdrawals', withdrawalsRoutes);
 router.use('/disputes', disputesRoutes);
 router.use('/refunds', refundsRoutes);
 router.use('/notifications', notificationsRoutes);
+router.use('/telegram', telegramRoutes);
 router.use('/admin', adminRoutes);
 
 export default router;

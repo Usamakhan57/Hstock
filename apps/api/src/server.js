@@ -21,6 +21,13 @@ async function bootstrap() {
   server = http.createServer(app);
   initializeSocket(server);
 
+  try {
+    const { initializeTelegram } = await import('./services/telegram.service.js');
+    await initializeTelegram();
+  } catch (error) {
+    logger.warn('Telegram initialization skipped', { message: error.message });
+  }
+
   server.listen(env.PORT, env.HOST, () => {
     logger.info(`${env.APP_NAME} listening`, {
       host: env.HOST,
@@ -43,6 +50,12 @@ async function shutdown(signal) {
   forceTimer.unref();
 
   try {
+    try {
+      const { stopPolling } = await import('./services/telegram.service.js');
+      stopPolling();
+    } catch {
+      // ignore
+    }
     await closeSocket();
     if (server) {
       await new Promise((resolve, reject) => {

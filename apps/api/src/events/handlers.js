@@ -53,26 +53,63 @@ export function registerEventHandlers(eventBus) {
     }
   });
 
+  eventBus.on(DOMAIN_EVENTS.ORDER_DELIVERED, async (payload) => {
+    try {
+      const { order } = payload;
+      if (!order?.buyer) return;
+      emitOrderUpdate(order);
+      await createNotification({
+        userId: order.buyer,
+        type: 'delivery',
+        title: 'Order delivered',
+        body: `Order ${order.orderNumber || ''} has been delivered.`,
+        link: order.orderNumber ? `/orders/${order.orderNumber}` : '/orders',
+        meta: { orderId: String(order._id), orderNumber: order.orderNumber },
+      });
+    } catch (error) {
+      logger.error('ORDER_DELIVERED handler failed', { message: error.message });
+    }
+  });
+
   eventBus.on(DOMAIN_EVENTS.PAYMENT_SUCCESS, async (payload) => {
     try {
       const { payment, order } = payload;
       if (payment) emitPaymentUpdate(payment);
       if (order) emitOrderUpdate(order);
-      const targets = [payment?.buyer, order?.buyer, payment?.sellerUser, order?.sellerUser].filter(Boolean);
-      await notifyUsers(targets, {
-        type: 'payment_success',
-        title: 'Payment successful',
-        body: `Payment confirmed for order ${order?.orderNumber || ''}.`,
-        link: order?.orderNumber ? `/orders/${order.orderNumber}` : null,
-        meta: {
-          paymentId: payment?._id ? String(payment._id) : null,
-          orderNumber: order?.orderNumber,
-        },
-        sendEmail: true,
-        emailType: 'payment_success',
-        emailData: { orderNumber: order?.orderNumber },
-        notifyAdmins: true,
-      });
+
+      const buyerId = order?.buyer || payment?.buyer;
+      const sellerId = order?.sellerUser || payment?.sellerUser;
+
+      if (buyerId) {
+        await createNotification({
+          userId: buyerId,
+          type: 'payment_success',
+          title: 'Payment successful',
+          body: `Payment confirmed for order ${order?.orderNumber || ''}.`,
+          link: order?.orderNumber ? `/orders/${order.orderNumber}` : null,
+          meta: {
+            paymentId: payment?._id ? String(payment._id) : null,
+            orderNumber: order?.orderNumber,
+          },
+          sendEmail: true,
+          emailType: 'payment_success',
+          emailData: { orderNumber: order?.orderNumber },
+          notifyAdmins: true,
+        });
+      }
+      if (sellerId && String(sellerId) !== String(buyerId)) {
+        await createNotification({
+          userId: sellerId,
+          type: 'payment_success',
+          title: 'Payment received',
+          body: `Payment received for order ${order?.orderNumber || ''}. Funds are held in escrow.`,
+          link: '/seller/orders',
+          meta: {
+            paymentId: payment?._id ? String(payment._id) : null,
+            orderNumber: order?.orderNumber,
+          },
+        });
+      }
     } catch (error) {
       logger.error('PAYMENT_SUCCESS handler failed', { message: error.message });
     }
@@ -100,22 +137,61 @@ export function registerEventHandlers(eventBus) {
     }
   });
 
+  eventBus.on(DOMAIN_EVENTS.ESCROW_LOCKED, async (payload) => {
+    try {
+      const { escrow, order } = payload;
+      if (escrow) emitEscrowUpdate(escrow);
+      if (order) emitOrderUpdate(order);
+      const sellerId = escrow?.sellerUser || order?.sellerUser;
+      if (sellerId) {
+        await createNotification({
+          userId: sellerId,
+          type: 'escrow_locked',
+          title: 'Escrow created',
+          body: `Escrow was created for order ${order?.orderNumber || ''}.`,
+          link: '/seller/escrow',
+          meta: {
+            escrowId: escrow?._id ? String(escrow._id) : null,
+            orderNumber: order?.orderNumber,
+          },
+        });
+      }
+    } catch (error) {
+      logger.error('ESCROW_LOCKED handler failed', { message: error.message });
+    }
+  });
+
   eventBus.on(DOMAIN_EVENTS.ESCROW_RELEASED, async (payload) => {
     try {
       const { escrow, order } = payload;
       if (escrow) emitEscrowUpdate(escrow);
       if (order) emitOrderUpdate(order);
-      const targets = [escrow?.buyer, escrow?.sellerUser, order?.buyer, order?.sellerUser].filter(Boolean);
-      await notifyUsers(targets, {
-        type: 'escrow_released',
-        title: 'Escrow released',
-        body: `Escrow released for order ${order?.orderNumber || ''}.`,
-        link: order?.orderNumber ? `/orders/${order.orderNumber}` : '/wallet',
-        sendEmail: true,
-        emailType: 'escrow_released',
-        emailData: { orderNumber: order?.orderNumber },
-        notifyAdmins: true,
-      });
+      const buyerId = escrow?.buyer || order?.buyer;
+      const sellerId = escrow?.sellerUser || order?.sellerUser;
+
+      if (buyerId) {
+        await createNotification({
+          userId: buyerId,
+          type: 'escrow_released',
+          title: 'Escrow released',
+          body: `Escrow released for order ${order?.orderNumber || ''}.`,
+          link: order?.orderNumber ? `/orders/${order.orderNumber}` : '/wallet',
+          sendEmail: true,
+          emailType: 'escrow_released',
+          emailData: { orderNumber: order?.orderNumber },
+          notifyAdmins: true,
+        });
+      }
+      if (sellerId && String(sellerId) !== String(buyerId)) {
+        await createNotification({
+          userId: sellerId,
+          type: 'escrow_released',
+          title: 'Escrow released',
+          body: `Escrow funds were released for order ${order?.orderNumber || ''}.`,
+          link: '/seller/earnings',
+          meta: { orderNumber: order?.orderNumber },
+        });
+      }
     } catch (error) {
       logger.error('ESCROW_RELEASED handler failed', { message: error.message });
     }
@@ -219,22 +295,61 @@ export function registerEventHandlers(eventBus) {
     try {
       const { dispute, order } = payload;
       if (dispute) emitDisputeUpdate(dispute);
-      const targets = [dispute?.buyer, dispute?.sellerUser].filter(Boolean);
-      await notifyUsers(targets, {
-        type: 'dispute_opened',
-        title: 'Dispute opened',
-        body: `A dispute was opened for order ${order?.orderNumber || dispute?.orderNumber || ''}.`,
-        link: dispute?._id ? `/disputes/${dispute._id}` : '/disputes',
-        sendEmail: true,
-        emailType: 'dispute_opened',
-        emailData: {
-          orderNumber: order?.orderNumber || dispute?.orderNumber,
-          disputeId: dispute?._id ? String(dispute._id) : null,
-        },
-        notifyAdmins: true,
-      });
+      const buyerId = dispute?.buyer;
+      const sellerId = dispute?.sellerUser;
+
+      if (buyerId) {
+        await createNotification({
+          userId: buyerId,
+          type: 'dispute_opened',
+          title: 'Dispute opened',
+          body: `A dispute was opened for order ${order?.orderNumber || dispute?.orderNumber || ''}.`,
+          link: dispute?._id ? `/disputes/${dispute._id}` : '/disputes',
+          sendEmail: true,
+          emailType: 'dispute_opened',
+          emailData: {
+            orderNumber: order?.orderNumber || dispute?.orderNumber,
+            disputeId: dispute?._id ? String(dispute._id) : null,
+          },
+          notifyAdmins: true,
+        });
+      }
+      if (sellerId && String(sellerId) !== String(buyerId)) {
+        await createNotification({
+          userId: sellerId,
+          type: 'dispute_opened',
+          title: 'New dispute',
+          body: `A buyer opened a dispute for order ${order?.orderNumber || dispute?.orderNumber || ''}.`,
+          link: dispute?._id ? `/seller/disputes/${dispute._id}` : '/seller/disputes',
+          meta: {
+            orderNumber: order?.orderNumber || dispute?.orderNumber,
+            disputeId: dispute?._id ? String(dispute._id) : null,
+          },
+        });
+      }
     } catch (error) {
       logger.error('DISPUTE_OPENED handler failed', { message: error.message });
+    }
+  });
+
+  eventBus.on(DOMAIN_EVENTS.DISPUTE_UPDATED, async (payload) => {
+    try {
+      const { dispute, order, note } = payload;
+      if (dispute) emitDisputeUpdate(dispute);
+      const targets = [dispute?.buyer, dispute?.sellerUser].filter(Boolean);
+      await notifyUsers(targets, {
+        type: 'dispute_updated',
+        title: 'Dispute updated',
+        body: note
+          || `Dispute updated for order ${order?.orderNumber || dispute?.orderNumber || ''}.`,
+        link: dispute?._id ? `/disputes/${dispute._id}` : '/disputes',
+        meta: {
+          disputeId: dispute?._id ? String(dispute._id) : null,
+          orderNumber: order?.orderNumber || dispute?.orderNumber,
+        },
+      });
+    } catch (error) {
+      logger.error('DISPUTE_UPDATED handler failed', { message: error.message });
     }
   });
 
@@ -263,7 +378,7 @@ export function registerEventHandlers(eventBus) {
 
   eventBus.on(DOMAIN_EVENTS.DISPUTE_CHAT_MESSAGE, async (payload) => {
     try {
-      const { disputeId, message, recipients = [] } = payload;
+      const { disputeId, message, recipients = [], actorRole } = payload;
       if (disputeId) {
         emitToRoom(`dispute:${disputeId}`, SOCKET_EVENTS.DISPUTE_CHAT_MESSAGE, {
           disputeId,
@@ -272,18 +387,135 @@ export function registerEventHandlers(eventBus) {
         });
       }
       for (const userId of recipients) {
+        const isBuyerMessage = actorRole === 'buyer';
         // eslint-disable-next-line no-await-in-loop
         await createNotification({
           userId,
           type: 'dispute_message',
-          title: 'New dispute message',
-          body: 'You have a new message in a dispute chat.',
+          title: isBuyerMessage ? 'New buyer message' : 'New dispute message',
+          body: isBuyerMessage
+            ? 'A buyer sent a new message in a dispute chat.'
+            : 'You have a new message in a dispute chat.',
           link: `/disputes/${disputeId}`,
           meta: { disputeId, messageId: message?._id },
         });
       }
     } catch (error) {
       logger.error('DISPUTE_CHAT_MESSAGE handler failed', { message: error.message });
+    }
+  });
+
+  eventBus.on(DOMAIN_EVENTS.REFUND_APPROVED, async (payload) => {
+    try {
+      const { refund, order } = payload;
+      if (order?.buyer || refund?.buyer) {
+        await createNotification({
+          userId: order?.buyer || refund?.buyer,
+          type: 'refund_approved',
+          title: 'Refund approved',
+          body: `Your refund for order ${order?.orderNumber || ''} was approved.`,
+          link: order?.orderNumber ? `/orders/${order.orderNumber}` : '/orders',
+          meta: {
+            refundId: refund?._id ? String(refund._id) : null,
+            orderNumber: order?.orderNumber,
+          },
+        });
+      }
+    } catch (error) {
+      logger.error('REFUND_APPROVED handler failed', { message: error.message });
+    }
+  });
+
+  eventBus.on(DOMAIN_EVENTS.REFUND_COMPLETED, async (payload) => {
+    try {
+      const { refund, order } = payload;
+      if (order?.buyer || refund?.buyer) {
+        await createNotification({
+          userId: order?.buyer || refund?.buyer,
+          type: 'refund_completed',
+          title: 'Refund completed',
+          body: `Refund of ${refund?.amount ?? ''} ${refund?.currency || 'USD'} completed for order ${order?.orderNumber || ''}.`,
+          link: order?.orderNumber ? `/orders/${order.orderNumber}` : '/orders',
+          meta: {
+            refundId: refund?._id ? String(refund._id) : null,
+            orderNumber: order?.orderNumber,
+          },
+          notifyAdmins: true,
+        });
+      }
+    } catch (error) {
+      logger.error('REFUND_COMPLETED handler failed', { message: error.message });
+    }
+  });
+
+  eventBus.on(DOMAIN_EVENTS.REPLACEMENT_REQUESTED, async (payload) => {
+    try {
+      const { dispute, replacement, order } = payload;
+      const buyerId = dispute?.buyer;
+      const sellerId = dispute?.sellerUser;
+
+      if (buyerId) {
+        await createNotification({
+          userId: buyerId,
+          type: 'replacement_requested',
+          title: 'Replacement requested',
+          body: `A replacement was sent for dispute on order ${order?.orderNumber || dispute?.orderNumber || ''}.`,
+          link: dispute?._id ? `/disputes/${dispute._id}` : '/disputes',
+          meta: {
+            disputeId: dispute?._id ? String(dispute._id) : null,
+            replacementId: replacement?._id || replacement?.id || null,
+          },
+        });
+      }
+      if (sellerId) {
+        await createNotification({
+          userId: sellerId,
+          type: 'replacement_requested',
+          title: 'Replacement requested',
+          body: `Replacement v${replacement?.version || ''} was sent for order ${order?.orderNumber || ''}.`,
+          link: dispute?._id ? `/seller/disputes/${dispute._id}` : '/seller/disputes',
+        });
+      }
+    } catch (error) {
+      logger.error('REPLACEMENT_REQUESTED handler failed', { message: error.message });
+    }
+  });
+
+  eventBus.on(DOMAIN_EVENTS.REPLACEMENT_ACCEPTED, async (payload) => {
+    try {
+      const { dispute, replacement, order } = payload;
+      const targets = [dispute?.buyer, dispute?.sellerUser].filter(Boolean);
+      await notifyUsers(targets, {
+        type: 'replacement_accepted',
+        title: 'Replacement accepted',
+        body: `Replacement v${replacement?.version || ''} was accepted for order ${order?.orderNumber || ''}.`,
+        link: dispute?._id ? `/disputes/${dispute._id}` : '/disputes',
+        meta: {
+          disputeId: dispute?._id ? String(dispute._id) : null,
+          replacementId: replacement?._id || replacement?.id || null,
+        },
+      });
+    } catch (error) {
+      logger.error('REPLACEMENT_ACCEPTED handler failed', { message: error.message });
+    }
+  });
+
+  eventBus.on(DOMAIN_EVENTS.REPLACEMENT_REJECTED, async (payload) => {
+    try {
+      const { dispute, replacement, order } = payload;
+      const targets = [dispute?.buyer, dispute?.sellerUser].filter(Boolean);
+      await notifyUsers(targets, {
+        type: 'replacement_rejected',
+        title: 'Replacement rejected',
+        body: `Replacement v${replacement?.version || ''} was rejected for order ${order?.orderNumber || ''}.`,
+        link: dispute?._id ? `/disputes/${dispute._id}` : '/disputes',
+        meta: {
+          disputeId: dispute?._id ? String(dispute._id) : null,
+          replacementId: replacement?._id || replacement?.id || null,
+        },
+      });
+    } catch (error) {
+      logger.error('REPLACEMENT_REJECTED handler failed', { message: error.message });
     }
   });
 

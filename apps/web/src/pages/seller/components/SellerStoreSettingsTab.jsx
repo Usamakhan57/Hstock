@@ -4,6 +4,7 @@ import ImageUploadInput from '../../../admin/components/ImageUploadInput';
 import { inputClass, textareaClass } from '../../../admin/components/FormSheet';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../../../components/ui/select';
 import { Switch } from '../../../components/ui/switch';
+import TelegramConnectSection from '../../../components/telegram/TelegramConnectSection';
 import { useToast } from '../../../hooks/use-toast';
 import { usersApi } from '../../../services/usersApi';
 
@@ -24,12 +25,6 @@ const SellerStoreSettingsTab = ({ seller }) => {
     description: seller?.bio || '',
     email: seller?.email || '',
     phone: seller?.phone || '',
-    website: seller?.website || '',
-    facebook: seller?.social?.facebook || '',
-    instagram: seller?.social?.instagram || '',
-    twitter: seller?.social?.twitter || '',
-    youtube: seller?.social?.youtube || '',
-    linkedin: seller?.social?.linkedin || '',
     address: seller?.address || '',
     payoutMethod: seller?.payout?.asset || 'USDT',
     payoutWalletAddress: seller?.payout?.walletAddress || '',
@@ -41,10 +36,6 @@ const SellerStoreSettingsTab = ({ seller }) => {
     },
     shippingPolicy: seller?.shippingPolicy || '',
     defaultProcessingTime: seller?.defaultProcessingTime || 'Instant access after checkout',
-    defaultShippingCost: '0',
-    freeShippingEnabled: true,
-    freeShippingThreshold: '',
-    countriesServed: 'Worldwide',
   });
 
   const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
@@ -58,15 +49,7 @@ const SellerStoreSettingsTab = ({ seller }) => {
         storeName: form.storeName.trim() || undefined,
         bio: form.description,
         phone: form.phone.trim() || null,
-        website: form.website.trim() || null,
         address: form.address.trim() || null,
-        social: {
-          facebook: form.facebook.trim() || null,
-          instagram: form.instagram.trim() || null,
-          twitter: form.twitter.trim() || null,
-          youtube: form.youtube.trim() || null,
-          linkedin: form.linkedin.trim() || null,
-        },
         payout: {
           asset: form.payoutMethod || null,
           walletAddress: form.payoutWalletAddress.trim() || null,
@@ -124,38 +107,8 @@ const SellerStoreSettingsTab = ({ seller }) => {
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1.5">Website</label>
-            <input value={form.website} onChange={set('website')} className={inputClass} placeholder="https://…" />
-          </div>
-          <div>
             <label className="block text-sm font-medium mb-1.5">Store Address</label>
             <input value={form.address} onChange={set('address')} className={inputClass} />
-          </div>
-        </div>
-
-        <div className="bg-white rounded-3xl border border-border soft-shadow p-6 space-y-4">
-          <h3 className="font-bold">Social Links</h3>
-          <div className="grid sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium mb-1.5">Facebook</label>
-              <input value={form.facebook} onChange={set('facebook')} className={inputClass} placeholder="https://facebook.com/…" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1.5">Instagram</label>
-              <input value={form.instagram} onChange={set('instagram')} className={inputClass} placeholder="https://instagram.com/…" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1.5">Twitter</label>
-              <input value={form.twitter} onChange={set('twitter')} className={inputClass} placeholder="https://twitter.com/…" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1.5">YouTube</label>
-              <input value={form.youtube} onChange={set('youtube')} className={inputClass} placeholder="https://youtube.com/…" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1.5">LinkedIn</label>
-              <input value={form.linkedin} onChange={set('linkedin')} className={inputClass} placeholder="https://linkedin.com/…" />
-            </div>
           </div>
         </div>
 
@@ -195,6 +148,8 @@ const SellerStoreSettingsTab = ({ seller }) => {
       </div>
 
       <div className="space-y-6">
+        <TelegramConnectSection compact />
+
         <div className="bg-white rounded-3xl border border-border soft-shadow p-6 space-y-4">
           <h3 className="font-bold">Notification Settings</h3>
           {NOTIFICATION_TOGGLES.map((n) => (

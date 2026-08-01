@@ -54,6 +54,13 @@ function publicUser(user) {
     emailVerified: user.emailVerified,
     lastLoginAt: user.lastLoginAt,
     permissions: resolvePermissions(roles),
+    telegram: {
+      connected: Boolean(user.telegramConnected),
+      username: user.telegramUsername || null,
+      telegramUserId: user.telegramUserId || null,
+      connectedAt: user.telegramConnectedAt || null,
+      notificationsEnabled: user.telegramNotificationsEnabled !== false,
+    },
     createdAt: user.createdAt,
     updatedAt: user.updatedAt,
   };

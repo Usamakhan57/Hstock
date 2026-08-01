@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Loader2, Users, Package, CalendarDays } from 'lucide-react';
 import ImageUploadInput from '../../../admin/components/ImageUploadInput';
 import { inputClass, textareaClass } from '../../../admin/components/FormSheet';
+import TelegramConnectSection from '../../../components/telegram/TelegramConnectSection';
 import { useToast } from '../../../hooks/use-toast';
 import { usersApi } from '../../../services/usersApi';
 
@@ -13,9 +14,6 @@ const SellerProfileTab = ({ seller, productsCount, joinedDate }) => {
     cover: seller?.banner || seller?.cover || '',
     name: seller?.ownerName || seller?.name || '',
     bio: seller?.bio || '',
-    website: seller?.website || '',
-    instagram: seller?.social?.instagram || '',
-    twitter: seller?.social?.twitter || '',
   });
 
   const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
@@ -27,11 +25,6 @@ const SellerProfileTab = ({ seller, productsCount, joinedDate }) => {
       const payload = {
         ownerName: form.name.trim() || undefined,
         bio: form.bio,
-        website: form.website.trim() || null,
-        social: {
-          instagram: form.instagram.trim() || null,
-          twitter: form.twitter.trim() || null,
-        },
       };
       if (form.avatar && (form.avatar.startsWith('http') || form.avatar.startsWith('data:'))) {
         payload.avatar = form.avatar;
@@ -94,23 +87,7 @@ const SellerProfileTab = ({ seller, productsCount, joinedDate }) => {
           </div>
         </div>
 
-        <div className="bg-white rounded-3xl border border-border soft-shadow p-6 space-y-4">
-          <h3 className="font-bold">Social Links</h3>
-          <div className="grid sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium mb-1.5">Website</label>
-              <input value={form.website} onChange={set('website')} className={inputClass} placeholder="https://…" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1.5">Instagram</label>
-              <input value={form.instagram} onChange={set('instagram')} className={inputClass} placeholder="https://instagram.com/…" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1.5">Twitter</label>
-              <input value={form.twitter} onChange={set('twitter')} className={inputClass} placeholder="https://twitter.com/…" />
-            </div>
-          </div>
-        </div>
+        <TelegramConnectSection />
 
         <button type="submit" disabled={saving} className="inline-flex items-center gap-2 px-6 py-3 rounded-full brand-gradient text-white text-sm font-semibold soft-shadow hover:opacity-95 transition-all disabled:opacity-60">
           {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}

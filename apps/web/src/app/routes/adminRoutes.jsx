@@ -57,6 +57,7 @@ const DisputeDetail = lazy(() => import('../../admin/pages/disputes/DisputeDetai
 const OcrReviewQueue = lazy(() => import('../../admin/pages/ocr/OcrReviewQueue'));
 const ReplacementsList = lazy(() => import('../../admin/pages/replacements/ReplacementsList'));
 const SystemHealth = lazy(() => import('../../admin/pages/system/SystemHealth'));
+const TelegramAdmin = lazy(() => import('../../admin/pages/telegram/TelegramAdmin'));
 
 function LazyPage({ children }) {
   return (
@@ -98,6 +99,7 @@ export function adminRoutes() {
         <Route path="ocr-review" element={<LazyPage><OcrReviewQueue /></LazyPage>} />
         <Route path="replacements" element={<LazyPage><ReplacementsList /></LazyPage>} />
         <Route path="system-health" element={<LazyPage><SystemHealth /></LazyPage>} />
+        <Route path="telegram" element={<LazyPage><TelegramAdmin /></LazyPage>} />
         <Route path="reviews" element={<LazyPage><ReviewsList /></LazyPage>} />
         <Route path="media" element={<LazyPage><MediaLibrary /></LazyPage>} />
         <Route path="banners" element={<LazyPage><BannersList /></LazyPage>} />
