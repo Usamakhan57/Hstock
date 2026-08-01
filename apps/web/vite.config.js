@@ -378,6 +378,8 @@ export default defineConfig({
 		allowedHosts: [
 			'.app-preview.com',
 			'.app-preview.io',
+			'apnastore.org',
+			'www.apnastore.org',
 		],
 		fs: {
 			strict: true,
@@ -387,8 +389,20 @@ export default defineConfig({
 			],
 		},
 	},
+	preview: {
+		host: '0.0.0.0',
+		port: 3000,
+		allowedHosts: [
+			'.app-preview.com',
+			'.app-preview.io',
+			'apnastore.org',
+			'www.apnastore.org',
+		],
+	},
 	resolve: {
 		extensions: ['.jsx', '.js', '.json'],
+		// Prevent duplicate React copies across chunks/deps (createContext crashes).
+		dedupe: ['react', 'react-dom'],
 		alias: {
 			'@': path.resolve(__dirname, './src'),
 		},
@@ -408,10 +422,12 @@ export default defineConfig({
 					if (id.includes('recharts')) return 'charts';
 					if (id.includes('socket.io-client')) return 'realtime';
 					if (id.includes('@radix-ui') || id.includes('lucide-react')) return 'ui';
-					if (id.includes('react-router') || id.includes('react-dom') || id.includes('/react/')) {
-						return 'vendor';
-					}
-					return 'vendor-misc';
+					// Single shared vendor chunk for React + remaining deps.
+					// A prior vendor/vendor-misc split created a circular chunk graph
+					// (React in vendor, cookie/scheduler consumers in misc) that left
+					// React undefined during module init and crashed with:
+					// "Cannot read properties of undefined (reading 'createContext')".
+					return 'vendor';
 				},
 			},
 			checks: {

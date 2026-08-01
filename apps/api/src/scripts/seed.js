@@ -11,7 +11,7 @@ import { USER_ROLES } from '../constants/roles.js';
 import { env } from '../config/env.js';
 
 async function seedAdmin() {
-  const email = process.env.SEED_ADMIN_EMAIL || 'admin@apnastore.org';
+  const email = process.env.SEED_ADMIN_EMAIL || 'admin.apnastore@gmail.com';
   const password = process.env.SEED_ADMIN_PASSWORD;
 
   if (!password || password.length < 8) {
