@@ -104,3 +104,31 @@ test('google oauth status endpoint', async (t) => {
   assert.equal(res.status, 200);
   assert.equal(typeof res.body.data.enabled, 'boolean');
 });
+
+test('google oauth callback redirects on failure instead of 500', async (t) => {
+  await setupTestDb();
+  t.after(async () => {
+    await resetDb();
+    await teardownTestDb();
+  });
+  const res = await request(app)
+    .get('/api/v1/auth/google/callback?code=invalid&state=test')
+    .redirects(0);
+  // Unconfigured → login?not_configured; configured → login?denied (never raw 500)
+  assert.ok([302, 303].includes(res.status), `expected redirect, got ${res.status}`);
+  assert.match(String(res.headers.location || ''), /\/login\?google=error/);
+});
+
+test('google oauth callback without code redirects to login error', async (t) => {
+  await setupTestDb();
+  t.after(async () => {
+    await resetDb();
+    await teardownTestDb();
+  });
+  const res = await request(app)
+    .get('/api/v1/auth/google/callback')
+    .redirects(0);
+  assert.ok([302, 303].includes(res.status), `expected redirect, got ${res.status}`);
+  assert.match(String(res.headers.location || ''), /\/login\?google=error/);
+});
+

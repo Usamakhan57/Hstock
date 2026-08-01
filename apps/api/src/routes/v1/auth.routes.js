@@ -54,19 +54,26 @@ router.get('/google', (req, res, next) => {
   })(req, res, next);
 });
 
-router.get(
-  '/google/callback',
-  (req, res, next) => {
-    if (!env.googleOAuthConfigured) {
-      const frontend = (env.FRONTEND_URL || 'http://localhost:3000').replace(/\/$/, '');
-      return res.redirect(`${frontend}/login?google=error&reason=not_configured`);
+router.get('/google/callback', (req, res, next) => {
+  const frontend = (env.FRONTEND_URL || 'http://localhost:3000').replace(/\/$/, '');
+  if (!env.googleOAuthConfigured) {
+    return res.redirect(`${frontend}/login?google=error&reason=not_configured`);
+  }
+
+  // Google denial / missing code should never restart the OAuth dance.
+  if (!req.query.code || req.query.error) {
+    return res.redirect(`${frontend}/login?google=error&reason=denied`);
+  }
+
+  // Custom callback so token exchange errors (invalid_grant, etc.) redirect
+  // to the frontend instead of surfacing as a raw 500 Internal Server Error.
+  return passport.authenticate('google', { session: false }, (err, user) => {
+    if (err || !user) {
+      return res.redirect(`${frontend}/login?google=error&reason=denied`);
     }
-    return passport.authenticate('google', {
-      session: false,
-      failureRedirect: `${(env.FRONTEND_URL || 'http://localhost:3000').replace(/\/$/, '')}/login?google=error&reason=denied`,
-    })(req, res, next);
-  },
-  authController.googleCallback,
-);
+    req.user = user;
+    return authController.googleCallback(req, res, next);
+  })(req, res, next);
+});
 
 export default router;

@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { User, Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
@@ -13,6 +13,7 @@ const RegisterPage = () => {
   const { register } = useStore();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -21,6 +22,23 @@ const RegisterPage = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+
+  useEffect(() => {
+    if (searchParams.get('google') !== 'error') return;
+    const reason = searchParams.get('reason') || 'denied';
+    setError('Google sign-up was cancelled or failed. Please try again.');
+    toast({
+      title: 'Google sign-up failed',
+      description: reason === 'not_configured'
+        ? 'Google sign-up is not configured on this server.'
+        : 'Please try again or use email registration.',
+      variant: 'destructive',
+    });
+    const next = new URLSearchParams(searchParams);
+    next.delete('google');
+    next.delete('reason');
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams, toast]);
 
   const handleGoogleAuth = async () => {
     if (googleLoading) return;
