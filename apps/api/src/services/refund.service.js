@@ -86,6 +86,19 @@ export async function createEscrowRefund({
     session,
   );
 
+  // Credit buyer prepaid wallet (ledger already settled to BUYER_AVAILABLE).
+  const buyerWalletService = await import('./buyerWallet.service.js');
+  await buyerWalletService.creditRefundToWallet({
+    buyerId: order.buyer,
+    amount: value,
+    orderId: order._id,
+    paymentId: order.payment,
+    refundId: refund._id,
+    session,
+    createdBy: actor?.id || null,
+    description: `Refund for order ${order.orderNumber}`,
+  });
+
   if (type === 'full' || value >= escrow.amount) {
     await escrowService.markEscrowRefunded(escrow._id, session);
     order.status = ORDER_STATUS.REFUNDED;

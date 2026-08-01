@@ -28,6 +28,13 @@ export const NOTIFICATION_TYPES = Object.freeze([
   'delivery',
   'message',
   'announcement',
+  'wallet_deposit',
+  'wallet_topup',
+  'wallet_purchase',
+  'wallet_refund',
+  'wallet_adjustment',
+  'wallet_frozen',
+  'wallet_unfrozen',
 ]);
 
 const notificationSchema = new mongoose.Schema(

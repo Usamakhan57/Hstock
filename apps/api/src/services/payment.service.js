@@ -257,10 +257,44 @@ export async function handleCryptomusWebhook(payload, { ip = null } = {}) {
           session,
         });
       }
+
+      // Wallet deposit / top-up invoices (Cryptomus order_id prefix wal_)
       if (!payment) {
-        throw new AppError('Payment not found for webhook', 404, {
-          code: 'PAYMENT_NOT_FOUND',
+        const buyerWalletService = await import('./buyerWallet.service.js');
+        const deposit = await buyerWalletService.findDepositByCryptomus(
+          payload.uuid,
+          payload.order_id,
+          session,
+        );
+        if (!deposit) {
+          throw new AppError('Payment not found for webhook', 404, {
+            code: 'PAYMENT_NOT_FOUND',
+          });
+        }
+
+        deposit.webhookCount = (deposit.webhookCount || 0) + 1;
+        deposit.lastWebhookAt = new Date();
+        if (!deposit.cryptomusUuid && payload.uuid) deposit.cryptomusUuid = payload.uuid;
+
+        const providerStatus = payload.status || payload.payment_status;
+        const applied = await buyerWalletService.applyDepositPaid(deposit, {
+          providerStatus,
+          raw: payload,
+          txid: payload.txid || null,
+          session,
         });
+
+        event.status = WEBHOOK_EVENT_STATUS.PROCESSED;
+        event.processedAt = new Date();
+        event.payload = { ...(event.payload || {}), kind: 'wallet_deposit', depositId: String(deposit._id) };
+        if (session) await event.save({ session });
+        else await event.save();
+
+        return {
+          kind: 'wallet_deposit',
+          deposit: applied.deposit,
+          alreadyPaid: applied.alreadyCredited,
+        };
       }
 
       payment.webhookCount = (payment.webhookCount || 0) + 1;
@@ -284,8 +318,19 @@ export async function handleCryptomusWebhook(payload, { ip = null } = {}) {
       if (session) await event.save({ session });
       else await event.save();
 
-      return applied;
+      return { kind: 'order_payment', ...applied };
     });
+
+    if (result.kind === 'wallet_deposit') {
+      return {
+        duplicate: false,
+        eventId: event._id,
+        depositId: result.deposit._id,
+        status: result.deposit.status,
+        alreadyPaid: result.alreadyPaid,
+        kind: 'wallet_deposit',
+      };
+    }
 
     return {
       duplicate: false,
@@ -293,6 +338,7 @@ export async function handleCryptomusWebhook(payload, { ip = null } = {}) {
       paymentId: result.payment._id,
       status: result.payment.status,
       alreadyPaid: result.alreadyPaid,
+      kind: 'order_payment',
     };
   } catch (error) {
     logger.error('Cryptomus webhook processing failed', {

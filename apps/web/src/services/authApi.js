@@ -1,4 +1,5 @@
 import { get, post } from '../lib/apiClient';
+import { API_BASE_URL } from '../lib/apiClient';
 import { persistSession, clearSession, getRememberMe } from '../lib/tokenStorage';
 
 function saveAuth(data, remember = getRememberMe()) {
@@ -12,6 +13,18 @@ function saveAuth(data, remember = getRememberMe()) {
 }
 
 export const authApi = {
+  getGoogleAuthUrl() {
+    return `${API_BASE_URL}/auth/google`;
+  },
+
+  googleStatus() {
+    return get('/auth/google/status').then(({ data }) => data);
+  },
+
+  completeGoogleSession({ accessToken, refreshToken, user }, { remember = true } = {}) {
+    return saveAuth({ accessToken, refreshToken, user }, remember);
+  },
+
   register(payload, { remember = true } = {}) {
     return post('/auth/register', payload).then(({ data }) => saveAuth(data, remember));
   },

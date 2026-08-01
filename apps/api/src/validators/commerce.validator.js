@@ -15,10 +15,31 @@ export const buyNowSchema = {
   body: z.object({
     productId: objectIdSchema,
     quantity: z.number().int().min(1).max(500).optional(),
+    /** cryptomus (default) or wallet (spend prepaid Cryptomus-funded balance) */
+    paymentMethod: z.enum(['cryptomus', 'wallet']).optional().default('cryptomus'),
     toCurrency: z.string().trim().min(2).max(20).optional(),
     network: z.string().trim().min(2).max(30).optional(),
     urlReturn: z.string().url().optional(),
     urlSuccess: z.string().url().optional(),
+  }),
+};
+
+export const buyerDepositSchema = {
+  body: z.object({
+    amount: z.number().positive(),
+    toCurrency: z.string().trim().min(2).max(20).optional(),
+    network: z.string().trim().min(2).max(30).optional(),
+    urlReturn: z.string().url().optional(),
+    urlSuccess: z.string().url().optional(),
+  }),
+};
+
+export const buyerWalletAdjustSchema = {
+  body: z.object({
+    amount: z.number().positive(),
+    direction: z.enum(['credit', 'debit']),
+    reason: z.string().trim().min(3).max(1000),
+    type: z.enum(['adjustment', 'bonus']).optional(),
   }),
 };
 
@@ -339,6 +360,8 @@ export const deliverOrderSchema = {
 
 export default {
   buyNowSchema,
+  buyerDepositSchema,
+  buyerWalletAdjustSchema,
   orderIdSchema,
   listOrdersSchema,
   cancelOrderSchema,

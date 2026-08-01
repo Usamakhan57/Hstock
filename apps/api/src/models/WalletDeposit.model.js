@@ -5,18 +5,16 @@ import {
   PAYMENT_STATUS_VALUES,
 } from '../constants/statuses.js';
 
-const paymentSchema = new mongoose.Schema(
+/**
+ * Cryptomus invoice that funds a buyer wallet (deposit or top-up).
+ * Kept separate from order Payment documents.
+ */
+const walletDepositSchema = new mongoose.Schema(
   {
-    order: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Order',
-      required: true,
-      unique: true,
-      index: true,
-    },
-    orderNumber: {
+    depositNumber: {
       type: String,
       required: true,
+      unique: true,
       index: true,
     },
     buyer: {
@@ -25,18 +23,22 @@ const paymentSchema = new mongoose.Schema(
       required: true,
       index: true,
     },
-    seller: {
+    buyerWallet: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'SellerProfile',
+      ref: 'BuyerWallet',
       required: true,
+      index: true,
+    },
+    purpose: {
+      type: String,
+      enum: ['deposit', 'topup'],
+      default: 'deposit',
       index: true,
     },
     gateway: {
       type: String,
-      // cryptomus = external crypto invoice; wallet = prepaid buyer balance (funded by Cryptomus)
-      enum: ['cryptomus', 'wallet'],
+      enum: ['cryptomus'],
       default: 'cryptomus',
-      index: true,
     },
     amount: {
       type: Number,
@@ -47,7 +49,6 @@ const paymentSchema = new mongoose.Schema(
       type: String,
       default: LEDGER_CURRENCY,
     },
-    /** Preferred crypto asset / network selected by buyer (optional) */
     toCurrency: {
       type: String,
       default: null,
@@ -92,30 +93,9 @@ const paymentSchema = new mongoose.Schema(
       default: null,
       index: true,
     },
-    payerAmount: {
-      type: String,
-      default: null,
-    },
-    payerCurrency: {
-      type: String,
-      default: null,
-    },
-    merchantAmount: {
-      type: String,
-      default: null,
-    },
-    paymentAmount: {
-      type: String,
-      default: null,
-    },
-    paymentAmountUsd: {
-      type: Number,
-      default: null,
-    },
     providerStatus: {
       type: String,
       default: null,
-      index: true,
     },
     isFinal: {
       type: Boolean,
@@ -128,14 +108,18 @@ const paymentSchema = new mongoose.Schema(
     expiresAt: {
       type: Date,
       default: null,
-      index: true,
     },
     paidAt: {
       type: Date,
       default: null,
     },
-    lastSyncedAt: {
+    creditedAt: {
       type: Date,
+      default: null,
+    },
+    creditTransaction: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'BuyerWalletTransaction',
       default: null,
     },
     lastWebhookAt: {
@@ -167,11 +151,10 @@ const paymentSchema = new mongoose.Schema(
   { timestamps: true },
 );
 
-paymentSchema.index({ status: 1, createdAt: -1 });
-paymentSchema.index({ buyer: 1, createdAt: -1 });
-paymentSchema.index({ seller: 1, status: 1, createdAt: -1 });
-paymentSchema.index({ status: 1, lastSyncedAt: 1, createdAt: 1 });
+walletDepositSchema.index({ buyer: 1, createdAt: -1 });
+walletDepositSchema.index({ status: 1, createdAt: -1 });
 
-const Payment = mongoose.models.Payment || mongoose.model('Payment', paymentSchema);
+const WalletDeposit =
+  mongoose.models.WalletDeposit || mongoose.model('WalletDeposit', walletDepositSchema);
 
-export default Payment;
+export default WalletDeposit;

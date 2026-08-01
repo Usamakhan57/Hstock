@@ -16,6 +16,7 @@ import MaintenancePage from '../../pages/MaintenancePage';
 import ComingSoonPage from '../../pages/ComingSoonPage';
 import LoginPage from '../../pages/LoginPage';
 import RegisterPage from '../../pages/RegisterPage';
+import AuthGoogleCallbackPage from '../../pages/AuthGoogleCallbackPage';
 import ForgotPasswordPage from '../../pages/ForgotPasswordPage';
 import ResetPasswordPage from '../../pages/ResetPasswordPage';
 import VerifyEmailPage from '../../pages/VerifyEmailPage';
@@ -85,6 +86,7 @@ export function storefrontRoutes() {
       <Route path="/coming-soon" element={<ComingSoonPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
+      <Route path="/auth/google/callback" element={<AuthGoogleCallbackPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route path="/verify-email" element={<VerifyEmailPage />} />

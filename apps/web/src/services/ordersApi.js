@@ -10,13 +10,20 @@ function originUrls(orderRef) {
 }
 
 export const ordersApi = {
-  async buyNow({ productId, quantity = 1, toCurrency = 'USDT', network = 'TRC20' }) {
+  async buyNow({
+    productId,
+    quantity = 1,
+    paymentMethod = 'cryptomus',
+    toCurrency = 'USDT',
+    network = 'TRC20',
+  }) {
     const urls = originUrls();
     const { data } = await post('/orders/buy-now', {
       productId,
       quantity,
-      toCurrency,
-      network,
+      paymentMethod,
+      toCurrency: paymentMethod === 'wallet' ? undefined : toCurrency,
+      network: paymentMethod === 'wallet' ? undefined : network,
       urlSuccess: urls.urlSuccess,
       urlReturn: urls.urlReturn,
     });
@@ -35,6 +42,8 @@ export const ordersApi = {
       payment: data.payment,
       escrow: data.escrow,
       paymentUrl: data.paymentUrl,
+      paymentMethod: data.paymentMethod || paymentMethod,
+      wallet: data.wallet || null,
       cryptomus: data.cryptomus,
       raw: data,
     };

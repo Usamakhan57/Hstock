@@ -12,6 +12,8 @@ export const LEDGER_ACCOUNT = Object.freeze({
   SELLER_WITHDRAWAL_RESERVE: 'seller_withdrawal_reserve',
   PLATFORM_ADJUSTMENT: 'platform_adjustment',
   REFUND_PAYABLE: 'refund_payable',
+  BUYER_AVAILABLE: 'buyer_available',
+  BUYER_PENDING: 'buyer_pending',
 });
 
 export const LEDGER_ACCOUNT_VALUES = Object.freeze(Object.values(LEDGER_ACCOUNT));
@@ -30,6 +32,12 @@ export const LEDGER_ENTRY_TYPE = Object.freeze({
   REFUND_DEBIT: 'refund_debit',
   REFUND_CREDIT: 'refund_credit',
   ADMIN_ADJUSTMENT: 'admin_adjustment',
+  BUYER_DEPOSIT: 'buyer_deposit',
+  BUYER_TOPUP: 'buyer_topup',
+  BUYER_SPEND: 'buyer_spend',
+  BUYER_REFUND_CREDIT: 'buyer_refund_credit',
+  BUYER_ADJUSTMENT: 'buyer_adjustment',
+  BUYER_BONUS: 'buyer_bonus',
 });
 
 export const LEDGER_ENTRY_TYPE_VALUES = Object.freeze(Object.values(LEDGER_ENTRY_TYPE));

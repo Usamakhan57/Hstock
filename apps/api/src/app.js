@@ -4,11 +4,13 @@ import cors from 'cors';
 import compression from 'compression';
 import cookieParser from 'cookie-parser';
 import morgan from 'morgan';
+import passport from 'passport';
 
 import { env } from './config/env.js';
 import { corsOptions } from './config/cors.js';
 import { httpLogger, logger } from './config/logger.js';
 import { ensureUploadDirectories } from './config/uploads.js';
+import { configureGooglePassport } from './config/googlePassport.js';
 import {
   errorHandler,
   globalRateLimiter,
@@ -19,11 +21,13 @@ import {
 import routes from './routes/index.js';
 
 ensureUploadDirectories();
+configureGooglePassport();
 
 const app = express();
 
 app.set('trust proxy', 1);
 app.disable('x-powered-by');
+app.use(passport.initialize());
 
 app.use(requestIdMiddleware);
 app.use(helmet({

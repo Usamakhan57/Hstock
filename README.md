@@ -67,7 +67,9 @@ npm audit
 
 ## Production host
 
-Target: **Hostinger Ubuntu VPS** with Node.js 20+, PM2, Nginx + Certbot, MongoDB (localhost), optional Redis, Cryptomus webhooks, SMTP.
+Target: **Hostinger Ubuntu VPS** with Node.js 20+, PM2, Nginx + Certbot, MongoDB (localhost), optional Redis, Cryptomus webhooks, SMTP, optional Google OAuth, buyer wallet (Cryptomus-funded).
+
+**Payments:** Cryptomus is the only external payment gateway. Buyers may deposit/top-up a prepaid wallet via Cryptomus and optionally pay from wallet at checkout. Stripe/PayPal are not supported.
 
 See [`apps/api/docs/PRODUCTION_DEPLOYMENT.md`](apps/api/docs/PRODUCTION_DEPLOYMENT.md).
 

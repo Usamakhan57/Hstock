@@ -21,14 +21,30 @@ const SellerRegisterPage = () => {
   const [error, setError] = useState('');
   const [googleLoading, setGoogleLoading] = useState(false);
 
-  const handleGoogleAuth = () => {
+  const handleGoogleAuth = async () => {
     if (googleLoading) return;
     setGoogleLoading(true);
-    toast({
-      title: 'Google sign-up unavailable',
-      description: 'Please create a seller account with email and password for now.',
-    });
-    setGoogleLoading(false);
+    try {
+      const { authApi } = await import('../services/authApi');
+      const status = await authApi.googleStatus();
+      if (!status?.enabled) {
+        toast({
+          title: 'Google sign-up not configured',
+          description: 'Use email and password, or ask an admin to configure Google OAuth.',
+          variant: 'destructive',
+        });
+        setGoogleLoading(false);
+        return;
+      }
+      window.location.assign(authApi.getGoogleAuthUrl());
+    } catch (err) {
+      toast({
+        title: 'Google sign-up failed',
+        description: err.message || 'Please try again.',
+        variant: 'destructive',
+      });
+      setGoogleLoading(false);
+    }
   };
 
   const handleSubmit = async (e) => {

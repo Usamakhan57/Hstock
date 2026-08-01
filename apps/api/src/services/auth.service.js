@@ -626,6 +626,139 @@ export function clearRefreshCookie(res) {
   });
 }
 
+/**
+ * Google OAuth login / register / link.
+ * - Existing googleId → login
+ * - Existing email without googleId → link googleId and login
+ * - New email → create buyer account (emailVerified=true)
+ */
+export async function loginOrRegisterWithGoogle(profile, meta = {}) {
+  if (!env.googleOAuthConfigured) {
+    throw new AppError('Google sign-in is not configured', 503, {
+      code: 'GOOGLE_OAUTH_NOT_CONFIGURED',
+    });
+  }
+
+  const googleId = profile.id || profile.googleId;
+  const email = String(profile.email || profile.emails?.[0]?.value || '').toLowerCase().trim();
+  const name = profile.displayName
+    || profile.name
+    || [profile.name?.givenName, profile.name?.familyName].filter(Boolean).join(' ')
+    || (email ? email.split('@')[0] : 'Google User');
+  const avatar = profile.photos?.[0]?.value || profile.picture || null;
+
+  if (!googleId || !email) {
+    throw new AppError('Google profile is incomplete', 400, { code: 'GOOGLE_PROFILE_INVALID' });
+  }
+
+  let user = await User.findOne({ googleId }).select('+passwordHash');
+  let linked = false;
+  let created = false;
+
+  if (!user) {
+    user = await User.findOne({ email }).select('+passwordHash');
+    if (user) {
+      if (user.googleId && user.googleId !== googleId) {
+        throw new AppError('This email is linked to a different Google account', 409, {
+          code: 'GOOGLE_ID_CONFLICT',
+        });
+      }
+      user.googleId = googleId;
+      user.authProvider = user.authProvider === 'local' ? 'local' : 'google';
+      if (!user.roles?.includes(USER_ROLES.BUYER)) {
+        user.roles = [...(user.roles || []), USER_ROLES.BUYER];
+      }
+      if (!user.emailVerified) {
+        user.emailVerified = true;
+        user.emailVerifiedAt = new Date();
+        user.verificationStatus = VerificationStatusEnum.Verified;
+      }
+      if (!user.avatar && avatar) user.avatar = avatar;
+      await user.save();
+      linked = true;
+    }
+  }
+
+  if (!user) {
+    const randomPassword = generateOpaqueToken(32);
+    const passwordHash = await hashPassword(randomPassword);
+    user = await withTransaction(async (session) => {
+      const createdUser = await createWithSession(
+        User,
+        {
+          email,
+          passwordHash,
+          name: String(name).slice(0, 120),
+          roles: [USER_ROLES.BUYER],
+          avatar,
+          googleId,
+          authProvider: 'google',
+          status: UserStatusEnum.Active,
+          verificationStatus: VerificationStatusEnum.Verified,
+          emailVerified: true,
+          emailVerifiedAt: new Date(),
+        },
+        session,
+      );
+
+      await createWithSession(
+        BuyerProfile,
+        {
+          user: createdUser._id,
+          avatar: avatar || null,
+        },
+        session,
+      );
+
+      await logActivity({
+        userId: createdUser._id,
+        action: 'auth.google.register',
+        resource: 'User',
+        resourceId: createdUser._id,
+        ip: meta.ip,
+        userAgent: meta.userAgent,
+        session,
+      });
+
+      return createdUser;
+    });
+    created = true;
+  }
+
+  if (user.status && user.status !== UserStatusEnum.Active) {
+    throw new AppError('Account is not active', 403, { code: 'ACCOUNT_INACTIVE' });
+  }
+
+  user.lastLoginAt = new Date();
+  user.lastLoginIp = meta.ip || null;
+  await user.save();
+
+  if (!created) {
+    await logActivity({
+      userId: user._id,
+      action: linked ? 'auth.google.link_login' : 'auth.google.login',
+      resource: 'User',
+      resourceId: user._id,
+      ip: meta.ip,
+      userAgent: meta.userAgent,
+    });
+  }
+
+  // Ensure buyer profile exists for Google accounts
+  const buyer = await BuyerProfile.findOne({ user: user._id });
+  if (!buyer) {
+    await BuyerProfile.create({ user: user._id, avatar: avatar || null });
+  }
+
+  const tokens = await issueTokenPair(user, meta);
+  return {
+    user: publicUser(user),
+    ...tokens,
+    created,
+    linked,
+  };
+}
+
 export { REFRESH_COOKIE_NAME, publicUser };
 
 export default {
@@ -640,6 +773,7 @@ export default {
   resetPassword,
   verifyEmail,
   getMe,
+  loginOrRegisterWithGoogle,
   setRefreshCookie,
   clearRefreshCookie,
   REFRESH_COOKIE_NAME,

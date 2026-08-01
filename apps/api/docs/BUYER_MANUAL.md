@@ -34,10 +34,22 @@
 4. Seller may offer replacement accounts
 5. Accept replacement or wait for admin resolution / refund
 
-## Wallet notes
+## Wallet
 
-Buyer wallet deposits are not required for Buy Now — Cryptomus invoices fund the order directly.
+Buyers have a prepaid wallet funded **only via Cryptomus** (deposit / top-up).
+
+1. Open **Account → Wallet**
+2. Enter an amount and choose **Deposit** or **Top Up**
+3. Complete the Cryptomus invoice
+4. After webhook confirmation, available balance increases
+5. At Buy Now checkout, choose **Pay from Wallet** or **Pay Direct (Cryptomus)**
+
+Refunds from escrow are credited back to the buyer wallet. Direct Cryptomus Buy Now (without wallet) still works exactly as before.
+
+## Google sign-in
+
+Use **Continue with Google** on login/register when `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` are configured. Existing email accounts are linked automatically.
 
 ## Notifications
 
-Open **Account → Notifications** for order, payment, escrow, and dispute alerts. Unread badges update in real time when connected.
+Open **Account → Notifications** for order, payment, escrow, wallet, and dispute alerts. Unread badges update in real time when connected. Telegram and email mirror wallet credits when enabled.

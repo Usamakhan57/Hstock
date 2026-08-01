@@ -107,6 +107,18 @@ const ledgerEntrySchema = new mongoose.Schema(
       default: null,
       index: true,
     },
+    buyerWallet: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'BuyerWallet',
+      default: null,
+      index: true,
+    },
+    deposit: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'WalletDeposit',
+      default: null,
+      index: true,
+    },
     description: {
       type: String,
       default: '',

@@ -49,8 +49,12 @@ cp .env.example .env
 | `TELEGRAM_WEBHOOK_SECRET` | Webhook secret header validation |
 | `TELEGRAM_WEBHOOK_URL` | Public webhook URL for production mode |
 | `TELEGRAM_MODE` | `webhook` (prod) or `polling` (dev) |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Optional Google OAuth 2 — enables `/auth/google` |
+| `GOOGLE_CALLBACK_URL` | Optional override (default `${APP_URL}${API_PREFIX}/auth/google/callback`) |
+| `BUYER_WALLET_MIN_DEPOSIT` | Min Cryptomus wallet deposit/top-up (USD, default 5) |
+| `BUYER_WALLET_MAX_DEPOSIT` | Max Cryptomus wallet deposit/top-up (USD, default 10000) |
 
-See also: [TELEGRAM.md](./TELEGRAM.md)
+See also: [TELEGRAM.md](./TELEGRAM.md), [BUYER_MANUAL.md](./BUYER_MANUAL.md)
 
 Never commit real secrets. Never hardcode credentials in source.
 
