@@ -26,7 +26,6 @@ import BecomeASellerPage from '../../pages/BecomeASellerPage';
 import SellerLoginPage from '../../pages/SellerLoginPage';
 import SellerRegisterPage from '../../pages/SellerRegisterPage';
 import SellerDashboard from '../../pages/SellerDashboard';
-import SellerProductEditorPage from '../../pages/seller/components/SellerProductEditorPage';
 import UploadAccountsPage from '../../pages/seller/components/UploadAccountsPage';
 import SellerHubPage from '../../pages/SellerHubPage';
 import RequireSellerAuth from '../../components/RequireSellerAuth';
@@ -59,6 +58,16 @@ import DisputesPage from '../../pages/account/DisputesPage';
 import DisputeDetailPage from '../../pages/account/DisputeDetailPage';
 import OpenDisputePage from '../../pages/account/OpenDisputePage';
 import SellerDisputeDetail from '../../pages/seller/components/SellerDisputeDetail';
+
+const SellerProductEditorPage = React.lazy(() => import('../../pages/seller/components/SellerProductEditorPage'));
+
+function LazySellerProductEditorPage() {
+  return (
+    <React.Suspense fallback={<div className="p-8 text-sm text-muted-foreground">Loading product editor…</div>}>
+      <SellerProductEditorPage />
+    </React.Suspense>
+  );
+}
 
 /**
  * Returns an array of <Route> elements for the storefront.
@@ -124,8 +133,8 @@ export function storefrontRoutes() {
       <Route path="/seller/dashboard" element={<RequireSellerAuth><SellerDashboard /></RequireSellerAuth>} />
       <Route path="/seller/overview" element={<RequireSellerAuth><SellerDashboard /></RequireSellerAuth>} />
       <Route path="/seller/products" element={<RequireSellerAuth><SellerDashboard /></RequireSellerAuth>} />
-      <Route path="/seller/products/new" element={<RequireSellerAuth><SellerProductEditorPage /></RequireSellerAuth>} />
-      <Route path="/seller/products/:id/edit" element={<RequireSellerAuth><SellerProductEditorPage /></RequireSellerAuth>} />
+      <Route path="/seller/products/new" element={<RequireSellerAuth><LazySellerProductEditorPage /></RequireSellerAuth>} />
+      <Route path="/seller/products/:id/edit" element={<RequireSellerAuth><LazySellerProductEditorPage /></RequireSellerAuth>} />
       <Route path="/seller/upload-accounts/:productId" element={<RequireSellerAuth><UploadAccountsPage /></RequireSellerAuth>} />
       <Route path="/seller/orders" element={<RequireSellerAuth><SellerDashboard /></RequireSellerAuth>} />
       <Route path="/seller/escrow" element={<RequireSellerAuth><SellerDashboard /></RequireSellerAuth>} />
