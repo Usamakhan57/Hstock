@@ -19,10 +19,12 @@ import {
   ChevronRight,
   X,
   Settings,
+  ArrowLeft,
 } from 'lucide-react';
 import Seo from '../components/Seo';
 import { getSellerProducts } from './seller/api/sellerProducts';
 import { useSellerAuth } from '../context/SellerAuthContext';
+import { useDashboardBack } from '../hooks/useDashboardBack';
 import { ordersApi } from '../services/ordersApi';
 import { walletApi } from '../services/walletApi';
 import { withdrawalsApi } from '../services/withdrawalsApi';
@@ -110,6 +112,7 @@ const SellerDashboard = () => {
   const { seller, logout } = useSellerAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const handleDashboardBack = useDashboardBack('/');
   const urlTab = location.pathname.split('/seller/')[1];
   const resolvedTab = urlTab === 'disputes' ? 'messages' : urlTab;
   const currentTab = TAB_KEYS.includes(resolvedTab) ? resolvedTab : 'overview';
@@ -238,9 +241,9 @@ const SellerDashboard = () => {
     ? new Date(seller.joinedAt).toLocaleDateString(undefined, { year: 'numeric', month: 'long' })
     : 'Recently';
 
-  const renderSidebarContent = () => (
-    <>
-      <div className="mb-8">
+  const renderSidebarContent = ({ scrollable = false } = {}) => (
+    <div className={scrollable ? 'flex h-full min-h-0 flex-col' : 'flex h-full flex-col'}>
+      <div className="mb-6 shrink-0">
         <span className="inline-flex h-12 w-12 items-center justify-center rounded-3xl bg-primary/10 text-primary text-lg font-bold">
           {seller?.storeName?.charAt(0) || 'S'}
         </span>
@@ -249,7 +252,10 @@ const SellerDashboard = () => {
         <p className="mt-2 text-sm text-muted-foreground">{seller?.email}</p>
       </div>
 
-      <div className="space-y-8 flex-1 overflow-y-auto pr-1">
+      <div
+        className={`min-h-0 flex-1 space-y-8 pr-1 ${scrollable ? 'overflow-y-auto overscroll-contain' : 'overflow-y-auto'}`}
+        style={scrollable ? { WebkitOverflowScrolling: 'touch' } : undefined}
+      >
         {menuGroups.map((group) => (
           <div key={group.label}>
             <p className="mb-3 text-xs uppercase tracking-[0.24em] text-muted-foreground">{group.label}</p>
@@ -273,7 +279,7 @@ const SellerDashboard = () => {
         ))}
       </div>
 
-      <div className="mt-8 border-t border-border pt-5">
+      <div className="mt-6 shrink-0 border-t border-border pt-5">
         <button
           onClick={handleLogout}
           className="flex w-full items-center justify-center gap-2 rounded-full border border-border bg-white px-4 py-3 text-sm font-semibold text-foreground shadow-sm hover:bg-secondary transition-colors"
@@ -281,7 +287,7 @@ const SellerDashboard = () => {
           <LogOut className="h-4 w-4 text-primary" /> Sign out
         </button>
       </div>
-    </>
+    </div>
   );
 
   return (
@@ -289,28 +295,32 @@ const SellerDashboard = () => {
       <Seo title="Seller Dashboard" description="Manage your ApnaStore store, listings, and earnings." noIndex />
 
       <div className="relative lg:flex">
-        <aside className="hidden lg:flex lg:w-[320px] shrink-0 flex-col border-r border-border bg-white px-6 py-8 shadow-sm">
-          {renderSidebarContent()}
+        <aside className="hidden lg:flex lg:h-screen lg:w-[320px] lg:sticky lg:top-0 shrink-0 flex-col border-r border-border bg-white px-6 py-8 shadow-sm overflow-hidden">
+          {renderSidebarContent({ scrollable: true })}
         </aside>
 
-        <div className="flex-1">
+        <div className="flex-1 min-w-0">
           <div className="sticky top-0 z-20 border-b border-border bg-white lg:hidden">
-            <div className="flex items-center justify-between px-4 py-4 sm:px-6">
+            <div className="flex items-center justify-between gap-2 px-4 py-4 sm:px-6">
               <button
-                onClick={() => setSidebarOpen(true)}
+                type="button"
+                onClick={handleDashboardBack}
                 className="inline-flex h-11 w-11 items-center justify-center rounded-3xl bg-secondary text-foreground hover:bg-muted transition-colors"
+                aria-label="Go back"
               >
-                <Menu className="h-5 w-5" />
+                <ArrowLeft className="h-5 w-5" />
               </button>
-              <div className="text-center">
+              <div className="min-w-0 text-center">
                 <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">Seller</p>
                 <p className="font-semibold text-foreground truncate max-w-[180px]">{seller?.storeName || 'Your Store'}</p>
               </div>
               <button
-                onClick={handleLogout}
-                className="inline-flex h-11 items-center rounded-3xl bg-secondary px-4 text-sm text-foreground hover:bg-muted transition-colors"
+                type="button"
+                onClick={() => setSidebarOpen(true)}
+                className="inline-flex h-11 w-11 items-center justify-center rounded-3xl bg-secondary text-foreground hover:bg-muted transition-colors"
+                aria-label="Open seller menu"
               >
-                Sign out
+                <Menu className="h-5 w-5" />
               </button>
             </div>
           </div>
@@ -321,22 +331,26 @@ const SellerDashboard = () => {
               onClick={() => setSidebarOpen(false)}
             />
             <aside
-              className={`absolute left-0 top-0 bottom-0 w-[88vw] max-w-[320px] bg-white p-6 shadow-2xl border-r border-border transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}
+              className={`absolute left-0 top-0 flex h-[100vh] h-[100dvh] w-[88vw] max-w-[320px] flex-col overflow-hidden bg-white p-6 shadow-2xl border-r border-border transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}
             >
-              <div className="mb-8 flex items-start justify-between gap-3">
+              <div className="mb-4 flex shrink-0 items-start justify-between gap-3">
                 <div>
                   <span className="inline-flex h-11 w-11 items-center justify-center rounded-3xl bg-primary/10 text-primary">
                     <Package className="h-5 w-5" />
                   </span>
                 </div>
                 <button
+                  type="button"
                   onClick={() => setSidebarOpen(false)}
                   className="inline-flex h-11 w-11 items-center justify-center rounded-3xl bg-secondary text-foreground hover:bg-muted transition-colors"
+                  aria-label="Close seller menu"
                 >
                   <X className="h-5 w-5" />
                 </button>
               </div>
-              {renderSidebarContent()}
+              <div className="min-h-0 flex-1 overflow-hidden">
+                {renderSidebarContent({ scrollable: true })}
+              </div>
             </aside>
           </div>
 
