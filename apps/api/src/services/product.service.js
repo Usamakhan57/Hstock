@@ -17,6 +17,7 @@ import {
   DOWNLOAD_TYPES,
 } from '../constants/productTypes.js';
 import { USER_ROLES } from '../constants/roles.js';
+import { SellerStatusEnum } from '../constants/enums.js';
 import { normalizeAssetIdentifier } from '../helpers/asset.helper.js';
 import {
   prepareAssetFields,
@@ -25,6 +26,16 @@ import {
   releaseDigitalAssetClaim,
   wrapDuplicateAssetError,
 } from './assetUniqueness.service.js';
+
+async function getApprovedSellerIds() {
+  return SellerProfile.find({ status: SellerStatusEnum.Approved }).distinct('_id');
+}
+
+async function isApprovedSellerId(sellerId) {
+  if (!sellerId) return false;
+  const seller = await SellerProfile.findById(sellerId).select('status').lean();
+  return Boolean(seller && seller.status === SellerStatusEnum.Approved);
+}
 
 async function ensureUniqueProductSlug(base, excludeId = null) {
   let slug = toSlug(base);
@@ -72,12 +83,27 @@ export async function listProducts(query = {}, actor = null) {
     filter.status = PRODUCT_STATUS.LIVE;
     filter.visibility = PRODUCT_VISIBILITY.PUBLIC;
     filter.approvalStatus = APPROVAL_STATUS.APPROVED;
+    // Public catalog: only listings from approved sellers.
+    const approvedSellerIds = await getApprovedSellerIds();
+    if (query.seller) {
+      const requested = String(query.seller);
+      const allowed = approvedSellerIds.some((id) => String(id) === requested);
+      if (!allowed) {
+        return { items: [], meta: buildPaginationMeta({ page, limit, total: 0 }) };
+      }
+      filter.seller = query.seller;
+    } else {
+      filter.seller = { $in: approvedSellerIds };
+    }
   }
 
   if (query.category) filter.category = query.category;
   if (query.brand) filter.brand = query.brand;
   if (query.productType) filter.productType = query.productType;
-  if (query.seller) filter.seller = query.seller;
+  // Staff / seller-mine queries may still filter by seller id.
+  if (query.seller && (isStaff || (actor?.roles?.includes(USER_ROLES.SELLER) && query.mine === 'true'))) {
+    filter.seller = query.seller;
+  }
   if (query.featured !== undefined) filter.featured = query.featured === 'true';
   if (query.tag) filter.tags = query.tag;
   if (query.assetPlatform) filter.assetPlatform = query.assetPlatform;
@@ -176,6 +202,11 @@ export async function getProduct(idOrSlug, actor = null, options = {}) {
       );
     }
 
+    let sellerApproved = product.seller?.status === SellerStatusEnum.Approved;
+    if (!sellerApproved && !product.seller?.status) {
+      sellerApproved = await isApprovedSellerId(product.seller?._id || product.seller);
+    }
+
     if (
       !isStaff
       && !isOwner
@@ -183,6 +214,7 @@ export async function getProduct(idOrSlug, actor = null, options = {}) {
         product.status !== PRODUCT_STATUS.LIVE
         || product.visibility !== PRODUCT_VISIBILITY.PUBLIC
         || product.approvalStatus !== APPROVAL_STATUS.APPROVED
+        || !sellerApproved
       )
     ) {
       throw new AppError('Product not found', 404, { code: 'PRODUCT_NOT_FOUND' });

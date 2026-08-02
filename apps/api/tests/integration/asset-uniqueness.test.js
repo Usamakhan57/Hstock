@@ -320,7 +320,14 @@ test('rejected listing releases asset for reuse', async () => {
 
 test('search uses normalized asset identifiers', async () => {
   const adminToken = await createAdminToken();
-  const { token: sellerA } = await createSeller('search-a@example.com', 'Search A');
+  const { token: sellerA, seller } = await createSeller('search-a@example.com', 'Search A');
+  const sellerId = seller._id || seller.id;
+
+  const approveSeller = await request(app)
+    .patch(`/api/v1/users/sellers/${sellerId}`)
+    .set('Authorization', `Bearer ${adminToken}`)
+    .send({ status: 'approved', verified: true });
+  assert.equal(approveSeller.status, 200);
 
   const created = await createListing(sellerA, {
     title: 'Searchable IG',

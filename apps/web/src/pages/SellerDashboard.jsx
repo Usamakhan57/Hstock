@@ -50,6 +50,7 @@ import SellerProfileTab from './seller/components/SellerProfileTab';
 import SellerNotificationsTab from './seller/components/SellerNotificationsTab';
 import SellerMessagesTab from './seller/components/SellerMessagesTab';
 import SellerEscrowTab from './seller/components/SellerEscrowTab';
+import SellerVerificationBanner from './seller/components/SellerVerificationBanner';
 
 const tabs = [
   { key: 'overview', label: 'Overview', icon: LayoutDashboard },
@@ -340,6 +341,8 @@ const SellerDashboard = () => {
           </div>
 
           <main className="mx-auto max-w-[1080px] px-4 py-8 sm:px-6 lg:px-10">
+            <SellerVerificationBanner seller={seller} />
+
             <div className="mb-10 flex flex-col gap-6 rounded-[2rem] border border-border bg-white p-8 shadow-sm">
               <div>
                 <p className="text-xs uppercase tracking-[0.3em] text-primary">Seller Dashboard</p>
@@ -421,6 +424,7 @@ const SellerDashboard = () => {
                     transactions={commerce.transactions}
                     withdrawals={commerce.withdrawals}
                     onRefresh={refreshCommerce}
+                    canWithdraw={String(seller?.status || '').toLowerCase() === 'approved'}
                   />
                 )}
                 {tab === 'analytics' && (
@@ -439,16 +443,28 @@ const SellerDashboard = () => {
                   <div className="rounded-[2rem] border border-border bg-white p-6 shadow-sm">
                     <h3 className="font-bold text-foreground">Your public storefront</h3>
                     <p className="mt-2 text-sm text-muted-foreground">This is what buyers see when they visit your store page.</p>
-                    <a
-                      href={`/seller/${(seller?.storeName || 'your-store').toLowerCase().replace(/\s+/g, '-')}`}
-                      className="mt-4 inline-flex items-center gap-2 rounded-full border border-border bg-secondary px-5 py-3 text-sm font-semibold text-foreground hover:bg-muted transition-colors"
-                    >
-                      <Store className="h-4 w-4" /> View storefront
-                    </a>
+                    {String(seller?.status || '').toLowerCase() === 'approved' ? (
+                      <a
+                        href={`/seller/${seller?.slug || (seller?.storeName || 'your-store').toLowerCase().replace(/\s+/g, '-')}`}
+                        className="mt-4 inline-flex items-center gap-2 rounded-full border border-border bg-secondary px-5 py-3 text-sm font-semibold text-foreground hover:bg-muted transition-colors"
+                      >
+                        <Store className="h-4 w-4" /> View storefront
+                      </a>
+                    ) : (
+                      <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                        Public Store URL is disabled while your seller account is {seller?.status || 'pending'}.
+                        It will unlock automatically after admin approval.
+                      </div>
+                    )}
                   </div>
                 )}
                 {tab === 'profile' && <SellerProfileTab seller={seller} productsCount={sellerProducts.length} joinedDate={joinedDate} />}
-                {tab === 'settings' && <SellerStoreSettingsTab seller={seller} />}
+                {tab === 'settings' && (
+                  <SellerStoreSettingsTab
+                    seller={seller}
+                    canManagePayouts={String(seller?.status || '').toLowerCase() === 'approved'}
+                  />
+                )}
               </div>
             )}
           </main>

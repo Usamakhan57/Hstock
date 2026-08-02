@@ -109,6 +109,56 @@ test('admin seller get/update accepts SellerProfile id or User id', async (t) =>
   assert.ok((publicList.body.data || []).some((p) => p.slug === 'hidden-listing'));
 });
 
+test('pending seller products stay hidden until seller is approved', async (t) => {
+  await setupTestDb();
+  t.after(async () => {
+    await resetDb();
+    await teardownTestDb();
+  });
+
+  const adminToken = await createAdminToken();
+  const { sellerId, userId } = await createPendingSeller();
+
+  await Product.create({
+    title: 'Pending Seller Listing',
+    slug: 'pending-seller-listing',
+    description: 'Must stay hidden while seller is pending',
+    price: 9,
+    seller: sellerId,
+    productType: 'social_accounts',
+    status: PRODUCT_STATUS.LIVE,
+    visibility: PRODUCT_VISIBILITY.PUBLIC,
+    approvalStatus: APPROVAL_STATUS.APPROVED,
+    createdBy: userId,
+    updatedBy: userId,
+  });
+
+  const before = await request(app).get('/api/v1/products/public');
+  assert.equal(before.status, 200);
+  assert.equal(
+    (before.body.data || []).some((p) => p.slug === 'pending-seller-listing'),
+    false,
+    'pending seller product must not appear publicly',
+  );
+
+  const approve = await request(app)
+    .patch(`/api/v1/users/sellers/${sellerId}`)
+    .set('Authorization', `Bearer ${adminToken}`)
+    .send({ status: 'approved', verified: true, commissionRate: 10 });
+  assert.equal(approve.status, 200);
+  assert.equal(approve.body.data.seller.status, 'approved');
+  assert.equal(approve.body.data.seller.commission, 10);
+  assert.equal(approve.body.data.seller.commissionRate, 10);
+  assert.ok(approve.body.data.seller.approvedAt);
+
+  const after = await request(app).get('/api/v1/products/public');
+  assert.equal(after.status, 200);
+  assert.ok(
+    (after.body.data || []).some((p) => p.slug === 'pending-seller-listing'),
+    'approved seller product must appear publicly',
+  );
+});
+
 test('admin seller update returns 404 for unknown id', async (t) => {
   await setupTestDb();
   t.after(async () => {

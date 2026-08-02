@@ -23,10 +23,26 @@ import { listActivityLogs } from './activity.service.js';
 function serializeSeller(seller) {
   if (!seller) return null;
   const obj = typeof seller.toObject === 'function' ? seller.toObject() : { ...seller };
+  const commissionRate = obj.commissionRate ?? 15;
+  let approvedBy = obj.approvedBy || null;
+  if (approvedBy && typeof approvedBy === 'object') {
+    approvedBy = {
+      id: String(approvedBy._id || approvedBy.id),
+      name: approvedBy.name || null,
+      email: approvedBy.email || null,
+    };
+  } else if (approvedBy) {
+    approvedBy = String(approvedBy);
+  }
   return {
     ...obj,
     id: String(obj._id || obj.id),
     userId: obj.user ? String(obj.user._id || obj.user) : null,
+    status: obj.status || SellerStatusEnum.Pending,
+    approvedAt: obj.approvedAt || null,
+    approvedBy,
+    commissionRate,
+    commission: commissionRate,
   };
 }
 
@@ -267,6 +283,22 @@ async function publishSellerProducts(sellerId) {
   );
 }
 
+/** Hide previously public listings when a seller loses approval. */
+async function unpublishSellerProducts(sellerId) {
+  await Product.updateMany(
+    {
+      seller: sellerId,
+      deletedAt: null,
+      approvalStatus: APPROVAL_STATUS.APPROVED,
+    },
+    {
+      $set: {
+        approvalStatus: APPROVAL_STATUS.PENDING,
+      },
+    },
+  );
+}
+
 export async function adminUpdateSellerStatus(sellerOrUserId, payload, actorId) {
   const seller = await findSellerProfileByIdOrUserId(sellerOrUserId);
   if (!seller) {
@@ -314,6 +346,11 @@ export async function adminUpdateSellerStatus(sellerOrUserId, payload, actorId) 
 
   if (seller.status === SellerStatusEnum.Approved) {
     await publishSellerProducts(seller._id);
+  } else if (
+    previousStatus === SellerStatusEnum.Approved
+    && [SellerStatusEnum.Pending, SellerStatusEnum.Rejected, SellerStatusEnum.Suspended].includes(seller.status)
+  ) {
+    await unpublishSellerProducts(seller._id);
   }
 
   await logActivity({

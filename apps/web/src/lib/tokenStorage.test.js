@@ -55,4 +55,23 @@ describe('tokenStorage', () => {
     expect(getRefreshToken()).toBeNull();
     expect(getStoredUser()).toBeNull();
   });
+
+  it('preserves refresh token when omitted during profile hydrate', () => {
+    persistSession({
+      accessToken: 'access-1',
+      refreshToken: 'refresh-keep',
+      user: { id: 'u1' },
+      remember: true,
+    });
+
+    persistSession({
+      accessToken: 'access-2',
+      user: { id: 'u1', name: 'Updated' },
+      remember: true,
+    });
+
+    expect(getAccessToken()).toBe('access-2');
+    expect(getRefreshToken()).toBe('refresh-keep');
+    expect(getStoredUser()?.name).toBe('Updated');
+  });
 });

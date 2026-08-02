@@ -19,6 +19,7 @@ const SellerEarningsTab = ({
   transactions = [],
   withdrawals: initialWithdrawals = [],
   onRefresh,
+  canWithdraw = true,
 }) => {
   const { toast } = useToast();
   const [withdrawals, setWithdrawals] = useState(initialWithdrawals);
@@ -90,10 +91,20 @@ const SellerEarningsTab = ({
       </div>
 
       <div className="bg-white rounded-3xl border border-border soft-shadow p-6 mb-6">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-4 gap-3">
           <h3 className="font-bold">Monthly Earnings</h3>
-          <Dialog open={open} onOpenChange={setOpen}>
-            <button onClick={() => setOpen(true)} className="brand-gradient text-white text-sm font-semibold px-5 py-2.5 rounded-full hover:opacity-95 transition-all">
+          <Dialog open={open} onOpenChange={(v) => canWithdraw && setOpen(v)}>
+            <button
+              type="button"
+              disabled={!canWithdraw}
+              title={canWithdraw ? 'Withdraw earnings' : 'Withdrawals unlock after seller approval'}
+              onClick={() => canWithdraw && setOpen(true)}
+              className={`text-sm font-semibold px-5 py-2.5 rounded-full transition-all ${
+                canWithdraw
+                  ? 'brand-gradient text-white hover:opacity-95'
+                  : 'bg-secondary text-muted-foreground cursor-not-allowed'
+              }`}
+            >
               Withdraw
             </button>
             <DialogContent>

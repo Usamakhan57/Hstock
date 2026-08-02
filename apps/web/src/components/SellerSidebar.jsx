@@ -24,11 +24,20 @@ const SellerSidebar = ({ open, closing, onClose, seller, walletBalance, notifica
     { label: 'Support', to: '/support', icon: MessageCircleQuestion },
   ], []);
 
+  const storeSlug = seller?.slug
+    || seller?.storeName?.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
+    || '';
+  const isApproved = String(seller?.status || '').toLowerCase() === 'approved';
   const footerLinks = useMemo(() => [
     { label: '+ Add Product', to: '/seller/products/new', primary: true },
-    { label: 'Platform Store', to: `/seller/${seller?.storeName?.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9\-]/g, '') || ''}`, primary: false },
+    {
+      label: isApproved ? 'Platform Store' : 'Platform Store (pending)',
+      to: isApproved ? `/seller/${storeSlug}` : '/seller/overview',
+      primary: false,
+      disabled: !isApproved,
+    },
     { label: 'Promote Store', to: '/seller/analytics', primary: false },
-  ], [seller?.storeName]);
+  ], [storeSlug, isApproved]);
 
   useEffect(() => {
     if (!open) return undefined;

@@ -8,7 +8,7 @@ const STYLES = {
   archived: 'bg-gray-100 text-gray-500',
   published: 'bg-emerald-100 text-emerald-700',
   // Orders / Sellers
-  pending: 'bg-amber-100 text-amber-700',
+  pending: 'bg-amber-100 text-amber-800 ring-1 ring-amber-200',
   processing: 'bg-blue-100 text-blue-700',
   shipped: 'bg-indigo-100 text-indigo-700',
   completed: 'bg-emerald-100 text-emerald-700',
@@ -17,12 +17,12 @@ const STYLES = {
   paid: 'bg-emerald-100 text-emerald-700',
   unpaid: 'bg-amber-100 text-amber-700',
   // Reviews / Coupons / Banners / Users
-  approved: 'bg-emerald-100 text-emerald-700',
-  rejected: 'bg-red-100 text-red-700',
+  approved: 'bg-emerald-100 text-emerald-800 ring-1 ring-emerald-200',
+  rejected: 'bg-red-100 text-red-800 ring-1 ring-red-200',
   expired: 'bg-gray-100 text-gray-500',
   scheduled: 'bg-blue-100 text-blue-700',
   invited: 'bg-blue-100 text-blue-700',
-  suspended: 'bg-red-100 text-red-700',
+  suspended: 'bg-red-100 text-red-800 ring-1 ring-red-200',
   blocked: 'bg-red-100 text-red-700',
   // Inventory
   in_stock: 'bg-emerald-100 text-emerald-700',

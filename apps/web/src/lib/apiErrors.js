@@ -61,12 +61,22 @@ export function normalizeApiError(error) {
 
   const payload = response.data || {};
   const status = response.status;
+  const code = payload.code || `HTTP_${status}`;
+  // Never surface raw refresh-token errors to users — send them to sign in.
+  if (code === 'REFRESH_REQUIRED' || /refresh token required/i.test(String(payload.message || ''))) {
+    return new ApiError('Please sign in to continue.', {
+      status: 401,
+      code: 'REFRESH_REQUIRED',
+      errors: payload.errors || null,
+      data: payload.data || null,
+    });
+  }
   const message = payload.message
     || messageForStatus(status, error.message);
 
   return new ApiError(message, {
     status,
-    code: payload.code || `HTTP_${status}`,
+    code,
     errors: payload.errors || null,
     data: payload.data || null,
   });

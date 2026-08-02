@@ -25,9 +25,18 @@ export const SellerAuthProvider = ({ children }) => {
       storeName: profile?.storeName || user.name,
       name: user.name,
       email: user.email,
-      slug: profile?.storeSlug || null,
+      slug: profile?.slug || profile?.storeSlug || null,
       joinedAt: profile?.createdAt || user.createdAt || null,
-      status: profile?.status || null,
+      status: profile?.status || 'pending',
+      commissionRate: profile?.commissionRate ?? profile?.commission ?? 15,
+      commission: profile?.commission ?? profile?.commissionRate ?? 15,
+      approvedAt: profile?.approvedAt || null,
+      approvedBy: profile?.approvedBy || null,
+      verified: !!profile?.verified,
+      bio: profile?.bio || '',
+      phone: profile?.phone || user.phone || '',
+      logo: profile?.logo || '',
+      banner: profile?.banner || '',
     };
   }, [user, profiles]);
 
