@@ -106,12 +106,17 @@ const SellerEarningsTab = ({
             >
               Withdraw
             </button>
-            <DialogContent>
+            <DialogContent className="sm:max-w-lg">
               <DialogHeader>
                 <DialogTitle>Withdraw earnings</DialogTitle>
                 <DialogDescription>Available balance: ${available.toFixed(2)}</DialogDescription>
               </DialogHeader>
-              <form onSubmit={submitWithdrawal} className="space-y-4">
+              <form
+                onSubmit={submitWithdrawal}
+                className="space-y-4"
+                data-selected-currency={coin}
+                data-selected-network={network}
+              >
                 <div>
                   <label className="block text-sm font-medium mb-1.5">Amount ($)</label>
                   <input type="number" step="0.01" min="0" max={available} value={amount} onChange={(e) => setAmount(e.target.value)} className={inputClass} placeholder="0.00" required />
@@ -127,11 +132,15 @@ const SellerEarningsTab = ({
                   <label className="block text-sm font-medium mb-1.5">Wallet address</label>
                   <input value={walletAddress} onChange={(e) => setWalletAddress(e.target.value)} className={inputClass} placeholder="Paste your payout address" required />
                 </div>
+                <p className="text-xs text-muted-foreground">
+                  Request will submit <span className="font-semibold text-foreground">{coin}</span> on{' '}
+                  <span className="font-semibold text-foreground">{network}</span>.
+                </p>
                 <DialogFooter>
                   <button type="button" onClick={() => setOpen(false)} className="px-5 py-2.5 rounded-full text-sm font-semibold border border-border hover:bg-secondary transition-colors">
                     Cancel
                   </button>
-                  <button type="submit" disabled={submitting || !amount || Number(amount) <= 0 || Number(amount) > available} className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold brand-gradient text-white disabled:opacity-60">
+                  <button type="submit" disabled={submitting || !amount || Number(amount) <= 0 || Number(amount) > available || !coin || !network} className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold brand-gradient text-white disabled:opacity-60">
                     {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
                     Request Withdrawal
                   </button>

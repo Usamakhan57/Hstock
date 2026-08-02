@@ -5,6 +5,7 @@ import {
   getDefaultNetworkForCoin,
   getNetworksForCoin,
   getWithdrawAsset,
+  resolveNetworkForCoin,
 } from './cryptoAssets';
 
 describe('cryptoAssets', () => {
@@ -32,5 +33,21 @@ describe('cryptoAssets', () => {
     expect(filterWithdrawAssets('teth').map((a) => a.symbol)).toContain('USDT');
     expect(filterWithdrawAssets('sol').map((a) => a.symbol)).toEqual(expect.arrayContaining(['SOL', 'USDT', 'USDC']));
     expect(getWithdrawAsset('pol').symbol).toBe('POL');
+  });
+
+  it('resets incompatible networks when currency changes', () => {
+    expect(resolveNetworkForCoin('USDT', 'TRC20')).toBe('TRC20');
+    expect(resolveNetworkForCoin('USDT', 'ERC20')).toBe('ERC20');
+    expect(resolveNetworkForCoin('BTC', 'TRC20')).toBe('BTC');
+    expect(resolveNetworkForCoin('SOL', 'ERC20')).toBe('SOL');
+    expect(resolveNetworkForCoin('POL', 'POLYGON')).toBe('POLYGON');
+  });
+
+  it('exposes every required withdraw currency', () => {
+    const required = ['USDT', 'BTC', 'ETH', 'BNB', 'USDC', 'TRX', 'LTC', 'SOL', 'TON', 'POL', 'XMR', 'DOGE', 'XRP'];
+    required.forEach((symbol) => {
+      expect(getWithdrawAsset(symbol).symbol).toBe(symbol);
+      expect(getNetworksForCoin(symbol).length).toBeGreaterThan(0);
+    });
   });
 });

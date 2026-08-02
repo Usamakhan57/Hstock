@@ -124,6 +124,16 @@ export function getDefaultNetworkForCoin(symbol) {
   return networks[0]?.code || 'TRC20';
 }
 
+/** Keep current network when still valid; otherwise fall back to the coin default. */
+export function resolveNetworkForCoin(symbol, currentNetwork) {
+  const networks = getNetworksForCoin(symbol);
+  const current = String(currentNetwork || '').toUpperCase();
+  if (networks.some((network) => network.code === current)) {
+    return current;
+  }
+  return networks[0]?.code || getDefaultNetworkForCoin(symbol);
+}
+
 export function filterWithdrawAssets(query = '') {
   const q = String(query || '').trim().toLowerCase();
   if (!q) return [...WITHDRAW_CRYPTO_ASSETS];
@@ -147,6 +157,7 @@ export default {
   getWithdrawAsset,
   getNetworksForCoin,
   getDefaultNetworkForCoin,
+  resolveNetworkForCoin,
   filterWithdrawAssets,
   formatAssetNetworkLabel,
 };
