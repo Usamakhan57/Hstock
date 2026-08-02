@@ -37,4 +37,10 @@ test('every seeded service is homepage-ready and active', () => {
     assert.ok(row.slug);
     assert.ok(row.icon);
   }
+
+  // Parents keep the fixed Services-page order (not alphabetical).
+  const roots = rows.filter((r) => !r.parentSlug);
+  assert.equal(roots[0].name, 'Social Accounts');
+  assert.equal(roots[1].name, 'Gaming');
+  assert.equal(roots[2].name, 'Streaming');
 });
