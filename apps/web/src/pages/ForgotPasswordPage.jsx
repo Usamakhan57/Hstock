@@ -31,7 +31,17 @@ const ForgotPasswordPage = () => {
         description: result.message || 'If an account exists, a reset link was sent.',
       });
     } catch (err) {
-      setError(err.message || 'Unable to send reset email.');
+      const code = err?.code;
+      const missing = err?.errors?.missing || err?.data?.missing;
+      if (code === 'SMTP_NOT_CONFIGURED' || code === 'SMTP_SEND_FAILED') {
+        setError(
+          Array.isArray(missing) && missing.length
+            ? `Email service is unavailable. Missing configuration: ${missing.join(', ')}.`
+            : (err.message || 'Email service is temporarily unavailable. Please try again later.'),
+        );
+      } else {
+        setError(err.message || 'Unable to send reset email.');
+      }
     } finally {
       setLoading(false);
     }

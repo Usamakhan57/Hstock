@@ -80,6 +80,7 @@ const envSchema = z.object({
   SMTP_USER: z.string().optional().default(''),
   SMTP_PASS: z.string().optional().default(''),
   EMAIL_FROM: z.string().optional().default('noreply@apnastore.org'),
+  EMAIL_REPLY_TO: z.string().optional().default(''),
 
   /** Optional Redis URL for multi-instance Socket.io / queue backends */
   REDIS_URL: z.string().optional().default(''),

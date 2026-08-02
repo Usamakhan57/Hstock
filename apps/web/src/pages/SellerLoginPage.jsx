@@ -99,7 +99,12 @@ const SellerLoginPage = () => {
                 </div>
               </div>
               <div>
-                <label htmlFor="password" className="text-sm font-medium block mb-1.5">Password</label>
+                <div className="mb-1.5 flex items-center justify-between gap-3">
+                  <label htmlFor="password" className="text-sm font-medium">Password</label>
+                  <Link to="/forgot-password" className="text-xs font-semibold text-primary hover:underline">
+                    Forgot Password?
+                  </Link>
+                </div>
                 <div className="flex items-center gap-2 bg-secondary/60 rounded-2xl px-4 py-3 border border-transparent focus-within:border-primary transition-colors">
                   <Lock className="w-4 h-4 text-muted-foreground shrink-0" />
                   <input id="password" type={showPw ? 'text' : 'password'} autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" className="bg-transparent outline-none text-sm w-full" />

@@ -23,6 +23,7 @@ import { USER_ROLES, ADMIN_LOGIN_ROLES } from '../constants/roles.js';
 import { UserStatusEnum, VerificationStatusEnum } from '../constants/enums.js';
 import { jwtConfig } from '../config/jwt.js';
 import { env } from '../config/env.js';
+import { logger } from '../config/logger.js';
 import { sendTemplatedEmail } from '../emails/email.service.js';
 import { logActivity } from './activity.service.js';
 import { getSellerRegistrationFee } from './config.service.js';
@@ -490,11 +491,27 @@ export async function refreshSession(refreshToken, meta = {}) {
 }
 
 export async function forgotPassword(email) {
-  const user = await User.findOne({ email: email.toLowerCase() });
-  // Always return success to avoid email enumeration
+  const normalized = String(email || '').trim().toLowerCase();
+  if (!normalized || !normalized.includes('@')) {
+    throw new AppError('A valid email address is required', 400, {
+      code: 'INVALID_EMAIL',
+    });
+  }
+
+  const user = await User.findOne({ email: normalized });
+  // Always return success for unknown emails to avoid account enumeration.
   if (!user) {
+    logger.info('Password reset requested for unknown email', {
+      emailDomain: normalized.split('@')[1] || null,
+    });
     return { sent: true };
   }
+
+  // Invalidate any previous unused reset tokens (single active token).
+  await PasswordResetToken.updateMany(
+    { user: user._id, usedAt: null },
+    { $set: { usedAt: new Date() } },
+  );
 
   const raw = generateOpaqueToken(32);
   const tokenHash = hashToken(raw);
@@ -506,22 +523,50 @@ export async function forgotPassword(email) {
     expiresAt,
   });
 
-  const resetUrl = `${env.FRONTEND_URL || env.APP_URL}/reset-password?token=${raw}`;
-  await sendTemplatedEmail('password_reset', {
+  const frontendBase = String(env.FRONTEND_URL || env.APP_URL || '').replace(/\/$/, '');
+  const resetUrl = `${frontendBase}/reset-password?token=${encodeURIComponent(raw)}`;
+
+  logger.info('Password reset token created', {
+    userId: String(user._id),
+    roles: user.roles,
+    expiresAt,
+  });
+
+  // If SMTP fails / is missing, surface a real error for existing accounts.
+  const emailResult = await sendTemplatedEmail('password_reset', {
     to: user.email,
-    data: { name: user.name, resetUrl },
+    data: {
+      name: user.name,
+      resetUrl,
+      expiresInMinutes: 60,
+    },
+  });
+
+  logger.info('Password reset email dispatch result', {
+    userId: String(user._id),
+    sent: emailResult.sent,
+    provider: emailResult.provider,
+    messageId: emailResult.messageId || null,
   });
 
   return {
     sent: true,
+    emailDelivered: Boolean(emailResult.sent),
     ...(env.isProduction ? {} : { token: raw, resetUrl, expiresAt }),
   };
 }
 
 export async function resetPassword({ token, password }) {
-  const tokenHash = hashToken(token);
+  if (!token || !String(token).trim()) {
+    throw new AppError('Invalid or expired reset token', 400, {
+      code: 'INVALID_RESET_TOKEN',
+    });
+  }
+
+  const tokenHash = hashToken(String(token).trim());
   const record = await PasswordResetToken.findOne({ tokenHash, usedAt: null });
   if (!record || record.expiresAt.getTime() < Date.now()) {
+    logger.warn('Password reset rejected: invalid or expired token');
     throw new AppError('Invalid or expired reset token', 400, {
       code: 'INVALID_RESET_TOKEN',
     });
@@ -535,8 +580,13 @@ export async function resetPassword({ token, password }) {
   user.passwordHash = await hashPassword(password);
   await user.save();
 
+  // Mark this token used and burn any other outstanding tokens for the user.
   record.usedAt = new Date();
   await record.save();
+  await PasswordResetToken.updateMany(
+    { user: user._id, usedAt: null, _id: { $ne: record._id } },
+    { $set: { usedAt: new Date() } },
+  );
 
   await RefreshToken.updateMany(
     { user: user._id, revokedAt: null },
@@ -548,6 +598,11 @@ export async function resetPassword({ token, password }) {
     action: 'auth.password.reset',
     resource: 'User',
     resourceId: user._id,
+  });
+
+  logger.info('Password reset completed', {
+    userId: String(user._id),
+    roles: user.roles,
   });
 
   return { reset: true };
