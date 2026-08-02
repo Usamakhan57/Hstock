@@ -16,6 +16,10 @@ function otherStore(remember) {
   return remember ? sessionStorage : localStorage;
 }
 
+function readRaw(key) {
+  return localStorage.getItem(key) || sessionStorage.getItem(key);
+}
+
 export function getRememberMe() {
   return localStorage.getItem(REMEMBER_KEY) !== 'false';
 }
@@ -25,38 +29,52 @@ export function setRememberMe(remember) {
 }
 
 export function getAccessToken() {
-  return localStorage.getItem(ACCESS_KEY) || sessionStorage.getItem(ACCESS_KEY);
+  return readRaw(ACCESS_KEY);
 }
 
 export function getRefreshToken() {
-  return localStorage.getItem(REFRESH_KEY) || sessionStorage.getItem(REFRESH_KEY);
+  return readRaw(REFRESH_KEY);
 }
 
 export function getStoredUser() {
   try {
-    const raw = localStorage.getItem(USER_KEY) || sessionStorage.getItem(USER_KEY);
+    const raw = readRaw(USER_KEY);
     return raw ? JSON.parse(raw) : null;
   } catch {
     return null;
   }
 }
 
-export function persistSession({ accessToken, refreshToken, user, remember = getRememberMe() }) {
+/**
+ * Persist session fields.
+ * `undefined` means "leave existing value as-is" so profile refreshes
+ * do not wipe the refresh token and break silent re-auth.
+ */
+export function persistSession({
+  accessToken,
+  refreshToken,
+  user,
+  remember = getRememberMe(),
+} = {}) {
   setRememberMe(remember);
   const primary = store(remember);
   const secondary = otherStore(remember);
+
+  const nextAccess = accessToken !== undefined ? accessToken : readRaw(ACCESS_KEY);
+  const nextRefresh = refreshToken !== undefined ? refreshToken : readRaw(REFRESH_KEY);
+  const nextUser = user !== undefined ? user : getStoredUser();
 
   secondary.removeItem(ACCESS_KEY);
   secondary.removeItem(REFRESH_KEY);
   secondary.removeItem(USER_KEY);
 
-  if (accessToken) primary.setItem(ACCESS_KEY, accessToken);
+  if (nextAccess) primary.setItem(ACCESS_KEY, nextAccess);
   else primary.removeItem(ACCESS_KEY);
 
-  if (refreshToken) primary.setItem(REFRESH_KEY, refreshToken);
+  if (nextRefresh) primary.setItem(REFRESH_KEY, nextRefresh);
   else primary.removeItem(REFRESH_KEY);
 
-  if (user) primary.setItem(USER_KEY, JSON.stringify(user));
+  if (nextUser) primary.setItem(USER_KEY, JSON.stringify(nextUser));
   else primary.removeItem(USER_KEY);
 }
 

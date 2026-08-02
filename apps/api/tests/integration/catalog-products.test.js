@@ -105,7 +105,15 @@ test('category brand tag CRUD', async () => {
 
 test('product foundation create + moderate', async () => {
   const adminToken = await createAdminToken();
-  const { token: sellerToken } = await createSellerToken();
+  const { token: sellerToken, seller } = await createSellerToken();
+  const sellerId = seller._id || seller.id;
+
+  // Seller must be approved before listings appear in the public catalog.
+  const approveSeller = await request(app)
+    .patch(`/api/v1/users/sellers/${sellerId}`)
+    .set('Authorization', `Bearer ${adminToken}`)
+    .send({ status: 'approved', verified: true });
+  assert.equal(approveSeller.status, 200);
 
   const category = await request(app)
     .post('/api/v1/categories')

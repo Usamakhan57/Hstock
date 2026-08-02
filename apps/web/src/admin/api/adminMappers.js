@@ -73,6 +73,7 @@ export function mapSellerFromProfile(seller, user = null) {
   if (!seller && !user) return null;
   const metrics = seller?.metrics || {};
   const status = seller?.status || 'pending';
+  const commissionRate = seller?.commissionRate ?? seller?.commission ?? 15;
   return {
     id: idOf(seller) || idOf(user),
     sellerProfileId: seller ? idOf(seller) : null,
@@ -87,7 +88,11 @@ export function mapSellerFromProfile(seller, user = null) {
     bio: seller?.bio || '',
     productsCount: metrics.productsCount ?? 0,
     totalSales: Number(metrics.totalSales ?? 0),
-    commissionRate: seller?.commissionRate ?? 15,
+    commissionRate,
+    commission: commissionRate,
+    approvedAt: seller?.approvedAt || null,
+    approvedBy: seller?.approvedBy || null,
+    slug: seller?.slug || seller?.storeSlug || null,
     joinedAt: seller?.joinedAt || seller?.createdAt || user?.createdAt || new Date().toISOString(),
   };
 }

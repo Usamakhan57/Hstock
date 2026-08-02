@@ -15,7 +15,7 @@ const NOTIFICATION_TOGGLES = [
   { key: 'marketing', label: 'ApnaStore news & tips', hint: 'Occasional seller tips and platform updates.' },
 ];
 
-const SellerStoreSettingsTab = ({ seller }) => {
+const SellerStoreSettingsTab = ({ seller, canManagePayouts = true }) => {
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
@@ -114,10 +114,19 @@ const SellerStoreSettingsTab = ({ seller }) => {
 
         <div className="bg-white rounded-3xl border border-border soft-shadow p-6 space-y-4">
           <h3 className="font-bold">Payment Information</h3>
+          {!canManagePayouts ? (
+            <p className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+              Payouts are disabled until your seller account is approved by an administrator.
+            </p>
+          ) : null}
           <div>
             <label className="block text-sm font-medium mb-1.5">Payout Network</label>
-            <Select value={form.payoutMethod} onValueChange={(v) => setForm((f) => ({ ...f, payoutMethod: v }))}>
-              <SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger>
+            <Select
+              value={form.payoutMethod}
+              onValueChange={(v) => canManagePayouts && setForm((f) => ({ ...f, payoutMethod: v }))}
+              disabled={!canManagePayouts}
+            >
+              <SelectTrigger className="rounded-xl" disabled={!canManagePayouts}><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="BTC">Bitcoin</SelectItem>
                 <SelectItem value="ETH">Ethereum</SelectItem>
@@ -129,7 +138,13 @@ const SellerStoreSettingsTab = ({ seller }) => {
           </div>
           <div>
             <label className="block text-sm font-medium mb-1.5">Payout Wallet Address</label>
-            <input value={form.payoutWalletAddress} onChange={set('payoutWalletAddress')} className={inputClass} placeholder="0x... or wallet address" />
+            <input
+              value={form.payoutWalletAddress}
+              onChange={set('payoutWalletAddress')}
+              className={inputClass}
+              placeholder="0x... or wallet address"
+              disabled={!canManagePayouts}
+            />
           </div>
         </div>
 

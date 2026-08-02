@@ -1,0 +1,127 @@
+import React from 'react';
+import { ExternalLink, Link2, Ban } from 'lucide-react';
+
+/**
+ * Prominent seller approval status card shown at the top of the seller dashboard.
+ */
+const SellerVerificationBanner = ({ seller }) => {
+  const status = String(seller?.status || 'pending').toLowerCase();
+  const commission = Number(seller?.commissionRate ?? seller?.commission ?? 15);
+  const storeSlug = seller?.slug
+    || (seller?.storeName || '')
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, '-')
+      .replace(/[^a-z0-9-]/g, '');
+  const storePath = storeSlug ? `/seller/${storeSlug}` : null;
+  const storeUrl = storePath && typeof window !== 'undefined'
+    ? `${window.location.origin}${storePath}`
+    : storePath;
+  const isApproved = status === 'approved';
+  const isRejected = status === 'rejected';
+  const isSuspended = status === 'suspended';
+
+  if (isApproved) {
+    return (
+      <div className="mb-8 rounded-[1.75rem] border border-emerald-200 bg-emerald-50 p-6 shadow-sm">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <h2 className="text-lg font-black tracking-tight text-emerald-900">
+              ✅ Seller Account Approved
+            </h2>
+            <p className="mt-2 max-w-2xl text-sm text-emerald-800/90">
+              Your store is now live and your products are visible in the marketplace.
+            </p>
+            <dl className="mt-4 grid gap-2 text-sm sm:grid-cols-2">
+              <div>
+                <dt className="text-emerald-700/80">Status</dt>
+                <dd className="font-semibold text-emerald-950">Approved</dd>
+              </div>
+              <div>
+                <dt className="text-emerald-700/80">Commission</dt>
+                <dd className="font-semibold text-emerald-950">{commission}%</dd>
+              </div>
+              {storeUrl ? (
+                <div className="sm:col-span-2">
+                  <dt className="text-emerald-700/80">Public Store URL</dt>
+                  <dd className="mt-0.5 break-all font-medium text-emerald-950">
+                    <a href={storeUrl} className="inline-flex items-center gap-1.5 hover:underline" target="_blank" rel="noreferrer">
+                      <Link2 className="h-3.5 w-3.5" />
+                      {storeUrl}
+                    </a>
+                  </dd>
+                </div>
+              ) : null}
+            </dl>
+          </div>
+          {storeUrl ? (
+            <a
+              href={storeUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-full bg-emerald-600 px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700"
+            >
+              Open Store
+              <ExternalLink className="h-4 w-4" />
+            </a>
+          ) : null}
+        </div>
+      </div>
+    );
+  }
+
+  if (isRejected || isSuspended) {
+    const title = isRejected ? 'Seller Account Rejected' : 'Seller Account Suspended';
+    const description = isRejected
+      ? 'Your seller application was not approved. Contact support if you believe this is a mistake.'
+      : 'Your seller account is suspended. Public store features and payouts are disabled until reinstated.';
+    return (
+      <div className="mb-8 rounded-[1.75rem] border border-red-200 bg-red-50 p-6 shadow-sm">
+        <h2 className="text-lg font-black tracking-tight text-red-900">⛔ {title}</h2>
+        <p className="mt-2 max-w-2xl text-sm text-red-800/90">{description}</p>
+        <p className="mt-4 text-sm font-semibold text-red-950">
+          Current Status: {isRejected ? 'Rejected' : 'Suspended'}
+        </p>
+      </div>
+    );
+  }
+
+  // Pending (default)
+  return (
+    <div className="mb-8 rounded-[1.75rem] border border-amber-200 bg-amber-50 p-6 shadow-sm">
+      <h2 className="text-lg font-black tracking-tight text-amber-950">
+        ⏳ Seller Verification Pending
+      </h2>
+      <p className="mt-2 max-w-2xl text-sm text-amber-900/90">
+        Your seller account is currently under review.
+        You can upload products, but they will not appear publicly until an administrator approves your store.
+      </p>
+      <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
+        <div>
+          <dt className="text-amber-800/80">Current Status</dt>
+          <dd className="font-semibold text-amber-950">Pending Approval</dd>
+        </div>
+        <div>
+          <dt className="text-amber-800/80">Estimated review</dt>
+          <dd className="font-semibold text-amber-950">Usually within 24–48 hours</dd>
+        </div>
+      </dl>
+      <ul className="mt-4 space-y-1.5 text-sm text-amber-900/90">
+        <li className="inline-flex items-center gap-2">
+          <Ban className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+          Withdraw disabled until approval
+        </li>
+        <li className="inline-flex items-center gap-2">
+          <Ban className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+          Payouts disabled until approval
+        </li>
+        <li className="inline-flex items-center gap-2">
+          <Ban className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+          Public Store URL disabled until approval
+        </li>
+      </ul>
+    </div>
+  );
+};
+
+export default SellerVerificationBanner;

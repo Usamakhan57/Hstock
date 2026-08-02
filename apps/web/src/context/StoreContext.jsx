@@ -108,7 +108,7 @@ export const StoreProvider = ({ children }) => {
             setProfiles(me.profiles || null);
             persistSession({
               accessToken: getAccessToken(),
-              refreshToken: undefined,
+              // Preserve refresh token — never wipe it during hydrate.
               user: me.user,
               remember: getRememberMe(),
             });
@@ -253,7 +253,7 @@ export const StoreProvider = ({ children }) => {
     setProfiles(me.profiles || null);
     persistSession({
       accessToken: getAccessToken(),
-      refreshToken: undefined,
+      // Keep existing refresh token so subsequent 401s can silent-refresh.
       user: me.user,
       remember: getRememberMe(),
     });

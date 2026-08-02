@@ -31,4 +31,17 @@ describe('apiErrors', () => {
     expect(error.code).toBe('EMAIL_TAKEN');
     expect(error.errors).toEqual({ email: 'taken' });
   });
+
+  it('maps refresh-token required errors to a sign-in message', () => {
+    const error = normalizeApiError({
+      response: {
+        status: 401,
+        data: { message: 'Refresh token required', code: 'REFRESH_REQUIRED' },
+      },
+    });
+    expect(error.status).toBe(401);
+    expect(error.code).toBe('REFRESH_REQUIRED');
+    expect(error.message).toMatch(/sign in/i);
+    expect(error.message).not.toMatch(/refresh token required/i);
+  });
 });

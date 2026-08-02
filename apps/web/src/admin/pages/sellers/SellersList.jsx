@@ -1,17 +1,31 @@
-import React, { useEffect, useState } from 'react';
-import { Plus, Pencil, Trash2, Check, X, Ban, RotateCcw, Store } from 'lucide-react';
+import React, { useCallback, useEffect, useState } from 'react';
+import { Pencil, Check, X, Ban, RotateCcw, Store } from 'lucide-react';
 import PageHeader from '../../components/PageHeader';
 import DataTable from '../../components/DataTable';
 import StatusBadge from '../../components/StatusBadge';
-import ConfirmDeleteDialog from '../../components/ConfirmDeleteDialog';
 import FormSheet, { inputClass } from '../../components/FormSheet';
 import {
-  getSellers, getSeller, createSeller, updateSeller, deleteSeller,
+  getSellers, getSeller, updateSeller,
   approveSeller, rejectSeller, suspendSeller, reinstateSeller,
 } from '../../api/sellers';
 import { useToast } from '../../../hooks/use-toast';
 
-const EMPTY = { storeName: '', ownerName: '', email: '', phone: '', commissionRate: '15', status: 'pending' };
+const EMPTY = {
+  storeName: '',
+  ownerName: '',
+  email: '',
+  phone: '',
+  commissionRate: '15',
+  status: 'pending',
+};
+
+const STATUS_OPTIONS = [
+  { value: 'pending', label: 'Pending' },
+  { value: 'approved', label: 'Approved' },
+  { value: 'rejected', label: 'Rejected' },
+  { value: 'suspended', label: 'Suspended' },
+];
+
 const fmtDate = (iso) => (iso ? new Date(iso).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : '—');
 const fmtMoney = (n) => `$${Number(n || 0).toFixed(2)}`;
 
@@ -23,29 +37,40 @@ const SellersList = () => {
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(EMPTY);
   const [saving, setSaving] = useState(false);
-  const [deleteTarget, setDeleteTarget] = useState(null);
-  const [busy, setBusy] = useState(false);
+  const [loadingSeller, setLoadingSeller] = useState(false);
 
-  const load = () => {
+  const load = useCallback(async () => {
     setLoading(true);
-    getSellers()
-      .then((s) => { setSellers(s); setLoading(false); })
-      .catch((error) => {
-        setLoading(false);
-        toast({
-          title: 'Unable to load sellers',
-          description: error?.message || 'Please try again.',
-          variant: 'destructive',
-        });
+    try {
+      const list = await getSellers();
+      setSellers(Array.isArray(list) ? list : []);
+    } catch (error) {
+      toast({
+        title: 'Unable to load sellers',
+        description: error?.message || 'Please try again.',
+        variant: 'destructive',
       });
-  };
-  useEffect(load, []);
+    } finally {
+      setLoading(false);
+    }
+  }, [toast]);
 
-  const openAdd = () => { setEditing(null); setForm(EMPTY); setSheetOpen(true); };
+  useEffect(() => {
+    load();
+  }, [load]);
+
   const openEdit = async (row) => {
     setSheetOpen(true);
     setEditing(row);
-    setForm({ ...row, commissionRate: String(row.commissionRate ?? 15) });
+    setForm({
+      storeName: row.storeName || '',
+      ownerName: row.ownerName || '',
+      email: row.email || '',
+      phone: row.phone || '',
+      commissionRate: String(row.commissionRate ?? row.commission ?? 15),
+      status: row.status || 'pending',
+    });
+    setLoadingSeller(true);
     try {
       const fresh = await getSeller(row.sellerProfileId || row.id || row.userId);
       setEditing(fresh);
@@ -54,7 +79,7 @@ const SellersList = () => {
         ownerName: fresh.ownerName || '',
         email: fresh.email || '',
         phone: fresh.phone || '',
-        commissionRate: String(fresh.commissionRate ?? 15),
+        commissionRate: String(fresh.commissionRate ?? fresh.commission ?? 15),
         status: fresh.status || 'pending',
       });
     } catch (error) {
@@ -63,11 +88,18 @@ const SellersList = () => {
         description: error?.message || 'Please try again.',
         variant: 'destructive',
       });
+    } finally {
+      setLoadingSeller(false);
     }
   };
 
   const handleSubmit = async () => {
-    if (!form.storeName.trim() || !form.email.trim()) { toast({ title: 'Store name and email are required', variant: 'destructive' }); return; }
+    if (!editing) return;
+    if (!form.storeName.trim() || !form.email.trim()) {
+      toast({ title: 'Store name and email are required', variant: 'destructive' });
+      return;
+    }
+    if (saving) return;
     setSaving(true);
     try {
       const payload = {
@@ -77,15 +109,16 @@ const SellersList = () => {
         phone: form.phone || '',
         commissionRate: Number(form.commissionRate || 15),
         status: form.status,
+        verified: form.status === 'approved',
       };
-      if (editing) {
-        await updateSeller(editing.sellerProfileId || editing.id || editing.userId, payload);
-      } else {
-        await createSeller({ ...payload, productsCount: 0, totalSales: 0, joinedAt: new Date().toISOString() });
-      }
-      toast({ title: editing ? 'Seller updated' : 'Seller added', description: payload.storeName });
+      await updateSeller(editing.sellerProfileId || editing.id || editing.userId, payload);
+      toast({
+        title: 'Seller updated',
+        description: `${payload.storeName} saved successfully.`,
+      });
       setSheetOpen(false);
-      load();
+      setEditing(null);
+      await load();
     } catch (error) {
       toast({
         title: 'Unable to save seller',
@@ -101,7 +134,7 @@ const SellersList = () => {
     try {
       await fn(row.sellerProfileId || row.id || row.userId);
       toast({ title: message, description: row.storeName });
-      load();
+      await load();
     } catch (error) {
       toast({
         title: 'Action failed',
@@ -111,40 +144,48 @@ const SellersList = () => {
     }
   };
 
-  const handleDelete = async () => {
-    setBusy(true);
-    await deleteSeller(deleteTarget.id);
-    toast({ title: 'Seller deleted', description: deleteTarget.storeName });
-    setBusy(false);
-    setDeleteTarget(null);
-    load();
-  };
-
   return (
     <div>
       <PageHeader
         title="Sellers"
         description={`${sellers.length} marketplace sellers`}
-        actions={
-          <button onClick={openAdd} className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-full brand-gradient text-white text-sm font-semibold soft-shadow">
-            <Plus className="w-4 h-4" /> Add Seller
-          </button>
-        }
       />
 
       <DataTable
         isLoading={loading}
         data={sellers}
         searchKeys={['storeName', 'ownerName', 'email']}
-        filters={[{ key: 'status', label: 'Status', options: [{ value: 'pending', label: 'Pending' }, { value: 'approved', label: 'Approved' }, { value: 'rejected', label: 'Rejected' }, { value: 'suspended', label: 'Suspended' }] }]}
+        filters={[{
+          key: 'status',
+          label: 'Status',
+          options: STATUS_OPTIONS.map((o) => ({ value: o.value, label: o.label })),
+        }]}
         onRowClick={openEdit}
         columns={[
-          { key: 'storeName', label: 'Store', render: (row) => (<div><p className="font-medium">{row.storeName}</p><p className="text-xs text-muted-foreground">{row.ownerName}</p></div>) },
+          {
+            key: 'storeName',
+            label: 'Store',
+            render: (row) => (
+              <div>
+                <p className="font-medium">{row.storeName}</p>
+                <p className="text-xs text-muted-foreground">{row.ownerName}</p>
+              </div>
+            ),
+          },
           { key: 'email', label: 'Email' },
           { key: 'productsCount', label: 'Products' },
           { key: 'totalSales', label: 'Total Sales', render: (row) => fmtMoney(row.totalSales) },
+          {
+            key: 'commissionRate',
+            label: 'Commission',
+            render: (row) => `${Number(row.commissionRate ?? row.commission ?? 15)}%`,
+          },
           { key: 'joinedAt', label: 'Joined', render: (row) => fmtDate(row.joinedAt) },
-          { key: 'status', label: 'Status', render: (row) => <StatusBadge status={row.status} /> },
+          {
+            key: 'status',
+            label: 'Status',
+            render: (row) => <StatusBadge status={row.status || 'pending'} />,
+          },
         ]}
         rowActions={(row) => [
           ...(row.status === 'pending' ? [
@@ -159,44 +200,97 @@ const SellersList = () => {
           ] : []),
           { separator: true },
           { label: 'Edit', icon: Pencil, onClick: () => openEdit(row) },
-          { label: 'Delete', icon: Trash2, destructive: true, onClick: () => setDeleteTarget(row) },
         ]}
         emptyState={{ icon: Store, title: 'No sellers yet' }}
       />
 
-      <FormSheet open={sheetOpen} onOpenChange={setSheetOpen} title={editing ? 'Edit Seller' : 'Add Seller'} onSubmit={handleSubmit} submitting={saving}>
+      <FormSheet
+        open={sheetOpen}
+        onOpenChange={(open) => {
+          if (saving) return;
+          setSheetOpen(open);
+          if (!open) setEditing(null);
+        }}
+        title={editing ? 'Edit Seller' : 'Seller'}
+        onSubmit={handleSubmit}
+        submitting={saving || loadingSeller}
+      >
+        <div className="rounded-2xl border border-border bg-secondary/40 px-4 py-3">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Current status</p>
+          <div className="mt-2">
+            <StatusBadge status={form.status || 'pending'} />
+          </div>
+        </div>
+
         <div>
           <label className="block text-sm font-medium mb-1.5">Store Name</label>
-          <input value={form.storeName} onChange={(e) => setForm((f) => ({ ...f, storeName: e.target.value }))} className={inputClass} />
+          <input
+            value={form.storeName}
+            onChange={(e) => setForm((f) => ({ ...f, storeName: e.target.value }))}
+            className={inputClass}
+            disabled={loadingSeller || saving}
+          />
         </div>
         <div>
           <label className="block text-sm font-medium mb-1.5">Owner Name</label>
-          <input value={form.ownerName} onChange={(e) => setForm((f) => ({ ...f, ownerName: e.target.value }))} className={inputClass} />
+          <input
+            value={form.ownerName}
+            onChange={(e) => setForm((f) => ({ ...f, ownerName: e.target.value }))}
+            className={inputClass}
+            disabled={loadingSeller || saving}
+          />
         </div>
         <div>
           <label className="block text-sm font-medium mb-1.5">Email</label>
-          <input type="email" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} className={inputClass} />
+          <input
+            type="email"
+            value={form.email}
+            onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+            className={inputClass}
+            disabled={loadingSeller || saving}
+          />
         </div>
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium mb-1.5">Phone</label>
-            <input value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} className={inputClass} />
+            <input
+              value={form.phone}
+              onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
+              className={inputClass}
+              disabled={loadingSeller || saving}
+            />
           </div>
           <div>
             <label className="block text-sm font-medium mb-1.5">Commission (%)</label>
-            <input type="number" min="0" max="100" value={form.commissionRate} onChange={(e) => setForm((f) => ({ ...f, commissionRate: e.target.value }))} className={inputClass} />
+            <input
+              type="number"
+              min="0"
+              max="100"
+              step="0.1"
+              value={form.commissionRate}
+              onChange={(e) => setForm((f) => ({ ...f, commissionRate: e.target.value }))}
+              className={inputClass}
+              disabled={loadingSeller || saving}
+            />
           </div>
         </div>
+        <div>
+          <label className="block text-sm font-medium mb-1.5">Status</label>
+          <select
+            value={form.status}
+            onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))}
+            className={inputClass}
+            disabled={loadingSeller || saving}
+          >
+            {STATUS_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
+          <p className="mt-1.5 text-xs text-muted-foreground">
+            Pending → Approved / Rejected. Approved → Suspended. Saving commission applies immediately.
+          </p>
+        </div>
       </FormSheet>
-
-      <ConfirmDeleteDialog
-        open={!!deleteTarget}
-        onOpenChange={(v) => !v && setDeleteTarget(null)}
-        title="Delete this seller?"
-        description={deleteTarget ? `"${deleteTarget.storeName}" will be permanently removed.` : ''}
-        onConfirm={handleDelete}
-        busy={busy}
-      />
     </div>
   );
 };
