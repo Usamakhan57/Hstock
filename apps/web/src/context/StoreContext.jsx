@@ -62,9 +62,11 @@ export const StoreProvider = ({ children }) => {
   const [catalogVersion, setCatalogVersion] = useState(0);
   const [profiles, setProfiles] = useState(null);
   const [compareList, setCompareList] = useState(() => load('hs_compare', []));
+  const [wishlist, setWishlist] = useState(() => load('apna_wishlist', load('hs_wishlist', [])));
   const [notifications, setNotifications] = useState([]);
 
   useEffect(() => { localStorage.setItem('hs_compare', JSON.stringify(compareList)); }, [compareList]);
+  useEffect(() => { localStorage.setItem('apna_wishlist', JSON.stringify(wishlist)); }, [wishlist]);
 
   useEffect(() => {
     try {
@@ -204,6 +206,18 @@ export const StoreProvider = ({ children }) => {
   const removeFromCompare = useCallback((id) => setCompareList((prev) => prev.filter((p) => p.id !== id)), []);
   const clearCompare = useCallback(() => setCompareList([]), []);
 
+  const inWishlist = useCallback((id) => wishlist.some((p) => p.id === id), [wishlist]);
+
+  const toggleWishlist = useCallback((product) => {
+    setWishlist((prev) => {
+      if (prev.some((p) => p.id === product.id)) return prev.filter((p) => p.id !== product.id);
+      return [...prev, product];
+    });
+  }, []);
+
+  const removeFromWishlist = useCallback((id) => setWishlist((prev) => prev.filter((p) => p.id !== id)), []);
+  const clearWishlist = useCallback(() => setWishlist([]), []);
+
   const applyAuthResult = useCallback((data) => {
     const nextUser = toStoreUser(data.user);
     setUser(nextUser);
@@ -274,6 +288,11 @@ export const StoreProvider = ({ children }) => {
       removeFromCompare,
       clearCompare,
       MAX_COMPARE,
+      wishlist,
+      inWishlist,
+      toggleWishlist,
+      removeFromWishlist,
+      clearWishlist,
     }}>
       {children}
     </StoreContext.Provider>

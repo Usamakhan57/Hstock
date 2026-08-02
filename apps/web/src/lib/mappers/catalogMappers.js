@@ -61,6 +61,7 @@ export function mapBackendProduct(product) {
   const artist = nameOf(seller?.storeName || seller)
     || nameOf(brand)
     || product.artist
+    || product.seller?.name
     || 'ApnaStore';
 
   const cat = nameOf(category, product.cat || 'Digital Assets');
@@ -68,6 +69,8 @@ export function mapBackendProduct(product) {
   const sellerVerified = seller?.verified === true
     || seller?.status === 'approved'
     || !!product.verifiedSeller;
+  const soldRaw = product.soldCount ?? product.salesCount ?? product.downloads;
+  const soldCount = soldRaw != null && soldRaw !== '' ? Number(soldRaw) : null;
 
   const features = Array.isArray(product.features)
     ? product.features
@@ -105,10 +108,18 @@ export function mapBackendProduct(product) {
     badge: product.featured ? 'Featured' : (product.badge || null),
     rating: product.rating != null ? Number(product.rating) : null,
     reviewCount: product.reviewCount != null ? Number(product.reviewCount) : 0,
-    downloads: product.salesCount ?? product.downloads ?? 0,
-    salesCount: product.salesCount ?? product.downloads ?? 0,
+    downloads: soldCount ?? 0,
+    salesCount: soldCount ?? 0,
+    soldCount: Number.isFinite(soldCount) ? soldCount : null,
     featured: !!product.featured,
     artist,
+    sellerName: artist,
+    seller: {
+      id: idOf(seller),
+      name: artist,
+      slug: seller?.storeSlug || slugOf(seller) || null,
+      verified: sellerVerified,
+    },
     artistSlug: seller?.storeSlug || slugOf(seller) || slugOf(brand) || null,
     sellerSlug: seller?.storeSlug || slugOf(seller) || null,
     sellerId: idOf(seller),

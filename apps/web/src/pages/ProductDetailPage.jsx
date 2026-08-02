@@ -7,6 +7,7 @@ import {
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import ProductCard from '../components/ProductCard';
+import { PRODUCT_GRID_CLASS } from '../lib/productGrid';
 import Seo from '../components/Seo';
 import Breadcrumbs from '../components/Breadcrumbs';
 import { ProductDetailSkeleton } from '../components/Skeletons';
@@ -543,7 +544,7 @@ const ProductDetailPage = () => {
         {Array.isArray(related) && related.length > 0 && (
           <div className="mt-20">
             <h2 className="text-2xl font-bold mb-6">Related Products</h2>
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
+            <div className={PRODUCT_GRID_CLASS}>
               {related.map((p) => <ProductCard key={p.id} p={p} />)}
             </div>
           </div>
@@ -557,7 +558,7 @@ const ProductDetailPage = () => {
           return (
             <div className="mt-20">
               <h2 className="text-2xl font-bold mb-6">Similar Products</h2>
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
+              <div className={PRODUCT_GRID_CLASS}>
                 {similarOnly.map((p) => <ProductCard key={p.id} p={p} />)}
               </div>
             </div>
@@ -568,7 +569,7 @@ const ProductDetailPage = () => {
         {Array.isArray(recommended) && recommended.length > 0 && (
           <div className="mt-20">
             <h2 className="text-2xl font-bold mb-6">Recommended For You</h2>
-            <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-5">
+            <div className={PRODUCT_GRID_CLASS}>
               {recommended.map((p) => <ProductCard key={p.id} p={p} />)}
             </div>
           </div>

@@ -6,6 +6,7 @@ import Footer from '../components/Footer';
 import Seo from '../components/Seo';
 import Breadcrumbs from '../components/Breadcrumbs';
 import ProductCard from '../components/ProductCard';
+import { PRODUCT_GRID_CLASS } from '../lib/productGrid';
 import EmptyState from '../components/EmptyState';
 import { NetworkErrorState } from '../components/ErrorState';
 import { ProductGridSkeleton } from '../components/Skeletons';
@@ -151,8 +152,8 @@ const ShopPage = () => {
           <div className="mt-6">
             {loading ? (
               <ProductGridSkeleton
-                count={8}
-                className={view === 'grid' ? 'grid grid-cols-2 gap-5 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 items-stretch' : 'grid grid-cols-1 gap-5 sm:grid-cols-2 items-stretch'}
+                count={12}
+                className={view === 'grid' ? PRODUCT_GRID_CLASS : 'grid grid-cols-1 gap-5 sm:grid-cols-2 items-stretch'}
               />
             ) : error ? (
               <NetworkErrorState onRetry={retry} message="We couldn't load products right now. Please try again." />
@@ -169,7 +170,7 @@ const ShopPage = () => {
               />
             ) : (
               <>
-                <div className={view === 'grid' ? 'grid grid-cols-2 gap-5 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 items-stretch' : 'grid grid-cols-1 gap-5 sm:grid-cols-2 items-stretch'}>
+                <div className={view === 'grid' ? PRODUCT_GRID_CLASS : 'grid grid-cols-1 gap-5 sm:grid-cols-2 items-stretch'}>
                   {paged.map((p) => (
                     <ProductCard key={p.id} p={p} />
                   ))}

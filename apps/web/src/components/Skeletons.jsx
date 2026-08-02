@@ -1,4 +1,5 @@
 import React from 'react';
+import { PRODUCT_GRID_CLASS } from '../lib/productGrid';
 
 const Bone = ({ className = '' }) => (
   <div className={`animate-pulse rounded-xl bg-secondary/80 ${className}`} aria-hidden="true" />
@@ -6,19 +7,20 @@ const Bone = ({ className = '' }) => (
 
 /** Matches ProductCard proportions so the grid doesn't shift on load. */
 export const ProductCardSkeleton = () => (
-  <div className="bg-white rounded-[1.75rem] border border-border overflow-hidden" aria-hidden="true">
-    <Bone className="aspect-square" />
-    <div className="px-4 pt-3.5 pb-4 space-y-2.5">
-      <div className="flex justify-between"><Bone className="h-3 w-16" /><Bone className="h-3 w-10" /></div>
+  <div className="flex h-full flex-col overflow-hidden rounded-2xl border border-border bg-white" aria-hidden="true">
+    <Bone className="aspect-[4/3] rounded-none" />
+    <div className="space-y-2.5 px-3.5 pb-4 pt-3">
       <Bone className="h-4 w-4/5" />
+      <Bone className="h-4 w-3/5" />
+      <div className="flex gap-2"><Bone className="h-5 w-16 rounded-full" /><Bone className="h-5 w-20 rounded-full" /></div>
+      <Bone className="h-3 w-28" />
+      <Bone className="h-6 w-16" />
       <Bone className="h-3 w-24" />
-      <div className="pt-3.5 border-t border-border/70"><Bone className="h-5 w-16" /></div>
-      <div className="flex justify-between items-center"><Bone className="h-3 w-20" /><Bone className="h-3 w-12" /></div>
     </div>
   </div>
 );
 
-export const ProductGridSkeleton = ({ count = 8, className = 'grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5' }) => (
+export const ProductGridSkeleton = ({ count = 12, className = PRODUCT_GRID_CLASS }) => (
   <div className={className} role="status" aria-label="Loading products">
     {Array.from({ length: count }, (_, i) => <ProductCardSkeleton key={i} />)}
     <span className="sr-only">Loading…</span>
