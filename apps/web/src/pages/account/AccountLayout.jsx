@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import Header from '../../components/Header';
 import Footer from '../../components/Footer';
+import Logo from '../../components/Logo';
 import { useStore } from '../../context/StoreContext';
 import { useDashboardBack } from '../../hooks/useDashboardBack';
 
@@ -178,8 +179,9 @@ const AccountLayout = ({ title, subtitle, children }) => {
           className={`absolute left-0 top-0 flex h-[100vh] max-h-[100dvh] w-[88vw] max-w-[320px] flex-col overflow-hidden bg-white shadow-2xl border-r border-border transition-transform duration-300 ${navOpen ? 'translate-x-0' : '-translate-x-full'}`}
         >
           <div className="flex shrink-0 items-center justify-between border-b border-border px-4 py-4">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-primary">My Account</p>
+            <div className="min-w-0">
+              <Logo to="/" size="sidebar" onClick={() => setNavOpen(false)} />
+              <p className="mt-2 text-xs font-semibold uppercase tracking-[0.24em] text-primary">My Account</p>
               <h2 className="mt-1 text-lg font-black text-foreground">Account Menu</h2>
             </div>
             <button

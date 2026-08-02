@@ -4,7 +4,7 @@ import { Lock, Eye, EyeOff, Loader2 } from 'lucide-react';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import Seo from '../components/Seo';
-import { LOGO } from '../data';
+import Logo from '../components/Logo';
 import { authApi } from '../services/authApi';
 import { useToast } from '../hooks/use-toast';
 
@@ -54,7 +54,7 @@ const ResetPasswordPage = () => {
         <div className="w-full max-w-[520px]">
           <div className="bg-white rounded-[24px] border border-border soft-shadow p-8 sm:p-10">
             <div className="flex flex-col items-center text-center">
-              <img src={LOGO} alt="ApnaStore" className="h-12 w-auto object-contain" />
+              <Logo size="auth" />
               <h1 className="mt-6 text-3xl font-black tracking-tight">Reset Password</h1>
               <p className="mt-3 text-sm text-muted-foreground">Create a new password for your account.</p>
             </div>

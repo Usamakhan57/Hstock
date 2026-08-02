@@ -4,7 +4,7 @@ import {
   Search, Wallet, User, Menu, X, ChevronDown, LayoutGrid, Bell,
   Clock, TrendingUp, ArrowUpRight, Folder, Hash, LucideStore,
 } from 'lucide-react';
-import { LOGO } from '../data';
+import Logo from './Logo';
 import { useStore } from '../context/StoreContext';
 import { useSellerAuth } from '../context/SellerAuthContext';
 import { productsApi, walletApi } from '../services/api';
@@ -394,17 +394,13 @@ const Header = () => {
       {/* ROW 1 — logo, search, actions */}
       <div className="mx-auto max-w-[90rem] px-5 lg:px-8">
         <div className="flex items-center gap-2 sm:gap-3 md:gap-6 h-[64px] sm:h-[80px] md:h-[88px]">
-          {/* Logo — enlarged for stronger branding */}
-          <Link to="/" className="flex items-center shrink-0 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-2xl" aria-label="ApnaStore home">
-            <img
-              src={LOGO}
-              alt="ApnaStore"
-              width="220"
-              height="72"
-              className="h-9 sm:h-16 md:h-[4.5rem] w-auto object-contain transition-transform duration-300 group-hover:scale-[1.03]"
-              draggable="false"
-            />
-          </Link>
+          <Logo
+            to="/"
+            size="header"
+            priority
+            className="group"
+            imgClassName="transition-transform duration-300 group-hover:scale-[1.03]"
+          />
 
           {/* Search bar — large, rounded, premium, with live suggestions */}
           <div ref={searchRef} className="hidden md:block relative flex-1 max-w-2xl mx-auto">

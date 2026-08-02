@@ -22,6 +22,7 @@ import {
   ArrowLeft,
 } from 'lucide-react';
 import Seo from '../components/Seo';
+import Logo from '../components/Logo';
 import { getSellerProducts } from './seller/api/sellerProducts';
 import { useSellerAuth } from '../context/SellerAuthContext';
 import { useDashboardBack } from '../hooks/useDashboardBack';
@@ -244,9 +245,7 @@ const SellerDashboard = () => {
   const renderSidebarContent = ({ scrollable = false } = {}) => (
     <div className={scrollable ? 'flex h-full min-h-0 flex-col' : 'flex h-full flex-col'}>
       <div className="mb-6 shrink-0">
-        <span className="inline-flex h-12 w-12 items-center justify-center rounded-3xl bg-primary/10 text-primary text-lg font-bold">
-          {seller?.storeName?.charAt(0) || 'S'}
-        </span>
+        <Logo to="/" size="sidebar" className="mb-4" />
         <p className="mt-4 text-xs uppercase tracking-[0.24em] text-muted-foreground">Seller portal</p>
         <h2 className="mt-3 text-2xl font-black text-foreground">{seller?.storeName || 'Your Store'}</h2>
         <p className="mt-2 text-sm text-muted-foreground">{seller?.email}</p>

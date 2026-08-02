@@ -4,6 +4,7 @@ import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import Seo from '../components/Seo';
+import Logo from '../components/Logo';
 import GoogleAuthButton from '../components/GoogleAuthButton';
 import { useSellerAuth } from '../context/SellerAuthContext';
 import { useToast } from '../hooks/use-toast';
@@ -75,6 +76,9 @@ const SellerLoginPage = () => {
       <div className="flex-1 grid place-items-center px-5 py-16">
         <div className="w-full max-w-md">
           <div className="bg-white rounded-3xl border border-border soft-shadow p-8">
+            <div className="flex justify-center mb-5">
+              <Logo size="auth" />
+            </div>
             <h1 className="text-2xl font-black tracking-tight text-center">Seller sign in</h1>
             <p className="text-sm text-muted-foreground text-center mt-2">Access your store, products, and earnings.</p>
 

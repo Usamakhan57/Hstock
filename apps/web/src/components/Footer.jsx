@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Instagram, Twitter, Github, Youtube, ArrowRight, Check } from 'lucide-react';
-import { LOGO } from '../data';
+import Logo from './Logo';
 import { newsletterApi } from '../services/api';
 
 const cols = [
@@ -81,9 +81,7 @@ const Footer = () => (
     <div className="mx-auto max-w-[90rem] px-5 lg:px-8 py-16">
       <div className="grid gap-12 lg:grid-cols-[1.4fr_repeat(4,1fr)]">
         <div>
-          <Link to="/" className="inline-block mb-4" aria-label="ApnaStore home">
-            <img src={LOGO} alt="ApnaStore" className="h-14 w-auto" />
-          </Link>
+          <Logo to="/" size="footer" className="mb-4" />
           <p className="text-sm text-muted-foreground max-w-xs leading-relaxed">
             ApnaStore is a secure marketplace for digital accounts, domains, websites, SaaS, and software assets — protected by escrow and built for verified sellers.
           </p>
