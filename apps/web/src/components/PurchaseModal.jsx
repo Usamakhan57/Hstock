@@ -2,11 +2,17 @@ import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ShieldCheck, AlertTriangle, Loader2, CheckCircle2, Wallet } from 'lucide-react';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from './ui/dialog';
+import CryptoAssetPicker from './CryptoAssetPicker';
 import { useStore } from '../context/StoreContext';
 import { useToast } from '../hooks/use-toast';
 import { ordersApi } from '../services/ordersApi';
 import { buyerWalletApi } from '../services/buyerWalletApi';
-import { estimateCommission, formatMoney, PAYMENT_CURRENCIES } from '../constants/commerce';
+import { paymentsApi } from '../services/paymentsApi';
+import { estimateCommission, formatMoney } from '../constants/commerce';
+import {
+  CHECKOUT_CRYPTO_ASSETS,
+  resolveNetworkFromCatalog,
+} from '../constants/cryptoAssets';
 
 function isOwnProduct(product, user, profiles) {
   if (!product) return false;
@@ -33,7 +39,11 @@ const PurchaseModal = ({ product, license, open, onOpenChange }) => {
   const navigate = useNavigate();
   const [submitting, setSubmitting] = useState(false);
   const [paySource, setPaySource] = useState('cryptomus');
-  const [cryptoMethod, setCryptoMethod] = useState(PAYMENT_CURRENCIES[0].label);
+  const [checkoutAssets, setCheckoutAssets] = useState(CHECKOUT_CRYPTO_ASSETS);
+  const [coin, setCoin] = useState(CHECKOUT_CRYPTO_ASSETS[0].symbol);
+  const [network, setNetwork] = useState(
+    resolveNetworkFromCatalog(CHECKOUT_CRYPTO_ASSETS, CHECKOUT_CRYPTO_ASSETS[0].symbol, null),
+  );
   const [wallet, setWallet] = useState(null);
 
   const quantity = Math.max(1, Number(product?.quantity) || 1);
@@ -44,7 +54,6 @@ const PurchaseModal = ({ product, license, open, onOpenChange }) => {
   );
   const subtotal = formatMoney(unitPrice * quantity);
   const fee = estimateCommission(subtotal);
-  const selected = PAYMENT_CURRENCIES.find((c) => c.label === cryptoMethod) || PAYMENT_CURRENCIES[0];
   const ownProduct = isOwnProduct(product, user, profiles);
   const outOfStock = !!product && !product.unlimitedStock && product.stock != null && product.stock < quantity;
   const walletBalance = Number(wallet?.availableBalance || 0);
@@ -61,6 +70,29 @@ const PurchaseModal = ({ product, license, open, onOpenChange }) => {
     return () => { cancelled = true; };
   }, [open, user]);
 
+  useEffect(() => {
+    if (!open || !user) return undefined;
+    let cancelled = false;
+    paymentsApi.listCheckoutAssets()
+      .then((result) => {
+        if (cancelled) return;
+        const assets = Array.isArray(result?.assets) && result.assets.length
+          ? result.assets
+          : CHECKOUT_CRYPTO_ASSETS;
+        setCheckoutAssets(assets);
+        setCoin((current) => {
+          const stillValid = assets.some((asset) => asset.symbol === current);
+          const nextCoin = stillValid ? current : assets[0].symbol;
+          setNetwork((currentNetwork) => resolveNetworkFromCatalog(assets, nextCoin, currentNetwork));
+          return nextCoin;
+        });
+      })
+      .catch(() => {
+        if (!cancelled) setCheckoutAssets(CHECKOUT_CRYPTO_ASSETS);
+      });
+    return () => { cancelled = true; };
+  }, [open, user]);
+
   if (!product) return null;
 
   const handleConfirm = async () => {
@@ -71,8 +103,8 @@ const PurchaseModal = ({ product, license, open, onOpenChange }) => {
         productId: product.id || product._id,
         quantity,
         paymentMethod: paySource,
-        toCurrency: selected.coin,
-        network: selected.network,
+        toCurrency: coin,
+        network,
       });
 
       onOpenChange(false);
@@ -88,8 +120,10 @@ const PurchaseModal = ({ product, license, open, onOpenChange }) => {
 
       if (result.paymentUrl) {
         toast({
-          title: 'Redirecting to payment',
-          description: 'Complete payment with Cryptomus to secure your order in escrow.',
+          title: result.raw?.reused ? 'Resuming payment' : 'Redirecting to payment',
+          description: result.raw?.reused
+            ? 'Opening your existing unpaid Cryptomus invoice.'
+            : 'Complete payment with Cryptomus to secure your order in escrow.',
         });
         window.location.assign(result.paymentUrl);
         return;
@@ -202,16 +236,17 @@ const PurchaseModal = ({ product, license, open, onOpenChange }) => {
 
         {paySource === 'cryptomus' ? (
           <div className="mt-4">
-            <label className="text-sm font-medium block mb-1.5">Cryptomus asset</label>
-            <select
-              value={cryptoMethod}
-              onChange={(e) => setCryptoMethod(e.target.value)}
-              className="w-full appearance-none rounded-2xl border border-border bg-secondary/50 px-4 py-3 text-sm font-medium outline-none"
-            >
-              {PAYMENT_CURRENCIES.map((c) => (
-                <option key={c.label} value={c.label}>{c.label}</option>
-              ))}
-            </select>
+            <CryptoAssetPicker
+              coin={coin}
+              network={network}
+              onCoinChange={setCoin}
+              onNetworkChange={setNetwork}
+              assets={checkoutAssets}
+              disabled={submitting}
+              currencyTitle="Pay with"
+              currencyDescription="Select a Cryptomus currency for this purchase."
+              routeLabel="Selected payment route"
+            />
           </div>
         ) : !walletEnough ? (
           <div className="mt-4 rounded-[16px] bg-amber-50 border border-amber-200 p-4 text-sm text-amber-900">

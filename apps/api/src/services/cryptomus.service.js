@@ -4,6 +4,11 @@ import { AppError } from '../utils/AppError.js';
 import { signCryptomusPayload, verifyCryptomusSignature, sha256Hex } from '../utils/crypto.js';
 import { toMoneyString } from '../helpers/money.helper.js';
 import {
+  FALLBACK_CHECKOUT_ASSETS,
+  mapPaymentServicesToAssets,
+  normalizeCryptomusNetwork,
+} from '../helpers/cryptomusAssets.helper.js';
+import {
   CRYPTOMUS_ENDPOINTS,
   CRYPTOMUS_WEBHOOK_IPS,
   CRYPTOMUS_WEBHOOK_MAX_AGE_SECONDS,
@@ -106,7 +111,8 @@ export async function createInvoice({
     url_success: urlSuccess || env.CRYPTOMUS_URL_SUCCESS || `${env.FRONTEND_URL}/orders/success`,
   };
 
-  if (network) payload.network = String(network).toLowerCase();
+  const normalizedNetwork = normalizeCryptomusNetwork(network);
+  if (normalizedNetwork) payload.network = normalizedNetwork;
   if (toCurrency) payload.to_currency = String(toCurrency).toUpperCase();
   if (additionalData) payload.additional_data = String(additionalData).slice(0, 255);
 
@@ -127,6 +133,56 @@ export async function getPaymentInfo({ uuid = null, orderId = null } = {}) {
 
 export async function listPaymentServices() {
   return cryptomusRequest(CRYPTOMUS_ENDPOINTS.PAYMENT_SERVICES, {});
+}
+
+/**
+ * Buyer-facing currency/network catalog synchronized from Cryptomus.
+ * Falls back to a broad offline list when the provider is unavailable.
+ */
+export async function listCheckoutAssets() {
+  if (!isCryptomusConfigured()) {
+    return {
+      assets: FALLBACK_CHECKOUT_ASSETS.map((asset) => ({
+        ...asset,
+        networks: asset.networks.map((n) => ({ ...n })),
+      })),
+      source: 'fallback',
+      mode: getCryptomusMode(),
+    };
+  }
+
+  try {
+    const services = await listPaymentServices();
+    const assets = mapPaymentServicesToAssets(services);
+    if (!assets.length) {
+      logger.warn('Cryptomus payment services returned empty — using fallback checkout assets');
+      return {
+        assets: FALLBACK_CHECKOUT_ASSETS.map((asset) => ({
+          ...asset,
+          networks: asset.networks.map((n) => ({ ...n })),
+        })),
+        source: 'fallback',
+        mode: getCryptomusMode(),
+      };
+    }
+    return {
+      assets,
+      source: 'cryptomus',
+      mode: getCryptomusMode(),
+    };
+  } catch (error) {
+    logger.warn('Failed to load Cryptomus payment services — using fallback checkout assets', {
+      message: error?.message,
+    });
+    return {
+      assets: FALLBACK_CHECKOUT_ASSETS.map((asset) => ({
+        ...asset,
+        networks: asset.networks.map((n) => ({ ...n })),
+      })),
+      source: 'fallback',
+      mode: getCryptomusMode(),
+    };
+  }
 }
 
 export async function resendWebhook({ uuid = null, orderId = null } = {}) {
@@ -267,6 +323,7 @@ export default {
   createInvoice,
   getPaymentInfo,
   listPaymentServices,
+  listCheckoutAssets,
   resendWebhook,
   simulateInvoice,
   createInvoiceOrSimulate,

@@ -542,10 +542,16 @@ const Header = () => {
               </button>
 
               {mega && (
-                <div className="absolute left-0 top-[calc(100%+10px)] w-[720px] animate-mega-in">
-                  <div className="bg-white rounded-3xl border border-border shadow-[0_30px_70px_-20px_rgba(108,59,255,0.28)] p-6" role="menu">
+                <div className="absolute left-0 top-[calc(100%+10px)] z-50 w-[min(720px,calc(100vw-2rem))] animate-mega-in">
+                  <div
+                    className="max-h-[80vh] overflow-y-auto overscroll-contain rounded-3xl border border-border bg-white p-6 shadow-[0_30px_70px_-20px_rgba(108,59,255,0.28)]"
+                    role="menu"
+                    style={{ WebkitOverflowScrolling: 'touch' }}
+                    data-testid="categories-mega-menu"
+                    onWheel={(e) => e.stopPropagation()}
+                  >
                     {headerCategories.length === 0 ? (
-                      <p className="text-sm text-muted-foreground px-1 py-2">No categories to show yet.</p>
+                      <p className="px-1 py-2 text-sm text-muted-foreground">No categories to show yet.</p>
                     ) : (
                       <div className="grid grid-cols-3 gap-x-4 gap-y-3">
                         {headerCategories.map((c) => (

@@ -15,7 +15,7 @@ export const ordersApi = {
     quantity = 1,
     paymentMethod = 'cryptomus',
     toCurrency = 'USDT',
-    network = 'TRC20',
+    network = 'tron',
   }) {
     const urls = originUrls();
     const { data } = await post('/orders/buy-now', {

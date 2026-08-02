@@ -10,32 +10,46 @@ function compactTimestamp() {
     + `${pad(d.getUTCHours())}`
     + `${pad(d.getUTCMinutes())}`
     + `${pad(d.getUTCSeconds())}`
+    + `${pad(d.getUTCMilliseconds(), 3)}`
   );
 }
 
+/** High-entropy commerce IDs — avoids same-second collisions under concurrent checkout. */
 export function generateOrderNumber() {
-  return `ORD-${compactTimestamp()}-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
+  return `ORD-${compactTimestamp()}-${crypto.randomBytes(8).toString('hex').toUpperCase()}`;
 }
 
 export function generatePaymentOrderId(orderNumber) {
   // Cryptomus order_id: alpha_dash only, max 128
-  return `pay_${String(orderNumber).replace(/[^a-zA-Z0-9_-]/g, '_')}`;
+  const base = `pay_${String(orderNumber).replace(/[^a-zA-Z0-9_-]/g, '_')}`;
+  if (base.length <= 120) {
+    return `${base}_${crypto.randomBytes(4).toString('hex')}`;
+  }
+  return `pay_${compactTimestamp()}_${crypto.randomBytes(8).toString('hex')}`;
 }
 
 export function generateWithdrawalNumber() {
-  return `WD-${compactTimestamp()}-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
+  return `WD-${compactTimestamp()}-${crypto.randomBytes(8).toString('hex').toUpperCase()}`;
 }
 
 export function generateDisputeNumber() {
-  return `DSP-${compactTimestamp()}-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
+  return `DSP-${compactTimestamp()}-${crypto.randomBytes(8).toString('hex').toUpperCase()}`;
 }
 
 export function generateRefundNumber() {
-  return `RFD-${compactTimestamp()}-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
+  return `RFD-${compactTimestamp()}-${crypto.randomBytes(8).toString('hex').toUpperCase()}`;
 }
 
 export function generateTransferId(prefix = 'xfer') {
-  return `${prefix}_${compactTimestamp()}_${crypto.randomBytes(6).toString('hex')}`;
+  return `${prefix}_${compactTimestamp()}_${crypto.randomBytes(8).toString('hex')}`;
+}
+
+export function isDuplicateKeyError(error) {
+  return Boolean(error && (error.code === 11000 || error?.codeName === 'DuplicateKey'));
+}
+
+export function duplicateKeyFields(error) {
+  return Object.keys(error?.keyPattern || {});
 }
 
 export default {
@@ -45,4 +59,6 @@ export default {
   generateDisputeNumber,
   generateRefundNumber,
   generateTransferId,
+  isDuplicateKeyError,
+  duplicateKeyFields,
 };
