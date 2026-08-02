@@ -7,15 +7,17 @@ const Bone = ({ className = '' }) => (
 
 /** Matches ProductCard proportions so the grid doesn't shift on load. */
 export const ProductCardSkeleton = () => (
-  <div className="flex h-full flex-col overflow-hidden rounded-2xl border border-border bg-white" aria-hidden="true">
+  <div className="flex h-full flex-col overflow-hidden rounded-xl border border-border/60 bg-white" aria-hidden="true">
     <Bone className="aspect-[4/3] rounded-none" />
-    <div className="space-y-2.5 px-3.5 pb-4 pt-3">
-      <Bone className="h-4 w-4/5" />
-      <Bone className="h-4 w-3/5" />
-      <div className="flex gap-2"><Bone className="h-5 w-16 rounded-full" /><Bone className="h-5 w-20 rounded-full" /></div>
-      <Bone className="h-3 w-28" />
-      <Bone className="h-6 w-16" />
-      <Bone className="h-3 w-24" />
+    <div className="space-y-2 px-2.5 pb-2.5 pt-2">
+      <Bone className="h-3.5 w-4/5" />
+      <Bone className="h-3 w-full" />
+      <Bone className="h-3 w-3/5" />
+      <Bone className="h-2.5 w-20" />
+      <div className="flex items-center justify-between pt-1">
+        <Bone className="h-5 w-12" />
+        <Bone className="h-7 w-14 rounded-md" />
+      </div>
     </div>
   </div>
 );
