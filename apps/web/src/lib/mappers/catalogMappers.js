@@ -21,8 +21,21 @@ function slugOf(value) {
   return value.slug || null;
 }
 
+/** True when a value looks like a real image URL/path (not a Lucide icon name). */
+export function isCategoryImageSrc(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return false;
+  if (/^https?:\/\//i.test(raw)) return true;
+  if (raw.startsWith('/') || raw.startsWith('data:')) return true;
+  // Relative upload / CDN paths with an extension
+  if (/\.(png|jpe?g|gif|webp|svg|avif)(\?.*)?$/i.test(raw)) return true;
+  return false;
+}
+
 export function mapBackendCategory(category) {
   if (!category) return null;
+  const imageCandidate = category.image || null;
+  const iconCandidate = category.icon || null;
   return {
     id: idOf(category),
     _id: idOf(category),
@@ -31,8 +44,11 @@ export function mapBackendCategory(category) {
     description: category.description || '',
     parentId: idOf(category.parent) || null,
     parent: idOf(category.parent) || null,
-    image: category.image || category.icon || null,
-    icon: category.icon || null,
+    // Never treat Lucide icon names (e.g. "Instagram") as <img src>.
+    image: isCategoryImageSrc(imageCandidate)
+      ? imageCandidate
+      : (isCategoryImageSrc(iconCandidate) ? iconCandidate : null),
+    icon: iconCandidate,
     featured: !!category.featured,
     showOnHomepage: !!category.showOnHomepage,
     showInHeader: !!category.showInHeader,

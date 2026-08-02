@@ -25,7 +25,7 @@ function ServiceCard({ card }) {
         className="grid h-14 w-14 place-items-center overflow-hidden rounded-2xl sm:h-16 sm:w-16"
         style={{ background: `${accent}14`, color: accent }}
       >
-        {card.image ? (
+        {card.image && /^(https?:\/\/|\/|data:)/i.test(String(card.image)) ? (
           <img
             src={card.image}
             alt=""
