@@ -1,11 +1,19 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { createPortal } from 'react-dom';
-import { Check, ChevronDown, Search, X } from 'lucide-react';
+import { Check, ChevronDown, Search } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from './ui/dialog';
 import {
   filterWithdrawAssets,
   formatAssetNetworkLabel,
   getNetworksForCoin,
   getWithdrawAsset,
+  resolveNetworkForCoin,
+  WITHDRAW_CRYPTO_ASSETS,
 } from '../constants/cryptoAssets';
 
 function AssetIcon({ asset, size = 'md' }) {
@@ -22,7 +30,9 @@ function AssetIcon({ asset, size = 'md' }) {
 }
 
 /**
- * Cryptomus-style currency / network picker with search, icons, and checkmarks.
+ * Cryptomus-style currency / network picker.
+ * Uses nested Dialogs so selection works inside the withdraw modal
+ * (portals to body were blocked by Radix pointer-events).
  */
 const CryptoAssetPicker = ({
   coin,
@@ -41,30 +51,31 @@ const CryptoAssetPicker = ({
   const selectedNetwork = networks.find((item) => item.code === network) || networks[0];
 
   useEffect(() => {
-    if (!currencyOpen && !networkOpen) return undefined;
-    const onKey = (event) => {
-      if (event.key === 'Escape') {
-        setCurrencyOpen(false);
-        setNetworkOpen(false);
-      }
-    };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [currencyOpen, networkOpen]);
-
-  useEffect(() => {
     if (!currencyOpen) setQuery('');
   }, [currencyOpen]);
 
-  const selectCoin = (symbol) => {
-    const nextNetworks = getNetworksForCoin(symbol);
-    onCoinChange?.(symbol);
-    onNetworkChange?.(nextNetworks[0]?.code || network);
+  // Keep network valid whenever coin/network props drift.
+  useEffect(() => {
+    const resolved = resolveNetworkForCoin(coin, network);
+    if (resolved && resolved !== network) {
+      onNetworkChange?.(resolved);
+    }
+  }, [coin, network, onNetworkChange]);
+
+  const selectCoin = (symbol, event) => {
+    event?.preventDefault?.();
+    event?.stopPropagation?.();
+    const nextSymbol = String(symbol || '').toUpperCase();
+    const nextNetwork = resolveNetworkForCoin(nextSymbol, network);
+    onCoinChange?.(nextSymbol);
+    onNetworkChange?.(nextNetwork);
     setCurrencyOpen(false);
   };
 
-  const selectNetwork = (code) => {
-    onNetworkChange?.(code);
+  const selectNetwork = (code, event) => {
+    event?.preventDefault?.();
+    event?.stopPropagation?.();
+    onNetworkChange?.(String(code || '').toUpperCase());
     setNetworkOpen(false);
   };
 
@@ -78,6 +89,7 @@ const CryptoAssetPicker = ({
             disabled={disabled}
             onClick={() => setCurrencyOpen(true)}
             className="flex w-full items-center justify-between gap-3 rounded-2xl border border-border bg-secondary/50 px-3 py-3 text-left transition hover:bg-secondary disabled:opacity-60"
+            data-testid="crypto-currency-trigger"
           >
             <span className="flex min-w-0 items-center gap-3">
               <AssetIcon asset={asset} size="sm" />
@@ -95,8 +107,11 @@ const CryptoAssetPicker = ({
           <button
             type="button"
             disabled={disabled || networks.length <= 1}
-            onClick={() => networks.length > 1 && setNetworkOpen(true)}
+            onClick={() => {
+              if (networks.length > 1) setNetworkOpen(true);
+            }}
             className="flex w-full items-center justify-between gap-3 rounded-2xl border border-border bg-secondary/50 px-3 py-3 text-left transition hover:bg-secondary disabled:opacity-60"
+            data-testid="crypto-network-trigger"
           >
             <span className="min-w-0">
               <span className="block truncate text-sm font-bold text-foreground">{selectedNetwork?.label || network}</span>
@@ -107,109 +122,119 @@ const CryptoAssetPicker = ({
         </div>
       </div>
 
-      <p className="text-xs text-muted-foreground">
-        Selected payout route: <span className="font-semibold text-foreground">{formatAssetNetworkLabel(coin, selectedNetwork?.code || network)}</span>
+      <p className="text-xs text-muted-foreground" data-testid="crypto-selected-route">
+        Selected payout route:{' '}
+        <span className="font-semibold text-foreground">
+          {formatAssetNetworkLabel(coin, selectedNetwork?.code || network)}
+        </span>
       </p>
 
-      {currencyOpen && typeof document !== 'undefined' ? createPortal(
-        <div className="fixed inset-0 z-[80] flex items-end justify-center sm:items-center sm:p-4">
-          <button type="button" className="absolute inset-0 bg-slate-950/50" aria-label="Close currency picker" onClick={() => setCurrencyOpen(false)} />
-          <div className="relative flex max-h-[85vh] w-full max-w-md flex-col overflow-hidden rounded-t-[1.5rem] bg-white shadow-2xl sm:rounded-[1.5rem]">
-            <div className="flex items-center justify-between border-b border-border px-4 py-4">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Select currency</p>
-                <h3 className="mt-1 text-lg font-black text-foreground">Withdraw asset</h3>
-              </div>
-              <button type="button" onClick={() => setCurrencyOpen(false)} className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-secondary" aria-label="Close">
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            <div className="border-b border-border px-4 py-3">
-              <label className="relative block">
-                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <input
-                  autoFocus
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Search USDT, BTC, Solana…"
-                  className="w-full rounded-2xl border border-border bg-secondary/40 py-2.5 pl-10 pr-3 text-sm outline-none focus:border-primary"
-                />
-              </label>
-            </div>
-            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-2" style={{ WebkitOverflowScrolling: 'touch' }}>
-              {filteredAssets.length === 0 ? (
-                <p className="px-3 py-8 text-center text-sm text-muted-foreground">No currencies match your search.</p>
-              ) : (
-                filteredAssets.map((item) => {
-                  const selected = item.symbol === asset.symbol;
-                  return (
-                    <button
-                      key={item.symbol}
-                      type="button"
-                      onClick={() => selectCoin(item.symbol)}
-                      className={`mb-1 flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left transition ${selected ? 'bg-primary/10' : 'hover:bg-secondary'}`}
-                    >
-                      <AssetIcon asset={item} />
-                      <span className="min-w-0 flex-1">
-                        <span className="flex items-center gap-2">
-                          <span className="text-sm font-black text-foreground">{item.symbol}</span>
-                          <span className="truncate text-xs text-muted-foreground">{item.name}</span>
-                        </span>
-                        <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">
-                          {item.networks.map((n) => n.label).slice(0, 3).join(' · ')}
-                          {item.networks.length > 3 ? ` +${item.networks.length - 3}` : ''}
-                        </span>
-                      </span>
-                      {selected ? <Check className="h-5 w-5 shrink-0 text-primary" /> : null}
-                    </button>
-                  );
-                })
-              )}
-            </div>
+      <Dialog open={currencyOpen} onOpenChange={setCurrencyOpen}>
+        <DialogContent
+          className="z-[80] max-h-[85vh] gap-0 overflow-hidden p-0 sm:max-w-md"
+          onOpenAutoFocus={(event) => {
+            // Focus search input instead of close button.
+            event.preventDefault();
+            const root = event.currentTarget;
+            root?.querySelector?.('input[data-crypto-search]')?.focus?.();
+          }}
+        >
+          <DialogHeader className="border-b border-border px-4 py-4 text-left">
+            <DialogTitle>Withdraw asset</DialogTitle>
+            <DialogDescription>Select a currency for this withdrawal.</DialogDescription>
+          </DialogHeader>
+          <div className="border-b border-border px-4 py-3">
+            <label className="relative block">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <input
+                data-crypto-search
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search USDT, BTC, Solana…"
+                className="w-full rounded-2xl border border-border bg-secondary/40 py-2.5 pl-10 pr-3 text-sm outline-none focus:border-primary"
+              />
+            </label>
           </div>
-        </div>,
-        document.body,
-      ) : null}
-
-      {networkOpen && typeof document !== 'undefined' ? createPortal(
-        <div className="fixed inset-0 z-[80] flex items-end justify-center sm:items-center sm:p-4">
-          <button type="button" className="absolute inset-0 bg-slate-950/50" aria-label="Close network picker" onClick={() => setNetworkOpen(false)} />
-          <div className="relative flex max-h-[85vh] w-full max-w-md flex-col overflow-hidden rounded-t-[1.5rem] bg-white shadow-2xl sm:rounded-[1.5rem]">
-            <div className="flex items-center justify-between border-b border-border px-4 py-4">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">{asset.symbol} networks</p>
-                <h3 className="mt-1 text-lg font-black text-foreground">Select network</h3>
-              </div>
-              <button type="button" onClick={() => setNetworkOpen(false)} className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-secondary" aria-label="Close">
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-2" style={{ WebkitOverflowScrolling: 'touch' }}>
-              {networks.map((item) => {
-                const selected = item.code === (selectedNetwork?.code || network);
+          <div
+            className="max-h-[50vh] overflow-y-auto overscroll-contain p-2"
+            style={{ WebkitOverflowScrolling: 'touch' }}
+            data-testid="crypto-currency-list"
+          >
+            {filteredAssets.length === 0 ? (
+              <p className="px-3 py-8 text-center text-sm text-muted-foreground">No currencies match your search.</p>
+            ) : (
+              filteredAssets.map((item) => {
+                const selected = item.symbol === asset.symbol;
                 return (
                   <button
-                    key={item.code}
+                    key={item.symbol}
                     type="button"
-                    onClick={() => selectNetwork(item.code)}
-                    className={`mb-1 flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left transition ${selected ? 'bg-primary/10' : 'hover:bg-secondary'}`}
+                    data-testid={`crypto-currency-option-${item.symbol}`}
+                    onPointerDown={(event) => event.stopPropagation()}
+                    onClick={(event) => selectCoin(item.symbol, event)}
+                    className={`mb-1 flex w-full touch-manipulation items-center gap-3 rounded-2xl px-3 py-3 text-left transition ${selected ? 'bg-primary/10' : 'hover:bg-secondary active:bg-secondary'}`}
                   >
-                    <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-secondary text-[10px] font-black text-foreground">
-                      {item.code.slice(0, 4)}
-                    </span>
+                    <AssetIcon asset={item} />
                     <span className="min-w-0 flex-1">
-                      <span className="block text-sm font-bold text-foreground">{item.label}</span>
-                      <span className="block text-xs text-muted-foreground">{item.code}</span>
+                      <span className="flex items-center gap-2">
+                        <span className="text-sm font-black text-foreground">{item.symbol}</span>
+                        <span className="truncate text-xs text-muted-foreground">{item.name}</span>
+                      </span>
+                      <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">
+                        {item.networks.map((n) => n.label).slice(0, 3).join(' · ')}
+                        {item.networks.length > 3 ? ` +${item.networks.length - 3}` : ''}
+                      </span>
                     </span>
                     {selected ? <Check className="h-5 w-5 shrink-0 text-primary" /> : null}
                   </button>
                 );
-              })}
-            </div>
+              })
+            )}
           </div>
-        </div>,
-        document.body,
-      ) : null}
+          <p className="border-t border-border px-4 py-2 text-[11px] text-muted-foreground">
+            {WITHDRAW_CRYPTO_ASSETS.length} supported currencies
+          </p>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={networkOpen} onOpenChange={setNetworkOpen}>
+        <DialogContent className="z-[80] max-h-[85vh] gap-0 overflow-hidden p-0 sm:max-w-md">
+          <DialogHeader className="border-b border-border px-4 py-4 text-left">
+            <DialogTitle>Select network</DialogTitle>
+            <DialogDescription>
+              Compatible networks for {asset.symbol}.
+            </DialogDescription>
+          </DialogHeader>
+          <div
+            className="max-h-[55vh] overflow-y-auto overscroll-contain p-2"
+            style={{ WebkitOverflowScrolling: 'touch' }}
+            data-testid="crypto-network-list"
+          >
+            {networks.map((item) => {
+              const selected = item.code === (selectedNetwork?.code || network);
+              return (
+                <button
+                  key={item.code}
+                  type="button"
+                  data-testid={`crypto-network-option-${item.code}`}
+                  onPointerDown={(event) => event.stopPropagation()}
+                  onClick={(event) => selectNetwork(item.code, event)}
+                  className={`mb-1 flex w-full touch-manipulation items-center gap-3 rounded-2xl px-3 py-3 text-left transition ${selected ? 'bg-primary/10' : 'hover:bg-secondary active:bg-secondary'}`}
+                >
+                  <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-secondary text-[10px] font-black text-foreground">
+                    {item.code.slice(0, 4)}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-sm font-bold text-foreground">{item.label}</span>
+                    <span className="block text-xs text-muted-foreground">{item.code}</span>
+                  </span>
+                  {selected ? <Check className="h-5 w-5 shrink-0 text-primary" /> : null}
+                </button>
+              );
+            })}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
