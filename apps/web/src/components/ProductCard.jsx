@@ -1,166 +1,193 @@
-import { useState, startTransition } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { Eye, Hand, Heart, Zap } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
-import { useWishlist } from "@/context/WishlistContext";
-import { mediaUrl } from "@/lib/api";
-import { formatMoney } from "@/lib/money";
-import { productPath } from "@/lib/slugPaths";
-import QuickViewModal from "@/components/QuickViewModal";
+import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
+import { Eye, Hand, Heart, Zap, BadgeCheck } from 'lucide-react';
+import { useStore } from '../context/StoreContext';
+import { slugify } from '../data';
+import { resolveSellerVerified } from '../services/sellerRepository';
+import { getStockStatus, getDeliveryTime, isManualHandover } from '../services/productMeta';
+import QuickViewDialog from './QuickViewDialog';
 
-export default function ProductCard({ product, className }) {
-  const navigate = useNavigate();
-  const { isWishlisted, toggleWishlist } = useWishlist();
-  const [quickOpen, setQuickOpen] = useState(false);
-  const wished = isWishlisted(product.id);
-  const href = productPath(product);
-  const cover = mediaUrl(product.images?.[0]);
-  const stockLeft = Number(product.stock_count || 0);
-  const isInstant = product.delivery_type === "instant";
-  const sellerSlug = product.seller_shop_slug || product.seller_id;
-  const subtitle =
-    product.short_description ||
-    product.description ||
-    product.category_name ||
-    "";
+const ProductCard = ({ p }) => {
+  const { toggleWishlist, inWishlist } = useStore();
+  const [quickView, setQuickView] = useState(false);
+
+  const realId = p.baseId ?? p.id;
+  const wished = inWishlist(realId);
+  const sellerName = p.seller?.name || p.sellerName || p.artist || 'Seller';
+  const sellerSlug = p.sellerSlug || p.artistSlug || p.seller?.slug || slugify(sellerName);
+  const sellerVerified = p.verifiedSeller || p.seller?.verified || resolveSellerVerified(sellerName);
+  const stockStatus = getStockStatus(p);
+  const manualDelivery = isManualHandover(p);
+  const instantAccess = !manualDelivery && getDeliveryTime(p).toLowerCase().includes('instant');
+  const thumbnail = p.img || p.thumbnail || (Array.isArray(p.images) ? p.images[0] : null);
+  const subtitle = (
+    p.shortDescription ||
+    p.description ||
+    p.cat ||
+    p.category?.name ||
+    p.category ||
+    ''
+  );
+
+  const handleWishlist = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    toggleWishlist({ ...p, id: realId });
+  };
+
+  const openQuickView = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setQuickView(true);
+  };
+
+  const priceValue = Number(p.price || 0);
+  const priceLabel = `$${priceValue.toFixed(priceValue % 1 === 0 ? 0 : 2)}`;
+  const cleanSubtitle = String(subtitle)
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
 
   return (
-    <>
-      <article
-        className={cn(
-          "group flex h-full flex-col overflow-hidden rounded-xl border border-border/70 bg-card shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/25 hover:shadow-md",
-          className
-        )}
-        data-testid={`product-card-${product.id}`}
-      >
-        <div className="relative aspect-[4/3] overflow-hidden bg-muted">
-          <Link to={href} className="absolute inset-0 block" aria-label={product.title}>
-            {cover ? (
-              <img
-                src={cover}
-                alt={product.title}
-                className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.04]"
-                loading="lazy"
-              />
-            ) : (
-              <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-muted to-secondary text-xs font-semibold text-muted-foreground">
-                No image
-              </div>
-            )}
-          </Link>
-
-          <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex items-start justify-between gap-1.5 p-1.5">
-            <div className="flex min-w-0 flex-wrap gap-1">
-              <span
-                className={cn(
-                  "inline-flex items-center gap-0.5 rounded-md px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white shadow-sm",
-                  isInstant ? "bg-emerald-600" : "bg-primary"
-                )}
-              >
-                {isInstant ? <Zap className="h-2.5 w-2.5" /> : <Hand className="h-2.5 w-2.5" />}
-                <span className="max-w-[4.5rem] truncate sm:max-w-none">{isInstant ? "Instant Access" : "Manual"}</span>
-              </span>
-              {product.is_featured ? (
-                <span className="rounded-md bg-amber-500 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white shadow-sm">
-                  Featured
-                </span>
-              ) : null}
-            </div>
-            <button
-              type="button"
-              className={cn(
-                "pointer-events-auto inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-white/70 bg-white/95 shadow-sm backdrop-blur transition hover:scale-105",
-                wished ? "text-rose-500" : "text-foreground/70"
-              )}
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                toggleWishlist(product);
-              }}
-              aria-label={wished ? "Remove from wishlist" : "Add to wishlist"}
-              data-testid={`wishlist-btn-${product.id}`}
-            >
-              <Heart className={cn("h-3.5 w-3.5", wished && "fill-current")} />
-            </button>
-          </div>
-
-          {stockLeft > 0 ? (
-            <span className="pointer-events-none absolute bottom-1.5 left-1.5 z-10 rounded-md bg-emerald-600 px-1.5 py-0.5 text-[10px] font-bold text-white shadow-sm">
-              {stockLeft} Left
-            </span>
+    <article
+      className="group relative flex h-full flex-col overflow-hidden rounded-xl border border-border/70 bg-white shadow-sm transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-primary/25 hover:shadow-md"
+      data-testid={`product-card-${realId}`}
+    >
+      <div className="relative aspect-[4/3] overflow-hidden bg-secondary">
+        <Link
+          to={`/product/${realId}`}
+          className="absolute inset-0 block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+          aria-label={p.title}
+        >
+          {thumbnail ? (
+            <img
+              src={thumbnail}
+              alt={p.title}
+              loading="lazy"
+              className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04]"
+            />
           ) : (
-            <span className="pointer-events-none absolute bottom-1.5 left-1.5 z-10 rounded-md bg-black/70 px-1.5 py-0.5 text-[10px] font-bold text-white shadow-sm">
-              Sold out
-            </span>
+            <div className="flex h-full w-full items-center justify-center text-xs font-semibold text-muted-foreground">
+              No image
+            </div>
           )}
+        </Link>
 
+        <div className="pointer-events-none absolute inset-x-0 top-0 z-[2] flex items-start justify-between gap-1.5 p-1.5">
+          <div className="flex min-w-0 flex-wrap gap-1">
+            {manualDelivery ? (
+              <span className="inline-flex items-center gap-0.5 rounded-md bg-primary px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white shadow-sm">
+                <Hand className="h-2.5 w-2.5 shrink-0" aria-hidden="true" />
+                Manual
+              </span>
+            ) : instantAccess ? (
+              <span className="inline-flex items-center gap-0.5 rounded-md bg-emerald-600 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white shadow-sm">
+                <Zap className="h-2.5 w-2.5 shrink-0" aria-hidden="true" />
+                Instant Access
+              </span>
+            ) : null}
+            {p.featured === true ? (
+              <span className="rounded-md bg-orange-500 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white shadow-sm">
+                Featured
+              </span>
+            ) : null}
+          </div>
           <button
             type="button"
-            className="absolute inset-x-2 bottom-2 z-10 hidden translate-y-1 rounded-md bg-foreground/90 px-2 py-1.5 text-[11px] font-semibold text-background opacity-0 backdrop-blur transition group-hover:translate-y-0 group-hover:opacity-100 md:block"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              setQuickOpen(true);
-            }}
-            data-testid={`quick-view-${product.id}`}
+            onClick={handleWishlist}
+            aria-label={wished ? 'Remove from wishlist' : 'Add to wishlist'}
+            aria-pressed={wished}
+            data-testid={`wishlist-btn-${realId}`}
+            className={`pointer-events-auto grid h-7 w-7 shrink-0 place-items-center rounded-full border border-white/70 bg-white/95 text-foreground shadow-sm backdrop-blur transition-all duration-200 hover:scale-105 hover:text-rose-500 ${
+              wished ? 'text-rose-500' : 'text-foreground/70'
+            }`}
           >
-            Quick View
+            <Heart className={`h-3.5 w-3.5 ${wished ? 'fill-rose-500' : ''}`} aria-hidden="true" />
           </button>
         </div>
 
-        <div className="flex flex-1 flex-col gap-1.5 p-2.5 sm:p-3">
-          <Link
-            to={href}
-            className="line-clamp-2 text-sm font-bold leading-snug text-foreground transition-colors hover:text-primary"
+        {stockStatus ? (
+          <span
+            className={`pointer-events-none absolute bottom-1.5 left-1.5 z-[2] rounded-md px-1.5 py-0.5 text-[10px] font-bold text-white shadow-sm ${
+              stockStatus.tone === 'destructive'
+                ? 'bg-red-500'
+                : stockStatus.tone === 'warning'
+                  ? 'bg-amber-500'
+                  : 'bg-emerald-600'
+            }`}
           >
-            {product.title}
-          </Link>
+            {stockStatus.label}
+          </span>
+        ) : null}
 
-          {subtitle ? (
-            <p className="line-clamp-2 text-[11px] leading-relaxed text-muted-foreground sm:text-xs">
-              {String(subtitle).replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim()}
-            </p>
-          ) : null}
-
-          {product.seller_shop_name ? (
-            <button
-              type="button"
-              className="inline-flex max-w-full items-center gap-1 text-[10px] text-muted-foreground transition-colors hover:text-primary"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                startTransition(() => navigate(`/seller/${sellerSlug}`));
-              }}
-            >
-              <span className="truncate">by {product.seller_shop_name}</span>
-              {product.seller_is_verified ? (
-                <span className="inline-flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full bg-primary text-[8px] font-bold text-primary-foreground">
-                  ✓
-                </span>
-              ) : null}
-            </button>
-          ) : null}
-
-          <div className="mt-auto flex items-center justify-between gap-2 pt-1">
-            <p className="truncate text-base font-extrabold tracking-tight text-emerald-600 sm:text-lg">
-              {formatMoney(product.price, product.currency || "USD")}
-            </p>
-            <Button
-              asChild
-              size="sm"
-              className="h-8 shrink-0 gap-1 rounded-lg bg-primary px-2.5 text-xs font-semibold text-primary-foreground shadow-sm hover:bg-primary/90"
-            >
-              <Link to={href} data-testid={`view-product-${product.id}`}>
-                <Eye className="h-3.5 w-3.5" />
-                View
-              </Link>
-            </Button>
-          </div>
+        <div className="pointer-events-none absolute inset-0 z-[1] hidden items-center justify-center bg-slate-900/0 opacity-0 transition-all duration-300 group-hover:bg-slate-900/35 group-hover:opacity-100 md:flex">
+          <button
+            type="button"
+            onClick={openQuickView}
+            data-testid={`quick-view-${realId}`}
+            className="pointer-events-auto inline-flex translate-y-2 items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-[11px] font-semibold text-foreground shadow-md transition-all duration-300 group-hover:translate-y-0 hover:bg-white"
+            aria-label={`Quick view ${p.title}`}
+          >
+            <Eye className="h-3.5 w-3.5" aria-hidden="true" />
+            Quick View
+          </button>
         </div>
-      </article>
+      </div>
 
-      <QuickViewModal open={quickOpen} onOpenChange={setQuickOpen} product={product} />
-    </>
+      <div className="flex flex-1 flex-col gap-1.5 p-2.5 sm:p-3">
+        <Link
+          to={`/product/${realId}`}
+          className="rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <h3 className="line-clamp-2 text-sm font-bold leading-snug text-foreground transition-colors group-hover:text-primary">
+            {p.title}
+          </h3>
+        </Link>
+
+        {cleanSubtitle ? (
+          <p className="line-clamp-2 text-[11px] leading-relaxed text-muted-foreground sm:text-xs">
+            {cleanSubtitle}
+          </p>
+        ) : null}
+
+        <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+          <span>by</span>
+          <Link
+            to={`/seller/${sellerSlug}`}
+            onClick={(e) => e.stopPropagation()}
+            className="truncate font-semibold text-foreground/80 transition-colors hover:text-primary"
+          >
+            {sellerName}
+          </Link>
+          {sellerVerified ? (
+            <BadgeCheck className="h-3 w-3 shrink-0 text-primary" aria-label="Verified seller" />
+          ) : null}
+        </div>
+
+        <div className="mt-auto flex items-center justify-between gap-2 pt-1">
+          <div className="min-w-0">
+            <div className="truncate text-base font-extrabold leading-none tracking-tight text-emerald-600 sm:text-lg">
+              {priceLabel}
+            </div>
+            {p.old != null ? (
+              <div className="mt-0.5 text-[10px] text-muted-foreground line-through">${p.old}</div>
+            ) : null}
+          </div>
+          <Link
+            to={`/product/${realId}`}
+            data-testid={`view-product-${realId}`}
+            className="inline-flex h-8 shrink-0 items-center gap-1 rounded-lg bg-primary px-2.5 text-xs font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90"
+            aria-label={`View ${p.title}`}
+          >
+            <Eye className="h-3.5 w-3.5" aria-hidden="true" />
+            View
+          </Link>
+        </div>
+      </div>
+
+      <QuickViewDialog product={p} open={quickView} onOpenChange={setQuickView} />
+    </article>
   );
-}
+};
+
+export default ProductCard;

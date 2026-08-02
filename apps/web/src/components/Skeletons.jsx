@@ -9,7 +9,7 @@ const Bone = ({ className = '' }) => (
 export const ProductCardSkeleton = () => (
   <div className="flex h-full flex-col overflow-hidden rounded-xl border border-border/60 bg-white" aria-hidden="true">
     <Bone className="aspect-[4/3] rounded-none" />
-    <div className="space-y-2 px-2.5 pb-2.5 pt-2">
+    <div className="space-y-2 px-2.5 pb-2.5 pt-2 sm:px-3">
       <Bone className="h-3.5 w-4/5" />
       <Bone className="h-3 w-full" />
       <Bone className="h-3 w-3/5" />
