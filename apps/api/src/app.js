@@ -19,11 +19,13 @@ import {
   sanitizeRequest,
 } from './middlewares/index.js';
 import routes from './routes/index.js';
+import { MAX_IMAGE_UPLOAD_MB } from './constants/uploads.js';
 
 ensureUploadDirectories();
 configureGooglePassport();
 
 const app = express();
+const BODY_LIMIT = `${MAX_IMAGE_UPLOAD_MB}mb`;
 
 app.set('trust proxy', 1);
 app.disable('x-powered-by');
@@ -45,12 +47,20 @@ app.use(helmet({
     }
     : false,
   crossOriginEmbedderPolicy: false,
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
 }));
 app.use(cors(corsOptions));
 app.use(compression());
-app.use(express.json({ limit: '1mb' }));
-app.use(express.urlencoded({ extended: true, limit: '1mb' }));
+app.use(express.json({ limit: BODY_LIMIT }));
+app.use(express.urlencoded({ extended: true, limit: BODY_LIMIT }));
 app.use(cookieParser());
+app.use(
+  '/uploads',
+  express.static(env.uploadPath, {
+    maxAge: '7d',
+    fallthrough: true,
+  }),
+);
 app.use(sanitizeRequest);
 app.use(globalRateLimiter);
 

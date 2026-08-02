@@ -55,6 +55,22 @@ export function errorHandler(err, req, res, _next) {
     code = 'CORS_DENIED';
   }
 
+  // express.json / urlencoded body limit
+  if (err?.type === 'entity.too.large' || err?.status === 413 || err?.statusCode === 413) {
+    statusCode = 413;
+    message = err.message?.includes('Image is too large')
+      ? err.message
+      : 'Upload is too large. Maximum allowed size is 25 MB.';
+    code = err.code && err.code !== 'INTERNAL_ERROR' ? err.code : 'PAYLOAD_TOO_LARGE';
+  }
+
+  // multer file size (when not already wrapped by upload middleware)
+  if (err?.name === 'MulterError' && err.code === 'LIMIT_FILE_SIZE') {
+    statusCode = 413;
+    message = 'Image is too large. Maximum allowed size is 25 MB.';
+    code = 'FILE_TOO_LARGE';
+  }
+
   if (statusCode >= 500) {
     logger.error(message, {
       code,

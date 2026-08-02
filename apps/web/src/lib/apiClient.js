@@ -99,9 +99,18 @@ async function refreshAccessToken() {
 
 apiClient.interceptors.request.use((config) => {
   const token = getAccessToken();
+  config.headers = config.headers || {};
   if (token) {
-    config.headers = config.headers || {};
     config.headers.Authorization = `Bearer ${token}`;
+  }
+  // FormData must set its own multipart boundary — never force JSON.
+  if (typeof FormData !== 'undefined' && config.data instanceof FormData) {
+    if (typeof config.headers.set === 'function') {
+      config.headers.delete('Content-Type');
+    } else {
+      delete config.headers['Content-Type'];
+      delete config.headers['content-type'];
+    }
   }
   return config;
 });

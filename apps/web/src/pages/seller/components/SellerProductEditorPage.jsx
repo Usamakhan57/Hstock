@@ -1,8 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
-import { ArrowLeft, ImagePlus, Sparkles, PackageCheck } from 'lucide-react';
+import { ArrowLeft, ImagePlus, Loader2, Sparkles, PackageCheck } from 'lucide-react';
 import { useToast } from '../../../hooks/use-toast';
 import { createSellerProduct, getSellerProduct, updateSellerProduct } from '../api/sellerProducts';
+import { MAX_IMAGE_UPLOAD_MB, uploadProductImage, validateImageFile } from '../../../lib/imageUpload';
 import InventoryImportSection from './InventoryImportSection';
 import {
   DELIVERY_OPTIONS,
@@ -36,6 +37,7 @@ const SellerProductEditorPage = () => {
   const [form, setForm] = useState(defaultDraft);
   const [saving, setSaving] = useState(false);
   const [imageFileName, setImageFileName] = useState('');
+  const [imageUploading, setImageUploading] = useState(false);
   const [inventoryAccounts, setInventoryAccounts] = useState([]);
 
   useEffect(() => {
@@ -57,20 +59,31 @@ const SellerProductEditorPage = () => {
   const inventoryRequired = isInventoryRequired(form.deliveryType);
   const readyInventoryCount = countReadyInventory(inventoryAccounts);
 
-  const handleImageUpload = (event) => {
+  const handleImageUpload = async (event) => {
     const file = event.target.files?.[0];
+    event.target.value = '';
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = typeof reader.result === 'string' ? reader.result : '';
+    setImageUploading(true);
+    try {
+      validateImageFile(file);
+      const uploaded = await uploadProductImage(file);
+      const url = uploaded.url;
       setForm((prev) => ({
         ...prev,
-        thumbnail: result,
-        gallery: prev.gallery.includes(result) ? prev.gallery : [result, ...prev.gallery].slice(0, 4),
+        thumbnail: url,
+        gallery: prev.gallery.includes(url) ? prev.gallery : [url, ...prev.gallery].slice(0, 4),
       }));
       setImageFileName(file.name);
-    };
-    reader.readAsDataURL(file);
+      toast({ title: 'Image uploaded', description: `${file.name} ready to save with this product.` });
+    } catch (error) {
+      toast({
+        title: 'Image upload failed',
+        description: error?.message || `Use JPG, PNG, or WEBP up to ${MAX_IMAGE_UPLOAD_MB} MB.`,
+        variant: 'destructive',
+      });
+    } finally {
+      setImageUploading(false);
+    }
   };
 
   const updateField = (field, value) => setForm((prev) => ({ ...prev, [field]: value }));
@@ -253,11 +266,11 @@ const SellerProductEditorPage = () => {
         <div className="space-y-6">
           <section className="rounded-[1.5rem] border border-border bg-white p-6 shadow-sm">
             <h3 className="text-lg font-black">Product Image</h3>
-            <label className="mt-4 flex cursor-pointer flex-col items-center justify-center rounded-[1.25rem] border border-dashed border-border bg-secondary/40 p-6 text-center text-sm text-muted-foreground">
-              <ImagePlus className="mb-3 h-8 w-8 text-primary" />
-              <span className="font-semibold text-foreground">Upload product image</span>
-              <span className="mt-1">PNG, JPG, WEBP supported</span>
-              <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
+            <label className={`mt-4 flex cursor-pointer flex-col items-center justify-center rounded-[1.25rem] border border-dashed border-border bg-secondary/40 p-6 text-center text-sm text-muted-foreground ${imageUploading ? 'opacity-70 pointer-events-none' : ''}`}>
+              {imageUploading ? <Loader2 className="mb-3 h-8 w-8 animate-spin text-primary" /> : <ImagePlus className="mb-3 h-8 w-8 text-primary" />}
+              <span className="font-semibold text-foreground">{imageUploading ? 'Uploading…' : 'Upload product image'}</span>
+              <span className="mt-1">JPG, PNG, WEBP · max {MAX_IMAGE_UPLOAD_MB} MB</span>
+              <input type="file" accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp" className="hidden" onChange={handleImageUpload} disabled={imageUploading} />
             </label>
             {imageFileName ? <p className="mt-3 text-sm text-muted-foreground">Selected: {imageFileName}</p> : null}
             {form.thumbnail ? <img src={form.thumbnail} alt={form.title || 'Product preview'} className="mt-4 h-40 w-full rounded-[1rem] object-cover" /> : null}
