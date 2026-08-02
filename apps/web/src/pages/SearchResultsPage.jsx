@@ -42,11 +42,14 @@ const SearchResultsPage = () => {
     return searchCategories(q);
   }, [q, catalogVersion, searchData]);
 
-  const matchedArtists = useMemo(() => {
-    if (searchData?.artists?.length) return searchData.artists;
+  const matchedSellers = useMemo(() => {
+    const fromSearch = searchData?.sellers?.length
+      ? searchData.sellers
+      : (searchData?.artists || []);
+    if (fromSearch.length) return fromSearch;
     const needle = q.trim().toLowerCase();
     if (!needle) return [];
-    return getStorefrontSellers().filter((a) => a.name.toLowerCase().includes(needle));
+    return getStorefrontSellers().filter((seller) => seller.name.toLowerCase().includes(needle));
   }, [q, catalogVersion, searchData]);
 
   const goSearch = (term) => navigate(term.trim() ? `/search?q=${encodeURIComponent(term.trim())}` : '/search');
@@ -122,11 +125,11 @@ const SearchResultsPage = () => {
               </div>
             )}
 
-            {matchedArtists.length > 0 && (
+            {matchedSellers.length > 0 && (
               <div className="flex flex-wrap gap-2 mt-3">
-                {matchedArtists.map((a) => (
-                  <Link key={a.slug} to={`/seller/${a.slug}`} className="text-sm font-medium px-4 py-2 rounded-full bg-white border border-border hover:bg-secondary transition-colors">
-                    Seller: {a.name}
+                {matchedSellers.map((seller) => (
+                  <Link key={seller.slug} to={`/seller/${seller.slug}`} className="text-sm font-medium px-4 py-2 rounded-full bg-white border border-border hover:bg-secondary transition-colors">
+                    Seller: {seller.name}
                   </Link>
                 ))}
               </div>

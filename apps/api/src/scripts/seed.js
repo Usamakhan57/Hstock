@@ -1,10 +1,11 @@
 /**
- * Seed default MongoDB configuration documents.
+ * Seed default MongoDB configuration documents + marketplace services.
  * Usage: node src/scripts/seed.js
  */
 import { connectDatabase, disconnectDatabase } from '../config/database.js';
 import { logger } from '../config/logger.js';
 import { ensureDefaultConfigs } from '../services/config.service.js';
+import { seedMarketplaceCategories } from '../services/categorySeed.service.js';
 import { User, AdminProfile } from '../models/index.js';
 import { hashPassword } from '../utils/password.js';
 import { USER_ROLES } from '../constants/roles.js';
@@ -54,6 +55,12 @@ async function main() {
 
   if (!env.isProduction || process.env.SEED_ADMIN === 'true') {
     await seedAdmin();
+  }
+
+  // Always ensure default marketplace services exist (idempotent by slug).
+  if (process.env.SEED_CATEGORIES !== 'false') {
+    const categorySeed = await seedMarketplaceCategories();
+    logger.info('Marketplace services ensured', categorySeed);
   }
 
   await disconnectDatabase();

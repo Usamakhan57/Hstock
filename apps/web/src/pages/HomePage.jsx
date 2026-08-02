@@ -133,7 +133,7 @@ const HomePage = () => {
   const { data: featuredProducts, loading: featuredLoading, error: featuredError, retry: retryFeatured } = useFetch(() => productsApi.featured(8), []);
   const { data: latestProducts, loading: latestLoading, error: latestError, retry: retryLatest } = useFetch(() => productsApi.latest(10), []);
   const featuredStores = useMemo(() => getStorefrontSellers().slice(0, 6), [catalogVersion]);
-  const popularCategories = useMemo(() => getHomepageCategories().slice(0, 20), [catalogVersion]);
+  const popularCategories = useMemo(() => getHomepageCategories(), [catalogVersion]);
   const [recentlyViewed, setRecentlyViewed] = useState([]);
 
   useEffect(() => {
@@ -154,20 +154,30 @@ const HomePage = () => {
         <HeroSection />
 
         {popularCategories.length > 0 && (
-          <Section eyebrow="Popular categories" title="Browse top marketplace categories" cta="View all" ctaTo="/categories">
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 xl:grid-cols-8 2xl:grid-cols-10 gap-4">
+          <Section eyebrow="Marketplace services" title="Browse digital services" cta="View all" ctaTo="/categories">
+            {/* Mobile: horizontal scroll. Tablet/Desktop: responsive multi-column grid. */}
+            <div className="flex gap-3 overflow-x-auto pb-2 snap-x snap-mandatory sm:grid sm:grid-cols-3 sm:overflow-visible sm:pb-0 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 sm:gap-4">
               {popularCategories.map((category) => {
                 const Icon = category.icon;
                 return (
                   <Link
                     key={category.id || category.slug}
                     to={`/category/${category.slug}`}
-                    className="group flex flex-col gap-4 rounded-[1.75rem] border border-border bg-white p-6 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-primary hover:shadow-lg"
+                    className="group flex w-[9.5rem] shrink-0 snap-start flex-col gap-3 rounded-2xl border border-border bg-white p-4 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-primary hover:shadow-lg sm:w-auto sm:gap-4 sm:rounded-[1.75rem] sm:p-5"
                   >
-                    <span className="grid h-14 w-14 place-items-center rounded-3xl bg-primary/10 text-primary transition-colors group-hover:bg-primary/15">
-                      <Icon className="h-6 w-6" aria-hidden="true" />
+                    <span className="grid h-12 w-12 place-items-center rounded-2xl bg-primary/10 text-primary transition-colors group-hover:bg-primary/15 sm:h-14 sm:w-14 sm:rounded-3xl">
+                      {category.image ? (
+                        <img src={category.image} alt="" className="h-full w-full rounded-2xl object-cover sm:rounded-3xl" />
+                      ) : (
+                        <Icon className="h-5 w-5 sm:h-6 sm:w-6" aria-hidden="true" />
+                      )}
                     </span>
-                    <span className="text-sm font-semibold text-foreground">{category.name}</span>
+                    <span className="min-w-0">
+                      <span className="block truncate text-sm font-semibold text-foreground">{category.name}</span>
+                      <span className="mt-1 block text-xs text-muted-foreground">
+                        {Number(category.productCount || 0).toLocaleString()} products
+                      </span>
+                    </span>
                   </Link>
                 );
               })}

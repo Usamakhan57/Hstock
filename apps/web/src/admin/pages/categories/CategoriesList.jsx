@@ -24,9 +24,10 @@ import { useToast } from '../../../hooks/use-toast';
 const ICON_CHOICES = [
   'Frame', 'Image', 'Boxes', 'Palette', 'CalendarDays', 'NotebookPen',
   'Printer', 'Mail', 'PencilRuler', 'Shirt', 'Trophy', 'Leaf', 'Grid3x3',
-  'Layers', 'Dumbbell', 'Sparkles',
+  'Layers', 'Dumbbell', 'Sparkles', 'Server', 'Coins', 'Shield', 'BadgeCheck',
   'Users', 'Globe2', 'Globe', 'Cloud', 'FileCode2', 'Smartphone', 'Bot',
-  'LayoutTemplate', 'GraduationCap', 'BookOpen', 'Terminal',
+  'LayoutTemplate', 'GraduationCap', 'BookOpen', 'Terminal', 'Send',
+  'MessageCircle', 'Briefcase', 'Camera', 'Film', 'Puzzle', 'Monitor',
   'Instagram', 'Facebook', 'Music2', 'Youtube', 'Twitter',
 ];
 
@@ -34,7 +35,7 @@ const ROOT_VALUE = '__root__';
 
 const EMPTY = {
   name: '', slug: '', description: '', image: '', icon: 'Sparkles', parentId: null,
-  status: 'active', featured: false, showInHeader: true, showOnHomepage: false,
+  status: 'active', featured: false, showInHeader: true, showOnHomepage: true,
   seoTitle: '', metaDescription: '', ogImage: '',
 };
 
@@ -219,16 +220,25 @@ const CategoriesList = () => {
     if (!form.name.trim()) { toast({ title: 'Name is required', variant: 'destructive' }); return; }
     setSaving(true);
     const payload = { ...form, slug: form.slug || slugify(form.name) };
-    if (editing) {
-      await updateCategory(editing.id, payload);
-    } else {
-      const siblingCount = categories.filter((c) => (c.parentId || null) === (payload.parentId || null)).length;
-      await createCategory({ ...payload, displayOrder: siblingCount });
+    try {
+      if (editing) {
+        await updateCategory(editing.id, payload);
+      } else {
+        const siblingCount = categories.filter((c) => (c.parentId || null) === (payload.parentId || null)).length;
+        await createCategory({ ...payload, displayOrder: siblingCount });
+      }
+      toast({ title: editing ? 'Category updated' : 'Category created', description: payload.name });
+      setSheetOpen(false);
+      load();
+    } catch (error) {
+      toast({
+        title: 'Could not save category',
+        description: error?.message || 'Please check the form and try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setSaving(false);
     }
-    toast({ title: editing ? 'Category updated' : 'Category created', description: payload.name });
-    setSaving(false);
-    setSheetOpen(false);
-    load();
   };
 
   const toggleEnabled = async (row) => {

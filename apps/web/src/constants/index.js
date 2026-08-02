@@ -21,8 +21,11 @@ export const ENDPOINTS = {
   product: (id) => `/products/${id}`,
   categories: '/categories',
   categoryProducts: (slug) => `/categories/${slug}/products`,
-  artists: '/artists',
-  artist: (slug) => `/artists/${slug}`,
+  sellers: '/sellers',
+  seller: (slug) => `/seller/${slug}`,
+  // Legacy aliases
+  artists: '/sellers',
+  artist: (slug) => `/seller/${slug}`,
   blog: '/blog',
   blogPost: (slug) => `/blog/${slug}`,
   search: '/search',

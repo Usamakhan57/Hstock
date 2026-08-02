@@ -3,10 +3,18 @@ import { objectIdSchema, paginationSchema } from './common.validator.js';
 
 const statusEnum = z.enum(['active', 'inactive']);
 
+/** Accept absolute/relative/data URLs; coerce blank strings to null. */
+const optionalImageRef = z.preprocess(
+  (value) => (value === '' || value === undefined ? null : value),
+  z.string().min(1).max(4000).nullable().optional(),
+);
+
 export const listQuerySchema = {
   query: paginationSchema.extend({
     status: statusEnum.optional(),
     featured: z.enum(['true', 'false']).optional(),
+    showOnHomepage: z.enum(['true', 'false']).optional(),
+    includeDeleted: z.enum(['true', 'false']).optional(),
     parent: z.string().optional(),
     search: z.string().max(120).optional(),
   }),
@@ -29,17 +37,33 @@ export const categoryBodySchema = {
     name: z.string().min(2).max(160),
     slug: z.string().min(2).max(160).optional(),
     description: z.string().max(5000).optional(),
-    image: z.string().url().nullable().optional(),
-    icon: z.string().nullable().optional(),
-    parent: objectIdSchema.nullable().optional(),
+    image: optionalImageRef,
+    icon: z.preprocess(
+      (value) => (value === '' || value === undefined ? null : value),
+      z.string().max(80).nullable().optional(),
+    ),
+    parent: z.preprocess(
+      (value) => (value === '' || value === undefined ? null : value),
+      objectIdSchema.nullable().optional(),
+    ),
     displayOrder: z.number().int().optional(),
     status: statusEnum.optional(),
     featured: z.boolean().optional(),
     showInHeader: z.boolean().optional(),
     showOnHomepage: z.boolean().optional(),
-    seoTitle: z.string().max(200).nullable().optional(),
-    seoDescription: z.string().max(500).nullable().optional(),
-    ogImage: z.string().url().nullable().optional(),
+    seoTitle: z.preprocess(
+      (value) => (value === '' || value === undefined ? null : value),
+      z.string().max(200).nullable().optional(),
+    ),
+    seoDescription: z.preprocess(
+      (value) => (value === '' || value === undefined ? null : value),
+      z.string().max(500).nullable().optional(),
+    ),
+    ogImage: optionalImageRef,
+    deletedAt: z.preprocess(
+      (value) => (value === '' || value === undefined ? null : value),
+      z.union([z.string().datetime(), z.null()]).optional(),
+    ),
   }),
 };
 

@@ -39,11 +39,17 @@ async function getByIdOrSlug(Model, idOrSlug, notFoundMessage) {
 
 export async function listCategories(query = {}) {
   const { page, limit, skip } = parsePagination(query);
-  const filter = { deletedAt: null };
+  const filter = {};
+  if (query.includeDeleted === 'true') {
+    filter.deletedAt = { $ne: null };
+  } else {
+    filter.deletedAt = null;
+  }
   if (query.status) filter.status = query.status;
   if (query.parent === 'null') filter.parent = null;
   else if (query.parent) filter.parent = query.parent;
   if (query.featured !== undefined) filter.featured = query.featured === 'true';
+  if (query.showOnHomepage !== undefined) filter.showOnHomepage = query.showOnHomepage === 'true';
   if (query.search) {
     const needle = String(query.search).trim();
     if (needle) {
@@ -54,7 +60,7 @@ export async function listCategories(query = {}) {
   }
 
   const [items, total] = await Promise.all([
-    Category.find(filter).sort({ displayOrder: 1, name: 1 }).skip(skip).limit(limit).lean(),
+    Category.find(filter).sort({ name: 1, displayOrder: 1 }).skip(skip).limit(limit).lean(),
     Category.countDocuments(filter),
   ]);
 
@@ -77,7 +83,12 @@ export async function createCategory(payload, userId) {
 }
 
 export async function updateCategory(id, payload, userId) {
-  const category = await Category.findOne({ _id: id, deletedAt: null });
+  // Allow restoring soft-deleted categories when deletedAt is explicitly null.
+  const allowDeleted = Object.prototype.hasOwnProperty.call(payload, 'deletedAt')
+    && payload.deletedAt === null;
+  const category = await Category.findOne(
+    allowDeleted ? { _id: id } : { _id: id, deletedAt: null },
+  );
   if (!category) {
     throw new AppError('Category not found', 404, { code: 'NOT_FOUND' });
   }
@@ -96,16 +107,22 @@ export async function updateCategory(id, payload, userId) {
 }
 
 export async function deleteCategory(id, userId) {
-  const category = await Category.findOneAndUpdate(
-    { _id: id, deletedAt: null },
-    { $set: { deletedAt: new Date(), updatedBy: userId, status: 'inactive' } },
-    { new: true },
-  ).lean();
-
-  if (!category) {
+  const existing = await Category.findById(id);
+  if (!existing) {
     throw new AppError('Category not found', 404, { code: 'NOT_FOUND' });
   }
-  return category;
+
+  // Second delete on an already-trashed category permanently removes it.
+  if (existing.deletedAt) {
+    await Category.deleteOne({ _id: id });
+    return existing.toObject();
+  }
+
+  existing.deletedAt = new Date();
+  existing.status = 'inactive';
+  existing.updatedBy = userId;
+  await existing.save();
+  return existing.toObject();
 }
 
 // ─── Brands ─────────────────────────────────────────────────────────────────

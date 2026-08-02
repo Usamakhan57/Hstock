@@ -102,9 +102,10 @@ export async function fetchProduct(idOrSlug) {
 }
 
 export async function fetchCategories(params = { limit: 100 }) {
-  const key = cacheKey('categories', params);
+  const query = { status: 'active', ...params };
+  const key = cacheKey('categories', query);
   return cachedRequest(key, async () => {
-    const { data, meta } = await get('/categories', { params });
+    const { data, meta } = await get('/categories', { params: query });
     const items = Array.isArray(data) ? data.map(mapBackendCategory) : [];
     return { items, meta };
   }, 60_000);
@@ -197,9 +198,9 @@ export const productsApi = {
 
   async search(q) {
     const needle = (q || '').trim();
-    if (!needle) return { products: [], categories: [], artists: [] };
+    if (!needle) return { products: [], categories: [], sellers: [], artists: [] };
     const tokens = tokenizeSearchQuery(needle);
-    if (!tokens.length) return { products: [], categories: [], artists: [] };
+    if (!tokens.length) return { products: [], categories: [], sellers: [], artists: [] };
 
     const [{ items: rawProducts }, { items: rawCategories }] = await Promise.all([
       fetchProducts({ search: needle, limit: 50 }),
@@ -210,12 +211,12 @@ export const productsApi = {
     const products = filterProductsBySearchRelevance(rawProducts, needle);
     const categories = filterCategoriesBySearch(rawCategories, needle);
 
-    const artistsMap = new Map();
+    const sellersMap = new Map();
     products.forEach((p) => {
       if (p.sellerId || p.artist) {
         const key = p.sellerId || p.artist;
-        if (!artistsMap.has(key)) {
-          artistsMap.set(key, mapBackendSeller({
+        if (!sellersMap.has(key)) {
+          sellersMap.set(key, mapBackendSeller({
             _id: p.sellerId,
             storeName: p.artist,
             storeSlug: p.sellerSlug || p.artistSlug,
@@ -225,10 +226,13 @@ export const productsApi = {
         }
       }
     });
+    const sellers = [...sellersMap.values()];
     return {
       products,
       categories,
-      artists: [...artistsMap.values()],
+      sellers,
+      // Backward-compatible alias — UI should use `sellers`.
+      artists: sellers,
     };
   },
 
@@ -237,7 +241,8 @@ export const productsApi = {
     return {
       products: result.products.slice(0, limit),
       categories: result.categories.slice(0, 3),
-      artists: result.artists.slice(0, 3),
+      sellers: result.sellers.slice(0, 3),
+      artists: result.sellers.slice(0, 3),
     };
   },
 };
