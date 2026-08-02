@@ -518,7 +518,7 @@ export const seedBlogRevisions = [
 export const seedBlogSettings = {
   pageTitle: 'The ApnaStore Blog',
   heroHeading: 'The ApnaStore Blog',
-  heroDescription: 'Guides, inspiration, and behind-the-scenes stories from our team and top artists.',
+  heroDescription: 'Guides, inspiration, and behind-the-scenes stories from our team and top sellers.',
   featuredCategoryIds: ['bcat-guides', 'bcat-inspiration', 'bcat-business', 'bcat-trends'],
   postsPerPage: 9,
   enableSearch: true,

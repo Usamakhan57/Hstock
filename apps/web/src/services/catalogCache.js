@@ -6,6 +6,7 @@ import {
   fetchCategories,
   fetchProducts,
 } from './catalogApi';
+import { clearRequestCache } from '../lib/requestCache';
 import { mapBackendSeller } from '../lib/mappers/catalogMappers';
 
 let categories = [];
@@ -84,6 +85,10 @@ export async function hydrateCatalog({ force = false } = {}) {
   if (hydratePromise && !force) return hydratePromise;
 
   hydratePromise = (async () => {
+    if (force) {
+      clearRequestCache('categories');
+      clearRequestCache('products');
+    }
     const [catItems, productItems] = await Promise.all([
       fetchAllCatalog((params) => fetchCategories(params)),
       fetchAllCatalog((params) => fetchProducts(params)),

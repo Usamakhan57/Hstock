@@ -148,13 +148,14 @@ const saveRecent = (term) => {
 };
 
 /* --------------------------------------------- live search suggestions */
-const EMPTY_SUGGESTIONS = { products: [], categories: [], artists: [] };
+const EMPTY_SUGGESTIONS = { products: [], categories: [], sellers: [] };
 
 const SearchSuggestions = ({ query, recent, onPick, onClearRecent }) => {
   const [suggestions, setSuggestions] = useState(EMPTY_SUGGESTIONS);
   const [suggestLoading, setSuggestLoading] = useState(false);
   const hasQuery = query.trim().length > 0;
-  const hasResults = suggestions.products.length || suggestions.categories.length || suggestions.artists.length;
+  const sellerSuggestions = suggestions.sellers || suggestions.artists || [];
+  const hasResults = suggestions.products.length || suggestions.categories.length || sellerSuggestions.length;
 
   useEffect(() => {
     const needle = query.trim();
@@ -256,16 +257,16 @@ const SearchSuggestions = ({ query, recent, onPick, onClearRecent }) => {
               ))}
             </ul>
           )}
-          {(suggestions.categories.length > 0 || suggestions.artists.length > 0) && (
+          {(suggestions.categories.length > 0 || sellerSuggestions.length > 0) && (
             <div className="flex flex-wrap gap-2 border-t border-border pt-3">
               {suggestions.categories.map((c) => (
                 <Link key={c.id} to={`/category/${c.slug}`} onMouseDown={(e) => e.preventDefault()} className="inline-flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-full bg-secondary/70 hover:bg-secondary transition-colors">
                   Service: {c.name} <ArrowUpRight className="w-3 h-3" aria-hidden="true" />
                 </Link>
               ))}
-              {suggestions.artists.map((a) => (
-                <Link key={a.slug} to={`/seller/${a.slug}`} onMouseDown={(e) => e.preventDefault()} className="inline-flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-full border border-border hover:bg-secondary transition-colors">
-                  Seller: {a.name} <ArrowUpRight className="w-3 h-3" aria-hidden="true" />
+              {sellerSuggestions.map((seller) => (
+                <Link key={seller.slug} to={`/seller/${seller.slug}`} onMouseDown={(e) => e.preventDefault()} className="inline-flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-full border border-border hover:bg-secondary transition-colors">
+                  Seller: {seller.name} <ArrowUpRight className="w-3 h-3" aria-hidden="true" />
                 </Link>
               ))}
             </div>

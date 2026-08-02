@@ -9,7 +9,7 @@ import {
   persistSession,
   getRememberMe,
 } from '../lib/tokenStorage';
-import { hydrateCatalog, getCatalogVersion } from '../services/catalogCache';
+import { hydrateCatalog, getCatalogVersion, subscribeCatalog } from '../services/catalogCache';
 import useSocket from '../hooks/useSocket';
 
 const StoreContext = createContext(null);
@@ -77,6 +77,12 @@ export const StoreProvider = ({ children }) => {
       // ignore
     }
   }, []);
+
+  // Keep homepage/header in sync when admin mutates categories/products.
+  useEffect(() => subscribeCatalog((version) => {
+    setCatalogVersion(version);
+    setCatalogReady(true);
+  }), []);
 
   const refreshNotifications = useCallback(async () => {
     if (!getAccessToken()) {
