@@ -9,7 +9,11 @@ export {
 export { authorize, requireRole } from './role.middleware.js';
 export { requirePermission } from './permission.middleware.js';
 export { sanitizeRequest } from './sanitize.middleware.js';
-export { createUploadMiddleware, uploadSingleTemp } from './upload.middleware.js';
+export {
+  createUploadMiddleware,
+  createImageUploadMiddleware,
+  uploadSingleTemp,
+} from './upload.middleware.js';
 export {
   globalRateLimiter,
   authRateLimiter,

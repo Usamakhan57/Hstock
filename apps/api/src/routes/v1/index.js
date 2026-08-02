@@ -17,6 +17,7 @@ import refundsRoutes from './refunds.routes.js';
 import notificationsRoutes from './notifications.routes.js';
 import telegramRoutes from './telegram.routes.js';
 import adminRoutes from './admin.routes.js';
+import uploadsRoutes from './uploads.routes.js';
 
 const router = Router();
 
@@ -48,6 +49,7 @@ router.get('/', (_req, res) => {
         'notifications',
         'telegram',
         'admin',
+        'uploads',
       ],
       health: '/health',
       socket: '/socket.io',
@@ -61,6 +63,7 @@ router.use('/config', configRoutes);
 router.use('/categories', categoriesRoutes);
 router.use('/brands', brandsRoutes);
 router.use('/tags', tagsRoutes);
+router.use('/uploads', uploadsRoutes);
 router.use('/products', productsRoutes);
 router.use('/orders', ordersRoutes);
 router.use('/payments', paymentsRoutes);

@@ -50,7 +50,7 @@ const envSchema = z.object({
   RATE_LIMIT_MAX: z.coerce.number().int().positive().default(200),
 
   UPLOAD_DIR: z.string().default('uploads'),
-  UPLOAD_MAX_FILE_SIZE_MB: z.coerce.number().positive().default(10),
+  UPLOAD_MAX_FILE_SIZE_MB: z.coerce.number().positive().default(25),
 
   LOG_LEVEL: z.enum(['error', 'warn', 'info', 'http', 'verbose', 'debug', 'silly']).default('info'),
   LOG_DIR: z.string().default('logs'),
