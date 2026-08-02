@@ -49,7 +49,7 @@ export async function listPayments(filter = {}, { skip = 0, limit = 20, sort = {
 export async function findPaymentsNeedingSync(limit = 50) {
   return Payment.find({
     status: { $in: ['pending', 'processing', 'partial'] },
-    cryptomusUuid: { $ne: null },
+    cryptomusUuid: { $type: 'string', $ne: '' },
   })
     .sort({ lastSyncedAt: 1, createdAt: 1 })
     .limit(limit);
