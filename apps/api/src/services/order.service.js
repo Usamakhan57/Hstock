@@ -396,7 +396,6 @@ export async function buyNow(payload, actor, requestMeta = {}) {
             toCurrency,
             network,
             status: PAYMENT_STATUS.PENDING,
-            cryptomusUuid: null,
             cryptomusOrderId,
             invoiceUrl: null,
             lifetimeSeconds,
@@ -498,14 +497,16 @@ export async function buyNow(payload, actor, requestMeta = {}) {
 
   let payment;
   try {
-    payment = await paymentRepository.updatePaymentById(result.payment._id, {
-      cryptomusUuid: invoice.uuid || null,
+    const invoiceUpdate = {
       invoiceUrl: invoice.url || null,
       address: invoice.address || null,
       providerStatus: invoice.payment_status || 'check',
       rawInvoice: invoice,
       metadata: { simulated },
-    });
+    };
+    // Never persist cryptomusUuid as null — sparse unique indexes treat null as a value.
+    if (invoice.uuid) invoiceUpdate.cryptomusUuid = invoice.uuid;
+    payment = await paymentRepository.updatePaymentById(result.payment._id, invoiceUpdate);
   } catch (error) {
     if (isDuplicateKeyError(error)) {
       // Another worker may have attached the same provider uuid — reload existing row.
@@ -650,7 +651,6 @@ async function buyNowWithWallet({
         amount: subtotal,
         currency: order.currency,
         status: PAYMENT_STATUS.PAID,
-        cryptomusUuid: null,
         cryptomusOrderId: walletPaymentId,
         invoiceUrl: null,
         paidAt,

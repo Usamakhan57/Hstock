@@ -66,9 +66,13 @@ const paymentSchema = new mongoose.Schema(
       default: PAYMENT_STATUS.PENDING,
       index: true,
     },
+    /**
+     * Sparse unique: do NOT default to null.
+     * MongoDB sparse unique indexes still index explicit null, so a null default
+     * allows only one pending payment row worldwide.
+     */
     cryptomusUuid: {
       type: String,
-      default: null,
       sparse: true,
       unique: true,
       index: true,

@@ -294,7 +294,7 @@ export async function createDepositOrTopup(payload, actor, purpose = 'deposit') 
     throw error;
   }
 
-  deposit.cryptomusUuid = invoice.uuid || null;
+  if (invoice.uuid) deposit.cryptomusUuid = invoice.uuid;
   deposit.invoiceUrl = invoice.url || null;
   deposit.address = invoice.address || null;
   deposit.providerStatus = invoice.payment_status || 'check';

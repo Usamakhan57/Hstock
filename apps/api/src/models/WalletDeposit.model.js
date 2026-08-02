@@ -67,9 +67,12 @@ const walletDepositSchema = new mongoose.Schema(
       default: PAYMENT_STATUS.PENDING,
       index: true,
     },
+    /**
+     * Sparse unique: omit until Cryptomus returns a uuid (never store null).
+     * Explicit null collides under MongoDB sparse unique indexes.
+     */
     cryptomusUuid: {
       type: String,
-      default: null,
       sparse: true,
       unique: true,
       index: true,
