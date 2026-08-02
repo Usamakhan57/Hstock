@@ -36,6 +36,20 @@ export const CategoryCardSkeleton = () => (
   </div>
 );
 
+/** Vertical service card used on the premium Services / Categories page. */
+export const ServiceCardSkeleton = () => (
+  <div
+    className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-border/80 bg-white px-3 py-5 sm:rounded-[1.15rem] sm:px-4 sm:py-6"
+    aria-hidden="true"
+  >
+    <Bone className="h-14 w-14 rounded-2xl sm:h-16 sm:w-16" />
+    <div className="w-full space-y-2">
+      <Bone className="mx-auto h-3.5 w-3/4" />
+      <Bone className="mx-auto h-2.5 w-1/2" />
+    </div>
+  </div>
+);
+
 export const ProductDetailSkeleton = () => (
   <div className="grid lg:grid-cols-2 gap-10" role="status" aria-label="Loading product">
     <div className="space-y-3">

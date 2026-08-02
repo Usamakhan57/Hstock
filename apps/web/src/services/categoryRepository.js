@@ -8,12 +8,14 @@ import {
   GraduationCap, BookOpen, Terminal, Instagram, Facebook, Music2, Youtube, Twitter,
   Mail, Trophy, Sparkles, Server, Coins, Shield, BadgeCheck, Send, MessageCircle,
   Briefcase, Camera, Film, Puzzle, Monitor, Palette, Layers, NotebookPen,
+  MessageSquare, Image, Gamepad2, Headphones, KeyRound, Wallet,
 } from 'lucide-react';
 import {
   getCategoryTree, getRootCategories, getChildren, flattenCategories, getAncestors,
 } from './categoryTree';
 import { getCachedCategories, hydrateCatalog } from './catalogCache';
 import { getProductCountByCategoryId } from './productRepository';
+import { buildServiceSections } from '../lib/servicesCatalog';
 
 const ACCENT_COLORS = ['#6C3BFF', '#8F63FF', '#FF4FD8'];
 
@@ -22,6 +24,7 @@ const ICON_MAP = {
   GraduationCap, BookOpen, Terminal, Instagram, Facebook, Music2, Youtube, Twitter,
   Mail, Trophy, Sparkles, Server, Coins, Shield, BadgeCheck, Send, MessageCircle,
   Briefcase, Camera, Film, Puzzle, Monitor, Palette, Layers, NotebookPen,
+  MessageSquare, Image, Gamepad2, Headphones, KeyRound, Wallet,
   Tag: TagIcon,
 };
 
@@ -88,6 +91,15 @@ export function getHomepageCategories() {
   return [...source].sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
 }
 
+/**
+ * Premium Services page — parent groups as section headings, children as cards.
+ * Counts come from the live product cache (direct assignment per category).
+ */
+export function getServiceSections() {
+  const counts = getProductCountByCategoryId();
+  return buildServiceSections(getStorefrontCategoryTree(), counts);
+}
+
 export function getStorefrontCategoryChildren(parentId = null) {
   return getChildren(list(), parentId);
 }
@@ -125,6 +137,7 @@ export default {
   getCategoryTreeForStorefront,
   getRootStorefrontCategories,
   getHomepageCategories,
+  getServiceSections,
   getStorefrontCategoryChildren,
   flattenStorefrontCategories,
   getCategoryAncestors,

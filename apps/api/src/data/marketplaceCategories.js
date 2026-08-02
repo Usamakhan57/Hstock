@@ -1,6 +1,8 @@
 /**
  * Default marketplace services (categories) for ApnaStore.
  * Seed is idempotent — matches existing rows by slug and skips duplicates.
+ *
+ * Parent display order follows the premium Services page section order.
  */
 
 function slugify(name) {
@@ -13,7 +15,7 @@ function slugify(name) {
 
 /** @typedef {{ name: string, icon?: string, children?: string[] }} ServiceGroup */
 
-/** Flat + nested digital marketplace services. */
+/** Nested digital marketplace services — order = Services page sections. */
 export const MARKETPLACE_SERVICE_GROUPS = [
   {
     name: 'Social Accounts',
@@ -22,15 +24,52 @@ export const MARKETPLACE_SERVICE_GROUPS = [
       'Instagram Accounts',
       'Facebook Accounts',
       'TikTok Accounts',
-      'Twitter (X) Accounts',
-      'YouTube Accounts',
+      'Threads Accounts',
       'Telegram Accounts',
-      'Discord Accounts',
-      'LinkedIn Accounts',
+      'YouTube Accounts',
+      'Snapchat Accounts',
       'Reddit Accounts',
       'Pinterest Accounts',
-      'Snapchat Accounts',
+      'LinkedIn Accounts',
+      'Twitter (X) Accounts',
+      'Discord Accounts',
+      'WhatsApp Accounts',
+      'WeChat Accounts',
+      'Kakao Accounts',
+      'Line Accounts',
+      'VK Accounts',
+      'Naver Accounts',
+      'Band Accounts',
     ],
+  },
+  {
+    name: 'Gaming',
+    icon: 'Trophy',
+    children: [
+      'PUBG',
+      'Free Fire',
+      'Steam',
+      'Battle.net',
+      'Epic Games',
+      'Riot Games',
+      'Roblox',
+      'EA',
+      'PlayStation',
+      'Xbox',
+      'Mobile Legends',
+      'Valorant',
+      'Minecraft',
+    ],
+  },
+  {
+    name: 'Streaming',
+    icon: 'Youtube',
+    children: ['Netflix', 'Spotify', 'Disney+', 'Prime Video', 'Crunchyroll', 'Hulu'],
+  },
+  {
+    name: 'Hosting',
+    icon: 'Server',
+    children: ['cPanel', 'WHM', 'VPS', 'Shared Hosting', 'RDP'],
   },
   {
     name: 'Email Accounts',
@@ -39,57 +78,68 @@ export const MARKETPLACE_SERVICE_GROUPS = [
       'Gmail Accounts',
       'Yahoo Accounts',
       'Outlook Accounts',
-      'Hotmail Accounts',
-      'AOL Accounts',
       'ProtonMail Accounts',
+      'Zoho Accounts',
+      'Business Email',
+      'Hotmail Accounts',
+      'Other Emails',
     ],
-  },
-  {
-    name: 'Streaming',
-    icon: 'Youtube',
-    children: ['Netflix', 'Spotify', 'Disney+', 'Prime Video', 'Crunchyroll'],
-  },
-  {
-    name: 'Gaming',
-    icon: 'Trophy',
-    children: ['Steam', 'Epic Games', 'PlayStation', 'Xbox', 'EA', 'Battle.net', 'Riot Games'],
   },
   {
     name: 'Software',
     icon: 'Cloud',
-    children: ['Canva', 'ChatGPT', 'Midjourney', 'Envato', 'Adobe', 'Microsoft 365', 'CapCut', 'Grammarly'],
+    children: [
+      'Windows',
+      'Office',
+      'Adobe',
+      'Canva',
+      'Grammarly',
+      'JetBrains',
+      'Microsoft 365',
+      'CapCut',
+      'Envato',
+    ],
+  },
+  {
+    name: 'AI Tools',
+    icon: 'Bot',
+    children: [
+      'ChatGPT',
+      'Claude',
+      'Gemini',
+      'Midjourney',
+      'Cursor',
+      'ElevenLabs',
+      'Perplexity',
+    ],
+  },
+  {
+    name: 'Crypto',
+    icon: 'Coins',
+    children: ['Binance', 'Bybit', 'Coinbase', 'OKX', 'KuCoin', 'Wallets'],
   },
   {
     name: 'Domains',
     icon: 'Globe2',
     children: ['Expired Domains', 'Premium Domains'],
   },
-  {
-    name: 'Hosting',
-    icon: 'Server',
-    children: ['Shared Hosting', 'VPS', 'RDP', 'cPanel', 'WHM'],
-  },
-  {
-    name: 'Source Code',
-    icon: 'FileCode2',
-    children: ['Scripts', 'Websites', 'Mobile Apps', 'Themes', 'Plugins'],
-  },
   { name: 'Gift Cards', icon: 'Sparkles' },
-  { name: 'Crypto', icon: 'Coins' },
-  { name: 'VPN', icon: 'Shield' },
-  { name: 'Proxy', icon: 'Globe' },
   { name: 'Digital Licenses', icon: 'BadgeCheck' },
-  { name: 'SaaS', icon: 'Cloud' },
-  { name: 'E-books', icon: 'BookOpen' },
   { name: 'Courses', icon: 'GraduationCap' },
-  { name: 'AI Tools', icon: 'Bot' },
-  { name: 'Other Digital Assets', icon: 'Layers' },
+  { name: 'E-books', icon: 'BookOpen' },
+  { name: 'VPN', icon: 'Shield' },
+  {
+    name: 'Other Digital Assets',
+    icon: 'Layers',
+    children: ['Scripts', 'Websites', 'Mobile Apps', 'Themes', 'Plugins', 'SaaS', 'Proxy'],
+  },
 ];
 
 const CHILD_ICONS = {
   'instagram-accounts': 'Instagram',
   'facebook-accounts': 'Facebook',
   'tiktok-accounts': 'Music2',
+  'threads-accounts': 'MessageCircle',
   'twitter-x-accounts': 'Twitter',
   'youtube-accounts': 'Youtube',
   'telegram-accounts': 'Send',
@@ -98,17 +148,29 @@ const CHILD_ICONS = {
   'reddit-accounts': 'MessageSquare',
   'pinterest-accounts': 'Image',
   'snapchat-accounts': 'Camera',
+  'whatsapp-accounts': 'MessageCircle',
+  'wechat-accounts': 'MessageCircle',
+  'kakao-accounts': 'MessageCircle',
+  'line-accounts': 'MessageCircle',
+  'vk-accounts': 'Users',
+  'naver-accounts': 'Globe',
+  'band-accounts': 'Users',
   'gmail-accounts': 'Mail',
   'yahoo-accounts': 'Mail',
   'outlook-accounts': 'Mail',
   'hotmail-accounts': 'Mail',
-  'aol-accounts': 'Mail',
   'protonmail-accounts': 'Mail',
+  'zoho-accounts': 'Mail',
+  'business-email': 'Mail',
+  'other-emails': 'Mail',
   netflix: 'Youtube',
   spotify: 'Music2',
   'disney-plus': 'Youtube',
   'prime-video': 'Youtube',
   crunchyroll: 'Youtube',
+  hulu: 'Youtube',
+  pubg: 'Trophy',
+  'free-fire': 'Trophy',
   steam: 'Trophy',
   'epic-games': 'Trophy',
   playstation: 'Trophy',
@@ -116,26 +178,47 @@ const CHILD_ICONS = {
   ea: 'Trophy',
   'battle-net': 'Trophy',
   'riot-games': 'Trophy',
+  roblox: 'Trophy',
+  'mobile-legends': 'Trophy',
+  valorant: 'Trophy',
+  minecraft: 'Trophy',
   canva: 'Palette',
   chatgpt: 'Bot',
   midjourney: 'Bot',
+  claude: 'Bot',
+  gemini: 'Bot',
+  cursor: 'Bot',
+  elevenlabs: 'Bot',
+  perplexity: 'Bot',
   envato: 'Layers',
   adobe: 'Palette',
+  windows: 'Monitor',
+  office: 'NotebookPen',
   'microsoft-365': 'Cloud',
   capcut: 'Film',
   grammarly: 'NotebookPen',
+  jetbrains: 'Terminal',
   'expired-domains': 'Globe2',
   'premium-domains': 'Globe2',
+  domains: 'Globe2',
   'shared-hosting': 'Server',
   vps: 'Server',
   rdp: 'Monitor',
   cpanel: 'Server',
   whm: 'Server',
+  binance: 'Coins',
+  bybit: 'Coins',
+  coinbase: 'Coins',
+  okx: 'Coins',
+  kucoin: 'Coins',
+  wallets: 'Wallet',
   scripts: 'Terminal',
   websites: 'Globe',
   'mobile-apps': 'Smartphone',
   themes: 'LayoutTemplate',
   plugins: 'Puzzle',
+  saas: 'Cloud',
+  proxy: 'Globe',
 };
 
 function childSlug(name) {
@@ -144,13 +227,12 @@ function childSlug(name) {
 
 /**
  * Expand groups into create payloads (parents first, then children).
- * displayOrder is alphabetical within each level for stable UI.
+ * displayOrder follows MARKETPLACE_SERVICE_GROUPS array order (Services page).
  */
 export function buildMarketplaceCategorySeedRows() {
-  const roots = [...MARKETPLACE_SERVICE_GROUPS].sort((a, b) => a.name.localeCompare(b.name));
   const rows = [];
 
-  roots.forEach((group, rootIndex) => {
+  MARKETPLACE_SERVICE_GROUPS.forEach((group, rootIndex) => {
     const parentSlug = slugify(group.name);
     rows.push({
       name: group.name,
@@ -167,7 +249,7 @@ export function buildMarketplaceCategorySeedRows() {
       seoDescription: `Browse ${group.name.toLowerCase()} from verified sellers on ApnaStore.`,
     });
 
-    const children = [...(group.children || [])].sort((a, b) => a.localeCompare(b));
+    const children = [...(group.children || [])];
     children.forEach((childName, childIndex) => {
       const slug = childSlug(childName);
       rows.push({
