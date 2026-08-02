@@ -5,7 +5,7 @@ import { Sheet, SheetContent, SheetTitle } from '../../components/ui/sheet';
 import { AdminSidebarContent } from './AdminSidebar';
 import { adminNavSections } from './nav';
 import './pva-header.css';
-import logo from '../assets/apnastore-icon.png';
+import Logo from '../../components/Logo';
 import { useAdminAuth } from '../AdminAuthContext';
 import {
   getNotifications,
@@ -129,9 +129,7 @@ const AdminHeader = () => {
         </button>
 
         <div className="pva-logo">
-          <NavLink to="/admin" end>
-            <img src={logo} alt="ApnaStore" />
-          </NavLink>
+          <Logo to="/admin" size="sidebar" imgClassName="!h-[46px] max-md:!h-8" />
         </div>
 
         <div className="pva-categories" ref={categoriesRef}>

@@ -3,7 +3,7 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { ChevronDown } from 'lucide-react';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '../../components/ui/collapsible';
 import { adminNavSections } from './nav';
-import { LOGO } from '../../data';
+import Logo from '../../components/Logo';
 
 const navLinkClass = ({ isActive }) =>
   `flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-medium transition-colors ${
@@ -69,7 +69,7 @@ const NavItems = ({ onNavigate }) => (
 export const AdminSidebarContent = ({ onNavigate }) => (
   <div className="flex flex-col h-full bg-white">
     <div className="flex items-center gap-2 px-5 h-16 border-b border-border shrink-0">
-      <img src={LOGO} alt="ApnaStore" className="h-8 w-auto" />
+      <Logo to="/admin" size="sidebar" />
       <span className="text-xs font-semibold text-muted-foreground">Admin</span>
     </div>
     <NavItems onNavigate={onNavigate} />

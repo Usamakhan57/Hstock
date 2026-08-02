@@ -1,6 +1,4 @@
-import apnaStoreLogo from './assets/apnastore-logo.png';
-
-export const LOGO = apnaStoreLogo;
+export { LOGO_SRC as LOGO } from './components/Logo';
 
 // Turns a category name into a URL-safe slug, e.g. "T-Shirt Design" -> "t-shirt-design"
 export const slugify = (name) =>

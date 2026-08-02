@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, ShieldCheck } from 'lucide-react';
 import { useAdminAuth } from '../AdminAuthContext';
-import logo from '../assets/apnastore-logo.png';
+import Logo from '../../components/Logo';
 
 const AdminLoginPage = () => {
   const { login, isAuthenticated } = useAdminAuth();
@@ -39,7 +39,7 @@ const AdminLoginPage = () => {
     <div className="min-h-screen grid place-items-center bg-[#F7F7FB] px-5 py-16">
       <div className="w-full max-w-md">
         <div className="flex justify-center mb-6">
-          <img src={logo} alt="ApnaStore" className="h-16 w-auto object-contain" />
+          <Logo size="auth" />
         </div>
         <div className="bg-white rounded-3xl border border-border soft-shadow p-8">
           <div className="flex items-center justify-center gap-2 text-primary mb-2">

@@ -5,7 +5,7 @@ import Header from '../components/Header';
 import Footer from '../components/Footer';
 import Seo from '../components/Seo';
 import GoogleAuthButton from '../components/GoogleAuthButton';
-import { LOGO } from '../data';
+import Logo from '../components/Logo';
 import { useStore } from '../context/StoreContext';
 import { useToast } from '../hooks/use-toast';
 import { authApi } from '../services/authApi';
@@ -95,7 +95,7 @@ const LoginPage = () => {
         <div className="w-full max-w-[560px]">
           <div className="bg-white rounded-[24px] border border-border soft-shadow p-8 sm:p-10 lg:p-12">
             <div className="flex flex-col items-center text-center">
-              <img src={LOGO} alt="ApnaStore" className="h-12 w-auto object-contain" />
+              <Logo size="auth" />
               <h1 className="mt-6 text-3xl font-black tracking-tight text-foreground">Welcome Back</h1>
               <p className="mt-3 text-sm text-muted-foreground max-w-[420px]">
                 Sign in to access your buyer or seller account.

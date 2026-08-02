@@ -4,7 +4,7 @@ import { Loader2, CheckCircle2, XCircle } from 'lucide-react';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import Seo from '../components/Seo';
-import { LOGO } from '../data';
+import Logo from '../components/Logo';
 import { authApi } from '../services/authApi';
 
 const VerifyEmailPage = () => {
@@ -40,7 +40,7 @@ const VerifyEmailPage = () => {
       <main className="flex-1 grid place-items-center">
         <div className="w-full max-w-[520px]">
           <div className="bg-white rounded-[24px] border border-border soft-shadow p-8 sm:p-10 text-center">
-            <img src={LOGO} alt="ApnaStore" className="h-12 w-auto object-contain mx-auto" />
+            <Logo size="auth" className="mx-auto justify-center" />
             <h1 className="mt-6 text-3xl font-black tracking-tight">Email Verification</h1>
             <div className="mt-6 flex flex-col items-center gap-3">
               {status === 'loading' && <Loader2 className="w-8 h-8 animate-spin text-primary" />}

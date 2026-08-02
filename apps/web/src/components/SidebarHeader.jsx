@@ -1,8 +1,12 @@
 import React from 'react';
 import { Wallet, Bell, Sparkles } from 'lucide-react';
+import Logo from './Logo';
 
 const SidebarHeader = ({ seller, walletBalance, notificationsCount }) => (
   <div className="border-b border-[#E5E7EB] bg-white px-5 py-5">
+    <div className="mb-4">
+      <Logo to="/" size="sidebar" />
+    </div>
     <div className="flex items-start justify-between gap-4">
       <div className="flex items-center gap-3.5">
         <span className="grid h-14 w-14 place-items-center rounded-[1.3rem] bg-primary/10 text-xl font-black text-primary">
