@@ -4,6 +4,7 @@ import { ArrowLeft, ImagePlus, Loader2, Sparkles, PackageCheck } from 'lucide-re
 import { useToast } from '../../../hooks/use-toast';
 import { createSellerProduct, getSellerProduct, updateSellerProduct } from '../api/sellerProducts';
 import { MAX_IMAGE_UPLOAD_MB, uploadProductImage, validateImageFile } from '../../../lib/imageUpload';
+import CategorySearchSelect from '../../../components/CategorySearchSelect';
 import InventoryImportSection from './InventoryImportSection';
 import {
   DELIVERY_OPTIONS,
@@ -17,9 +18,10 @@ const defaultDraft = {
   title: '',
   shortDescription: '',
   description: '',
-  category: 'Social Accounts',
-  price: 199,
-  salePrice: 149,
+  category: '',
+  categoryId: null,
+  price: '',
+  salePrice: '',
   stock: 100,
   lowStockThreshold: 5,
   deliveryType: 'automatic',
@@ -29,6 +31,12 @@ const defaultDraft = {
   thumbnail: '',
   gallery: [],
 };
+
+function parseOptionalNumber(value) {
+  if (value === '' || value == null) return '';
+  const next = Number(value);
+  return Number.isFinite(next) ? next : '';
+}
 
 const SellerProductEditorPage = () => {
   const { id } = useParams();
@@ -48,6 +56,10 @@ const SellerProductEditorPage = () => {
       setForm({
         ...defaultDraft,
         ...product,
+        categoryId: product.categoryId || null,
+        category: product.category || '',
+        price: product.price == null || product.price === '' ? '' : Number(product.price),
+        salePrice: product.salePrice == null || product.salePrice === '' ? '' : Number(product.salePrice),
       });
       setImageFileName(product.thumbnail ? 'Current image set' : '');
     });
@@ -205,18 +217,46 @@ const SellerProductEditorPage = () => {
                 <span>Title</span>
                 <input value={form.title} onChange={(e) => updateField('title', e.target.value)} className="w-full rounded-2xl border border-border bg-secondary/60 px-3 py-2.5 outline-none" placeholder="e.g. Premium Instagram growth account" />
               </label>
-              <label className="space-y-2 text-sm font-medium text-foreground">
+              <div className="space-y-2 text-sm font-medium text-foreground">
                 <span>Category</span>
-                <input value={form.category} onChange={(e) => updateField('category', e.target.value)} className="w-full rounded-2xl border border-border bg-secondary/60 px-3 py-2.5 outline-none" />
-              </label>
+                <CategorySearchSelect
+                  value={form.categoryId}
+                  placeholder="Select category"
+                  onChange={({ categoryId, category }) => {
+                    setForm((prev) => ({
+                      ...prev,
+                      categoryId,
+                      category,
+                    }));
+                  }}
+                />
+              </div>
               <label className="space-y-2 text-sm font-medium text-foreground">
                 <span>Price</span>
-                <input type="number" value={form.price} onChange={(e) => updateField('price', Number(e.target.value))} className="w-full rounded-2xl border border-border bg-secondary/60 px-3 py-2.5 outline-none" />
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  inputMode="decimal"
+                  value={form.price === '' || form.price == null ? '' : form.price}
+                  onChange={(e) => updateField('price', parseOptionalNumber(e.target.value))}
+                  placeholder="Enter price"
+                  className="w-full rounded-2xl border border-border bg-secondary/60 px-3 py-2.5 outline-none"
+                />
               </label>
               {!manualDelivery ? (
                 <label className="space-y-2 text-sm font-medium text-foreground">
-                  <span>Sale price</span>
-                  <input type="number" value={form.salePrice} onChange={(e) => updateField('salePrice', Number(e.target.value))} className="w-full rounded-2xl border border-border bg-secondary/60 px-3 py-2.5 outline-none" />
+                  <span>Sale Price</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    inputMode="decimal"
+                    value={form.salePrice === '' || form.salePrice == null ? '' : form.salePrice}
+                    onChange={(e) => updateField('salePrice', parseOptionalNumber(e.target.value))}
+                    placeholder="Optional discount price"
+                    className="w-full rounded-2xl border border-border bg-secondary/60 px-3 py-2.5 outline-none"
+                  />
                 </label>
               ) : null}
             </div>

@@ -20,6 +20,7 @@ import {
 import { getProductCountByCategoryId } from '../services/productRepository';
 import { getDescendants, getRolledUpCount } from '../services/categoryTree';
 import { DEFAULT_FILTERS, SORT_OPTIONS, PAGE_SIZE } from '../constants';
+import { matchServiceSection } from '../lib/servicesCatalog';
 import { useStore } from '../context/StoreContext';
 import { useDebouncedValue } from '../hooks/useDebouncedValue';
 
@@ -88,21 +89,36 @@ const CategoryPage = () => {
   const rootAncestorId = ancestors[0]?.id || category.id;
 
   const categorySlot = (
-    <div className="pb-4 mb-4 border-b border-border">
-      <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3">Jump to category</p>
+    <div>
+      <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3">Jump to Category</p>
       <div className="flex flex-wrap gap-1.5">
-        <button onClick={() => navigate('/shop')} className="text-sm px-3.5 py-1.5 rounded-full bg-secondary/70 hover:bg-secondary text-foreground/80 transition-colors">
+        <button
+          type="button"
+          onClick={() => navigate('/shop')}
+          className="text-sm px-3.5 py-1.5 rounded-full bg-secondary/70 hover:bg-secondary text-foreground/80 transition-colors"
+        >
           All
         </button>
-        {rootCategories.map((c) => (
-          <button
-            key={c.id}
-            onClick={() => navigate(`/category/${c.slug}`)}
-            className={`text-sm px-3.5 py-1.5 rounded-full whitespace-nowrap transition-colors ${c.id === rootAncestorId ? 'brand-gradient text-white font-semibold' : 'bg-secondary/70 hover:bg-secondary text-foreground/80'}`}
-          >
-            {c.name}
-          </button>
-        ))}
+        {[...rootCategories]
+          .sort((a, b) => {
+            const aOrder = matchServiceSection(a)?.order ?? 999;
+            const bOrder = matchServiceSection(b)?.order ?? 999;
+            if (aOrder !== bOrder) return aOrder - bOrder;
+            return String(a.name || '').localeCompare(String(b.name || ''));
+          })
+          .map((c) => {
+            const label = matchServiceSection(c)?.heading || c.name;
+            return (
+              <button
+                key={c.id}
+                type="button"
+                onClick={() => navigate(`/category/${c.slug}`)}
+                className={`text-sm px-3.5 py-1.5 rounded-full whitespace-nowrap transition-colors ${c.id === rootAncestorId ? 'brand-gradient text-white font-semibold' : 'bg-secondary/70 hover:bg-secondary text-foreground/80'}`}
+              >
+                {label}
+              </button>
+            );
+          })}
       </div>
     </div>
   );
@@ -131,7 +147,7 @@ const CategoryPage = () => {
 
         <div className="mt-8 flex flex-col lg:flex-row gap-8">
           <aside className="lg:w-80 shrink-0">
-            <FilterSidebar filters={filters} onChange={setFilters} categorySlot={categorySlot} resultCount={list?.length} />
+            <FilterSidebar categorySlot={categorySlot} />
           </aside>
 
           <div className="flex-1 min-w-0">
@@ -160,9 +176,9 @@ const CategoryPage = () => {
             ) : !list || list.length === 0 ? (
               <EmptyState
                 title="No products found"
-                message={`Try a different search term or filter, or check back soon — new ${category.name.toLowerCase()} assets are added regularly.`}
-                secondaryLabel="Reset filters"
-                onSecondary={() => { setFilters({ ...DEFAULT_FILTERS }); setQuery(''); setSort('Most Popular'); }}
+                message={`Try a different search term, or check back soon — new ${category.name.toLowerCase()} assets are added regularly.`}
+                secondaryLabel="Clear search"
+                onSecondary={() => { setQuery(''); setSort('Most Popular'); }}
               />
             ) : (
               <>
