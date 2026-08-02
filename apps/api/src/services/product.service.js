@@ -4,6 +4,7 @@ import {
   DigitalProduct,
   SellerProfile,
   Tag,
+  Category,
 } from '../models/index.js';
 import { AppError } from '../utils/AppError.js';
 import { toSlug } from '../utils/slug.js';
@@ -19,6 +20,12 @@ import {
 import { USER_ROLES } from '../constants/roles.js';
 import { SellerStatusEnum } from '../constants/enums.js';
 import { normalizeAssetIdentifier } from '../helpers/asset.helper.js';
+import {
+  buildTokenMatchClause,
+  escapeRegex,
+  sortProductsBySearchRelevance,
+  tokenizeSearchQuery,
+} from '../helpers/productSearch.helper.js';
 import {
   prepareAssetFields,
   assertAssetAvailable,
@@ -120,6 +127,8 @@ export async function listProducts(query = {}, actor = null) {
     }
   }
 
+  let searchTokens = [];
+
   if (query.search) {
     const rawSearch = String(query.search).trim();
     const searchNormalized = normalizeAssetIdentifier(rawSearch, {
@@ -139,8 +148,37 @@ export async function listProducts(query = {}, actor = null) {
     if (looksLikeAsset) {
       filter.assetIdentifierNormalized = searchNormalized;
     } else {
-      filter.$text = { $search: query.search };
+      searchTokens = tokenizeSearchQuery(rawSearch);
+      if (!searchTokens.length) {
+        return { items: [], meta: buildPaginationMeta({ page, limit, total: 0 }) };
+      }
+
+      // Resolve taxonomy matches per token so "Digital Assets" still hits category.
+      const tokenClauses = await Promise.all(searchTokens.map(async (token) => {
+        const re = new RegExp(escapeRegex(token), 'i');
+        const [categoryIds, tagIds] = await Promise.all([
+          Category.find({ deletedAt: null, $or: [{ name: re }, { slug: re }] }).distinct('_id'),
+          Tag.find({ status: 'active', $or: [{ name: re }, { slug: re }] }).distinct('_id'),
+        ]);
+        return buildTokenMatchClause(token, { categoryIds, tagIds });
+      }));
+
+      filter.$and = [...(filter.$and || []), ...tokenClauses];
     }
+  }
+
+  if (searchTokens.length) {
+    // Fetch matching set, rank by title/platform relevance, then paginate.
+    const matched = await Product.find(filter)
+      .populate('category', 'name slug')
+      .populate('brand', 'name slug')
+      .populate('tags', 'name slug')
+      .populate('seller', 'storeName slug status')
+      .lean();
+    const ranked = sortProductsBySearchRelevance(matched, searchTokens);
+    const total = ranked.length;
+    const items = ranked.slice(skip, skip + limit);
+    return { items, meta: buildPaginationMeta({ page, limit, total }) };
   }
 
   const [items, total] = await Promise.all([

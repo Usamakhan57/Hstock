@@ -76,7 +76,7 @@ const SearchResultsPage = () => {
           <div className="max-w-lg space-y-6">
             <div className="bg-white rounded-3xl border border-border p-10 sm:p-12 text-center">
               <h1 className="text-lg font-bold">Search ApnaStore</h1>
-              <p className="text-sm text-muted-foreground mt-1.5">Type a product, category, or artist name above to get started.</p>
+              <p className="text-sm text-muted-foreground mt-1.5">Type a product, service, or seller name above to get started.</p>
             </div>
 
             {recent.length > 0 && (
@@ -116,7 +116,7 @@ const SearchResultsPage = () => {
               <div className="flex flex-wrap gap-2 mt-5">
                 {matchedCategories.map((c) => (
                   <Link key={c.id} to={`/category/${c.slug}`} className="text-sm font-medium px-4 py-2 rounded-full bg-white border border-border hover:bg-secondary transition-colors">
-                    Category: {c.name}
+                    Service: {c.name}
                   </Link>
                 ))}
               </div>
@@ -126,7 +126,7 @@ const SearchResultsPage = () => {
               <div className="flex flex-wrap gap-2 mt-3">
                 {matchedArtists.map((a) => (
                   <Link key={a.slug} to={`/seller/${a.slug}`} className="text-sm font-medium px-4 py-2 rounded-full bg-white border border-border hover:bg-secondary transition-colors">
-                    Artist: {a.name}
+                    Seller: {a.name}
                   </Link>
                 ))}
               </div>
@@ -143,8 +143,8 @@ const SearchResultsPage = () => {
             ) : results.length === 0 ? (
               <div className="mt-10">
                 <EmptyState
-                  title="No products found"
-                  message="Try a different search term, or browse all products instead."
+                  title={`No products found for "${q}"`}
+                  message="Try another keyword."
                   actionLabel="Browse the Shop"
                   actionTo="/shop"
                 />

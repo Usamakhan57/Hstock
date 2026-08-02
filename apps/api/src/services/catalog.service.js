@@ -44,6 +44,14 @@ export async function listCategories(query = {}) {
   if (query.parent === 'null') filter.parent = null;
   else if (query.parent) filter.parent = query.parent;
   if (query.featured !== undefined) filter.featured = query.featured === 'true';
+  if (query.search) {
+    const needle = String(query.search).trim();
+    if (needle) {
+      const escaped = needle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const re = new RegExp(escaped, 'i');
+      filter.$or = [{ name: re }, { slug: re }, { description: re }];
+    }
+  }
 
   const [items, total] = await Promise.all([
     Category.find(filter).sort({ displayOrder: 1, name: 1 }).skip(skip).limit(limit).lean(),
