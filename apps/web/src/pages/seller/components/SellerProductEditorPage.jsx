@@ -3,11 +3,14 @@ import { useNavigate, useParams, Link } from 'react-router-dom';
 import { ArrowLeft, ImagePlus, Sparkles, PackageCheck } from 'lucide-react';
 import { useToast } from '../../../hooks/use-toast';
 import { createSellerProduct, getSellerProduct, updateSellerProduct } from '../api/sellerProducts';
-
-const DELIVERY_OPTIONS = [
-  { value: 'automatic', label: 'Automatic Delivery' },
-  { value: 'manual', label: 'Manual Delivery' },
-];
+import InventoryImportSection from './InventoryImportSection';
+import {
+  DELIVERY_OPTIONS,
+  countReadyInventory,
+  getDeliveryLabel,
+  isInventoryRequired,
+  isManualDelivery,
+} from '../lib/sellerDelivery';
 
 const defaultDraft = {
   title: '',
@@ -33,6 +36,7 @@ const SellerProductEditorPage = () => {
   const [form, setForm] = useState(defaultDraft);
   const [saving, setSaving] = useState(false);
   const [imageFileName, setImageFileName] = useState('');
+  const [inventoryAccounts, setInventoryAccounts] = useState([]);
 
   useEffect(() => {
     if (!id) return;
@@ -49,6 +53,9 @@ const SellerProductEditorPage = () => {
   }, [id]);
 
   const isEditing = Boolean(id);
+  const manualDelivery = isManualDelivery(form.deliveryType);
+  const inventoryRequired = isInventoryRequired(form.deliveryType);
+  const readyInventoryCount = countReadyInventory(inventoryAccounts);
 
   const handleImageUpload = (event) => {
     const file = event.target.files?.[0];
@@ -56,7 +63,11 @@ const SellerProductEditorPage = () => {
     const reader = new FileReader();
     reader.onload = () => {
       const result = typeof reader.result === 'string' ? reader.result : '';
-      setForm((prev) => ({ ...prev, thumbnail: result, gallery: prev.gallery.includes(result) ? prev.gallery : [result, ...prev.gallery].slice(0, 4) }));
+      setForm((prev) => ({
+        ...prev,
+        thumbnail: result,
+        gallery: prev.gallery.includes(result) ? prev.gallery : [result, ...prev.gallery].slice(0, 4),
+      }));
       setImageFileName(file.name);
     };
     reader.readAsDataURL(file);
@@ -64,14 +75,34 @@ const SellerProductEditorPage = () => {
 
   const updateField = (field, value) => setForm((prev) => ({ ...prev, [field]: value }));
 
+  const handleDeliveryTypeChange = (value) => {
+    updateField('deliveryType', value);
+    if (isManualDelivery(value)) {
+      setInventoryAccounts([]);
+    }
+  };
+
   const handleSubmit = async (publish = false) => {
     if (!form.title.trim()) {
       toast({ title: 'Title required', description: 'Add a clear product title before saving.', variant: 'destructive' });
       return;
     }
 
+    if (publish && inventoryRequired && readyInventoryCount < 1) {
+      toast({
+        title: 'Inventory required',
+        description: 'Import and validate at least one account before publishing an Instant Access product.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setSaving(true);
     try {
+      const stockValue = publish && inventoryRequired
+        ? readyInventoryCount
+        : Number(form.stock || 0);
+
       const payload = {
         title: form.title.trim(),
         shortDescription: form.shortDescription.trim(),
@@ -80,7 +111,7 @@ const SellerProductEditorPage = () => {
         categoryId: form.categoryId,
         price: Number(form.price || 0),
         salePrice: Number(form.salePrice || 0),
-        stock: Number(form.stock || 0),
+        stock: stockValue,
         lowStockThreshold: Number(form.lowStockThreshold || 0),
         deliveryType: form.deliveryType,
         marketplaceType: form.marketplaceType,
@@ -88,24 +119,28 @@ const SellerProductEditorPage = () => {
         productType: form.productType,
         thumbnail: form.thumbnail,
         gallery: form.gallery,
-        status: publish ? 'pending' : 'draft',
+        status: publish ? (manualDelivery ? 'pending' : 'live') : 'draft',
         whatsIncluded: form.whatsIncluded,
         seoTitle: form.seoTitle,
         seoDescription: form.seoDescription,
         seoKeywords: form.seoKeywords,
-        inventoryType: form.inventoryType,
-        stockType: form.stockType,
+        inventoryType: inventoryRequired ? 'tracked' : (form.inventoryType || 'manual'),
+        stockType: form.stockType || 'limited',
       };
 
-      const saved = isEditing
-        ? await updateSellerProduct(id, payload, { publish })
-        : await createSellerProduct(payload, { publish });
-      toast({ title: publish ? 'Product published' : 'Product saved', description: publish ? 'You can upload accounts and make it live.' : 'Your draft is now available in My Products.' });
-      if (publish) {
-        navigate(`/seller/upload-accounts/${saved.id}`);
-      } else {
-        navigate('/seller/products');
-      }
+      await (isEditing
+        ? updateSellerProduct(id, payload, { publish })
+        : createSellerProduct(payload, { publish }));
+
+      toast({
+        title: publish ? 'Product published' : 'Product saved',
+        description: publish
+          ? (manualDelivery
+            ? 'Manual Delivery listing is ready — inventory import is not required.'
+            : `${readyInventoryCount} Instant Access accounts are ready.`)
+          : 'Your draft is now available in My Products.',
+      });
+      navigate('/seller/products');
     } catch (error) {
       toast({ title: 'Could not save product', description: error.message, variant: 'destructive' });
     } finally {
@@ -118,7 +153,7 @@ const SellerProductEditorPage = () => {
     const sale = Number(form.salePrice || 0);
     return {
       savings: price > sale ? price - sale : 0,
-      deliveryLabel: form.deliveryType === 'manual' ? 'Manual handover' : 'Instant unlock',
+      deliveryLabel: getDeliveryLabel(form.deliveryType),
     };
   }, [form.price, form.salePrice, form.deliveryType]);
 
@@ -131,11 +166,13 @@ const SellerProductEditorPage = () => {
               <Link to="/seller/products" className="inline-flex items-center gap-1 text-primary hover:opacity-80"><ArrowLeft className="h-3.5 w-3.5" /> Back</Link>
             </div>
             <h2 className="mt-2 text-2xl font-black">{isEditing ? 'Edit product' : 'Upload product'}</h2>
-            <p className="mt-1 text-sm text-muted-foreground">Create a clear listing with pricing, delivery options, and media — then publish into the ApnaStore workflow.</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Create a clear listing with pricing, delivery options, and media — then publish into the ApnaStore workflow.
+            </p>
           </div>
           <div className="rounded-2xl border border-primary/10 bg-primary/[0.05] px-4 py-3 text-sm text-muted-foreground">
             <div className="flex items-center gap-2 font-semibold text-foreground"><Sparkles className="h-4 w-4 text-primary" /> ApnaStore-ready listing</div>
-            <p className="mt-1">Publish into the seller workflow in one pass.</p>
+            <p className="mt-1">Delivery type controls whether inventory import is required.</p>
           </div>
         </div>
       </div>
@@ -143,7 +180,7 @@ const SellerProductEditorPage = () => {
       <div className="grid gap-6 xl:grid-cols-[1.4fr_0.8fr]">
         <div className="space-y-6">
           <section className="rounded-[1.5rem] border border-border bg-white p-6 shadow-sm">
-            <h3 className="text-lg font-black">Listing details</h3>
+            <h3 className="text-lg font-black">Product Details</h3>
             <div className="mt-5 grid gap-4 md:grid-cols-2">
               <label className="space-y-2 text-sm font-medium text-foreground">
                 <span>Title</span>
@@ -175,32 +212,47 @@ const SellerProductEditorPage = () => {
           </section>
 
           <section className="rounded-[1.5rem] border border-border bg-white p-6 shadow-sm">
-            <div className="flex items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center justify-between gap-3">
               <h3 className="text-lg font-black">Delivery and stock</h3>
               <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-primary">{summary.deliveryLabel}</span>
             </div>
             <div className="mt-5 grid gap-4 md:grid-cols-3">
               <label className="space-y-2 text-sm font-medium text-foreground">
                 <span>Delivery Type</span>
-                <select value={form.deliveryType} onChange={(e) => updateField('deliveryType', e.target.value)} className="w-full rounded-2xl border border-border bg-secondary/60 px-3 py-2.5 outline-none">
-                  {DELIVERY_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                <select
+                  value={form.deliveryType}
+                  onChange={(e) => handleDeliveryTypeChange(e.target.value)}
+                  className="w-full rounded-2xl border border-border bg-secondary/60 px-3 py-2.5 outline-none"
+                >
+                  {DELIVERY_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
                 </select>
               </label>
               <label className="space-y-2 text-sm font-medium text-foreground">
-                <span>Initial stock</span>
+                <span>Initial Stock</span>
                 <input type="number" value={form.stock} onChange={(e) => updateField('stock', Number(e.target.value))} className="w-full rounded-2xl border border-border bg-secondary/60 px-3 py-2.5 outline-none" />
               </label>
               <label className="space-y-2 text-sm font-medium text-foreground">
-                <span>Low stock threshold</span>
+                <span>Low Stock Threshold</span>
                 <input type="number" value={form.lowStockThreshold} onChange={(e) => updateField('lowStockThreshold', Number(e.target.value))} className="w-full rounded-2xl border border-border bg-secondary/60 px-3 py-2.5 outline-none" />
               </label>
             </div>
+            {manualDelivery ? (
+              <p className="mt-4 text-sm text-muted-foreground">
+                Manual Delivery does not use inventory import. Set stock manually and publish when the listing details are ready.
+              </p>
+            ) : (
+              <p className="mt-4 text-sm text-muted-foreground">
+                Instant Access requires inventory import before publishing. Use the section below to paste or upload accounts.
+              </p>
+            )}
           </section>
         </div>
 
         <div className="space-y-6">
           <section className="rounded-[1.5rem] border border-border bg-white p-6 shadow-sm">
-            <h3 className="text-lg font-black">Media</h3>
+            <h3 className="text-lg font-black">Product Image</h3>
             <label className="mt-4 flex cursor-pointer flex-col items-center justify-center rounded-[1.25rem] border border-dashed border-border bg-secondary/40 p-6 text-center text-sm text-muted-foreground">
               <ImagePlus className="mb-3 h-8 w-8 text-primary" />
               <span className="font-semibold text-foreground">Upload product image</span>
@@ -216,19 +268,39 @@ const SellerProductEditorPage = () => {
             <div className="mt-4 space-y-3 text-sm text-muted-foreground">
               <div className="flex items-center justify-between"><span>Starting price</span><span className="font-semibold text-foreground">${Number(form.price || 0).toFixed(2)}</span></div>
               <div className="flex items-center justify-between"><span>Discount</span><span className="font-semibold text-foreground">${summary.savings.toFixed(2)}</span></div>
-              <div className="flex items-center justify-between"><span>Stock</span><span className="font-semibold text-foreground">{Number(form.stock || 0)}</span></div>
-              <div className="flex items-center justify-between"><span>Delivery</span><span className="font-semibold text-foreground">{form.deliveryType === 'manual' ? 'Manual' : 'Automatic'}</span></div>
+              <div className="flex items-center justify-between"><span>Stock</span><span className="font-semibold text-foreground">{inventoryRequired && readyInventoryCount > 0 ? readyInventoryCount : Number(form.stock || 0)}</span></div>
+              <div className="flex items-center justify-between"><span>Delivery</span><span className="font-semibold text-foreground">{summary.deliveryLabel}</span></div>
+              {inventoryRequired ? (
+                <div className="flex items-center justify-between"><span>Inventory ready</span><span className="font-semibold text-foreground">{readyInventoryCount}</span></div>
+              ) : null}
             </div>
             <div className="mt-5 rounded-2xl border border-primary/10 bg-primary/[0.05] p-4 text-sm text-muted-foreground">
-              <div className="flex items-center gap-2 font-semibold text-foreground"><PackageCheck className="h-4 w-4 text-primary" /> After publish, inventory uploads become the next step.</div>
+              <div className="flex items-center gap-2 font-semibold text-foreground">
+                <PackageCheck className="h-4 w-4 text-primary" />
+                {manualDelivery
+                  ? 'Manual Delivery: publish with product details and stock only.'
+                  : 'Instant Access: import inventory below, then publish.'}
+              </div>
             </div>
           </section>
         </div>
       </div>
 
+      {inventoryRequired ? (
+        <InventoryImportSection
+          productId={id}
+          accounts={inventoryAccounts}
+          onAccountsChange={setInventoryAccounts}
+        />
+      ) : null}
+
       <div className="flex flex-wrap items-center justify-end gap-3 rounded-[1.5rem] border border-border bg-white p-5 shadow-sm">
-        <button type="button" onClick={() => handleSubmit(false)} disabled={saving} className="rounded-full border border-border px-5 py-2.5 text-sm font-semibold text-foreground transition hover:bg-secondary disabled:opacity-60">{saving ? 'Saving...' : 'Save draft'}</button>
-        <button type="button" onClick={() => handleSubmit(true)} disabled={saving} className="rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-white transition hover:opacity-95 disabled:opacity-60">{saving ? 'Publishing...' : 'Publish product'}</button>
+        <button type="button" onClick={() => handleSubmit(false)} disabled={saving} className="rounded-full border border-border px-5 py-2.5 text-sm font-semibold text-foreground transition hover:bg-secondary disabled:opacity-60">
+          {saving ? 'Saving...' : 'Save draft'}
+        </button>
+        <button type="button" onClick={() => handleSubmit(true)} disabled={saving} className="rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-white transition hover:opacity-95 disabled:opacity-60">
+          {saving ? 'Publishing...' : 'Publish'}
+        </button>
       </div>
     </div>
   );

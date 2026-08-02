@@ -1,0 +1,39 @@
+import { describe, expect, it } from 'vitest';
+import {
+  countReadyInventory,
+  getDeliveryLabel,
+  isInstantAccess,
+  isInventoryRequired,
+  isManualDelivery,
+} from './sellerDelivery';
+
+describe('sellerDelivery', () => {
+  it('treats manual/handover as Manual Delivery', () => {
+    expect(isManualDelivery('manual')).toBe(true);
+    expect(isManualDelivery('handover')).toBe(true);
+    expect(isManualDelivery('automatic')).toBe(false);
+    expect(isInstantAccess('automatic')).toBe(true);
+    expect(isInstantAccess('instant')).toBe(true);
+  });
+
+  it('requires inventory only for Instant Access', () => {
+    expect(isInventoryRequired('manual')).toBe(false);
+    expect(isInventoryRequired('handover')).toBe(false);
+    expect(isInventoryRequired('automatic')).toBe(true);
+    expect(isInventoryRequired('instant')).toBe(true);
+  });
+
+  it('counts ready inventory rows', () => {
+    expect(countReadyInventory([
+      { status: 'uploaded' },
+      { status: 'failed' },
+      { status: 'ready' },
+      { status: 'pending' },
+    ])).toBe(2);
+  });
+
+  it('returns buyer-facing delivery labels', () => {
+    expect(getDeliveryLabel('manual')).toBe('Manual Delivery');
+    expect(getDeliveryLabel('automatic')).toBe('Instant Access');
+  });
+});
