@@ -43,12 +43,17 @@ export const WITHDRAWAL_STATUS = {
 /** Fallback display-only commission when buyer cannot read CommissionConfig. */
 export const DEFAULT_COMMISSION_PERCENT = 10;
 
+/** Compact checkout options (purchase modal). Withdrawals use WITHDRAW_CRYPTO_ASSETS. */
 export const PAYMENT_CURRENCIES = [
   { coin: 'USDT', network: 'TRC20', label: 'USDT · TRC20' },
   { coin: 'USDT', network: 'ERC20', label: 'USDT · ERC20' },
   { coin: 'BTC', network: 'BTC', label: 'Bitcoin' },
   { coin: 'ETH', network: 'ETH', label: 'Ethereum' },
+  { coin: 'USDC', network: 'ERC20', label: 'USDC · ERC20' },
+  { coin: 'SOL', network: 'SOL', label: 'Solana' },
 ];
+
+export { WITHDRAW_CRYPTO_ASSETS } from './cryptoAssets';
 
 export const ORDER_STATUS_LABEL = {
   pending_payment: 'Pending Payment',

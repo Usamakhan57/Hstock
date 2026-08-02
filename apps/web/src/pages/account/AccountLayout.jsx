@@ -3,11 +3,12 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, User, Package, Download, Settings, LogOut, Wallet,
   Star, ShieldCheck, Bell, MapPin, CreditCard, LifeBuoy, FileText, Ticket, Users, Clock,
-  Menu, X, ChevronRight, AlertTriangle,
+  Menu, X, ChevronRight, AlertTriangle, ArrowLeft,
 } from 'lucide-react';
 import Header from '../../components/Header';
 import Footer from '../../components/Footer';
 import { useStore } from '../../context/StoreContext';
+import { useDashboardBack } from '../../hooks/useDashboardBack';
 
 const groups = [
   {
@@ -58,6 +59,7 @@ const AccountLayout = ({ title, subtitle, children }) => {
   const { user, logout } = useStore();
   const location = useLocation();
   const navigate = useNavigate();
+  const handleDashboardBack = useDashboardBack('/shop');
   const [navOpen, setNavOpen] = useState(false);
 
   useEffect(() => {
@@ -71,11 +73,9 @@ const AccountLayout = ({ title, subtitle, children }) => {
     };
 
     document.addEventListener('keydown', onKeyDown);
-    document.body.style.overflow = 'hidden';
-
+    // Keep body scroll unlocked so the drawer itself can scroll on mobile browsers.
     return () => {
       document.removeEventListener('keydown', onKeyDown);
-      document.body.style.overflow = '';
     };
   }, [navOpen]);
 
@@ -88,7 +88,7 @@ const AccountLayout = ({ title, subtitle, children }) => {
     <div className={mobile ? 'space-y-5' : 'flex lg:flex-col gap-4 overflow-x-auto lg:overflow-visible'}>
       {groups.map((group) => (
         <div key={group.label} className={mobile ? 'space-y-2' : 'shrink-0 lg:shrink'}>
-          <p className={`px-3 pb-1.5 text-[11px] font-bold uppercase tracking-wider text-muted-foreground/70 ${mobile ? 'hidden' : 'hidden lg:block'}`}>{group.label}</p>
+          <p className={`px-3 pb-1.5 text-[11px] font-bold uppercase tracking-wider text-muted-foreground/70 ${mobile ? 'block' : 'hidden lg:block'}`}>{group.label}</p>
           <div className={mobile ? 'space-y-1.5' : 'flex lg:flex-col gap-1'}>
             {group.links.map((l) => {
               const active = location.pathname === l.to;
@@ -124,23 +124,37 @@ const AccountLayout = ({ title, subtitle, children }) => {
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
+      <div className="sticky top-0 z-30 border-b border-border bg-white/95 backdrop-blur lg:hidden">
+        <div className="mx-auto flex max-w-[90rem] items-center justify-between gap-2 px-5 py-3">
+          <button
+            type="button"
+            onClick={handleDashboardBack}
+            className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-border bg-white text-foreground shadow-sm transition-colors hover:bg-secondary"
+            aria-label="Go back"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </button>
+          <div className="min-w-0 text-center">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-primary">My Account</p>
+            <p className="truncate text-sm font-bold text-foreground">{title}</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setNavOpen(true)}
+            className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-border bg-white text-foreground shadow-sm transition-colors hover:bg-secondary"
+            aria-label="Open account navigation"
+          >
+            <Menu className="h-5 w-5" />
+          </button>
+        </div>
+      </div>
+
       <div className="flex-1 mx-auto max-w-[90rem] w-full px-5 lg:px-8 pt-10 pb-20">
-        <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
+        <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
           <div>
             <p className="text-xs font-semibold uppercase tracking-wide text-primary">My Account</p>
             <h1 className="text-3xl md:text-4xl font-black tracking-tight mt-1">{title}</h1>
             {subtitle && <p className="text-sm text-muted-foreground mt-1">{subtitle}</p>}
-          </div>
-          <div className="flex items-center gap-2 lg:hidden">
-            <button
-              type="button"
-              onClick={() => setNavOpen(true)}
-              className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-border bg-white text-foreground shadow-sm transition-colors hover:bg-secondary"
-              aria-label="Open account navigation"
-            >
-              <Menu className="h-5 w-5" />
-            </button>
-            <span className="text-sm font-semibold text-foreground/80">Menu</span>
           </div>
           <p className="hidden lg:block text-sm text-muted-foreground">Signed in as <span className="font-semibold text-foreground">{user?.name}</span></p>
         </div>
@@ -160,8 +174,10 @@ const AccountLayout = ({ title, subtitle, children }) => {
           className={`absolute inset-0 bg-slate-900/30 transition-opacity ${navOpen ? 'opacity-100' : 'opacity-0'}`}
           onClick={() => setNavOpen(false)}
         />
-        <aside className={`absolute left-0 top-0 bottom-0 w-[88vw] max-w-[320px] bg-white shadow-2xl border-r border-border transition-transform duration-300 ${navOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-          <div className="flex items-center justify-between border-b border-border px-4 py-4">
+        <aside
+          className={`absolute left-0 top-0 flex h-[100vh] max-h-[100dvh] w-[88vw] max-w-[320px] flex-col overflow-hidden bg-white shadow-2xl border-r border-border transition-transform duration-300 ${navOpen ? 'translate-x-0' : '-translate-x-full'}`}
+        >
+          <div className="flex shrink-0 items-center justify-between border-b border-border px-4 py-4">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.24em] text-primary">My Account</p>
               <h2 className="mt-1 text-lg font-black text-foreground">Account Menu</h2>
@@ -175,7 +191,7 @@ const AccountLayout = ({ title, subtitle, children }) => {
               <X className="h-5 w-5" />
             </button>
           </div>
-          <div className="overflow-y-auto p-4">
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4" style={{ WebkitOverflowScrolling: 'touch' }}>
             {renderNavigation(true)}
           </div>
         </aside>

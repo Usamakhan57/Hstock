@@ -10,7 +10,8 @@ import EmptyState from '../../../admin/components/EmptyState';
 import { inputClass } from '../../../admin/components/FormSheet';
 import { useToast } from '../../../hooks/use-toast';
 import { withdrawalsApi } from '../../../services/withdrawalsApi';
-import { PAYMENT_CURRENCIES } from '../../../constants/commerce';
+import { getDefaultNetworkForCoin, WITHDRAW_CRYPTO_ASSETS } from '../../../constants/cryptoAssets';
+import CryptoAssetPicker from '../../../components/CryptoAssetPicker';
 
 const fmtDate = (iso) => (iso ? new Date(iso).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : '—');
 
@@ -25,8 +26,8 @@ const SellerEarningsTab = ({
   const [withdrawals, setWithdrawals] = useState(initialWithdrawals);
   const [open, setOpen] = useState(false);
   const [amount, setAmount] = useState('');
-  const [coin, setCoin] = useState(PAYMENT_CURRENCIES[0].coin);
-  const [network, setNetwork] = useState(PAYMENT_CURRENCIES[0].network);
+  const [coin, setCoin] = useState(WITHDRAW_CRYPTO_ASSETS[0].symbol);
+  const [network, setNetwork] = useState(getDefaultNetworkForCoin(WITHDRAW_CRYPTO_ASSETS[0].symbol));
   const [walletAddress, setWalletAddress] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -49,8 +50,6 @@ const SellerEarningsTab = ({
     });
     return [...byMonth.entries()].slice(-6).map(([month, earnings]) => ({ month, earnings: Math.round(earnings * 100) / 100 }));
   }, [transactions]);
-
-  const networksForCoin = PAYMENT_CURRENCIES.filter((c) => c.coin === coin);
 
   const submitWithdrawal = async (e) => {
     e.preventDefault();
@@ -117,30 +116,13 @@ const SellerEarningsTab = ({
                   <label className="block text-sm font-medium mb-1.5">Amount ($)</label>
                   <input type="number" step="0.01" min="0" max={available} value={amount} onChange={(e) => setAmount(e.target.value)} className={inputClass} placeholder="0.00" required />
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-sm font-medium mb-1.5">Coin</label>
-                    <select
-                      value={coin}
-                      onChange={(e) => {
-                        setCoin(e.target.value);
-                        const next = PAYMENT_CURRENCIES.find((c) => c.coin === e.target.value);
-                        if (next) setNetwork(next.network);
-                      }}
-                      className={inputClass}
-                    >
-                      {[...new Set(PAYMENT_CURRENCIES.map((c) => c.coin))].map((c) => <option key={c} value={c}>{c}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1.5">Network</label>
-                    <select value={network} onChange={(e) => setNetwork(e.target.value)} className={inputClass}>
-                      {(networksForCoin.length ? networksForCoin : PAYMENT_CURRENCIES).map((c) => (
-                        <option key={`${c.coin}-${c.network}`} value={c.network}>{c.network}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
+                <CryptoAssetPicker
+                  coin={coin}
+                  network={network}
+                  onCoinChange={setCoin}
+                  onNetworkChange={setNetwork}
+                  disabled={submitting}
+                />
                 <div>
                   <label className="block text-sm font-medium mb-1.5">Wallet address</label>
                   <input value={walletAddress} onChange={(e) => setWalletAddress(e.target.value)} className={inputClass} placeholder="Paste your payout address" required />

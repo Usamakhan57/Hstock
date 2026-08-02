@@ -70,13 +70,11 @@ const SellerSidebar = ({ open, closing, onClose, seller, walletBalance, notifica
     };
 
     document.addEventListener('keydown', onKeyDown);
-    document.body.style.overflow = 'hidden';
     const focusTarget = firstFocusableRef.current ?? panelRef.current?.querySelector('a, button') ?? null;
     focusTarget?.focus();
 
     return () => {
       document.removeEventListener('keydown', onKeyDown);
-      document.body.style.overflow = '';
     };
   }, [open, onClose]);
 
@@ -105,9 +103,9 @@ const SellerSidebar = ({ open, closing, onClose, seller, walletBalance, notifica
         role="dialog"
         aria-label="Seller sidebar"
         aria-modal="true"
-        className={`fixed right-0 top-0 bottom-0 z-[71] h-screen w-full overflow-hidden bg-white shadow-[0_20px_80px_-24px_rgba(15,23,42,0.35)] border-l border-[#E5E7EB] transition-transform duration-250 ease-out sm:w-[380px] lg:w-[420px] ${closing ? 'translate-x-full' : 'translate-x-0'}`}
+        className={`fixed right-0 top-0 z-[71] flex h-[100vh] max-h-[100dvh] w-full flex-col overflow-hidden bg-white shadow-[0_20px_80px_-24px_rgba(15,23,42,0.35)] border-l border-[#E5E7EB] transition-transform duration-250 ease-out sm:w-[380px] lg:w-[420px] ${closing ? 'translate-x-full' : 'translate-x-0'}`}
       >
-        <div className="h-full overflow-y-auto">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain" style={{ WebkitOverflowScrolling: 'touch' }}>
           <div className="flex min-h-full flex-col">
             <div className="sticky top-0 z-20 border-b border-[#E5E7EB] bg-white px-4 py-3 backdrop-blur-sm">
               <button

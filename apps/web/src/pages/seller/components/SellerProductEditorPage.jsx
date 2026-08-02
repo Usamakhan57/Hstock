@@ -89,7 +89,11 @@ const SellerProductEditorPage = () => {
   const updateField = (field, value) => setForm((prev) => ({ ...prev, [field]: value }));
 
   const handleDeliveryTypeChange = (value) => {
-    updateField('deliveryType', value);
+    setForm((prev) => ({
+      ...prev,
+      deliveryType: value,
+      ...(isManualDelivery(value) ? { salePrice: 0 } : {}),
+    }));
     if (isManualDelivery(value)) {
       setInventoryAccounts([]);
     }
@@ -123,7 +127,7 @@ const SellerProductEditorPage = () => {
         category: form.category,
         categoryId: form.categoryId,
         price: Number(form.price || 0),
-        salePrice: Number(form.salePrice || 0),
+        salePrice: manualDelivery ? 0 : Number(form.salePrice || 0),
         stock: stockValue,
         lowStockThreshold: Number(form.lowStockThreshold || 0),
         deliveryType: form.deliveryType,
@@ -164,8 +168,10 @@ const SellerProductEditorPage = () => {
   const summary = useMemo(() => {
     const price = Number(form.price || 0);
     const sale = Number(form.salePrice || 0);
+    const showDiscount = !isManualDelivery(form.deliveryType);
     return {
-      savings: price > sale ? price - sale : 0,
+      savings: showDiscount && price > sale ? price - sale : 0,
+      showDiscount,
       deliveryLabel: getDeliveryLabel(form.deliveryType),
     };
   }, [form.price, form.salePrice, form.deliveryType]);
@@ -207,10 +213,12 @@ const SellerProductEditorPage = () => {
                 <span>Price</span>
                 <input type="number" value={form.price} onChange={(e) => updateField('price', Number(e.target.value))} className="w-full rounded-2xl border border-border bg-secondary/60 px-3 py-2.5 outline-none" />
               </label>
-              <label className="space-y-2 text-sm font-medium text-foreground">
-                <span>Sale price</span>
-                <input type="number" value={form.salePrice} onChange={(e) => updateField('salePrice', Number(e.target.value))} className="w-full rounded-2xl border border-border bg-secondary/60 px-3 py-2.5 outline-none" />
-              </label>
+              {!manualDelivery ? (
+                <label className="space-y-2 text-sm font-medium text-foreground">
+                  <span>Sale price</span>
+                  <input type="number" value={form.salePrice} onChange={(e) => updateField('salePrice', Number(e.target.value))} className="w-full rounded-2xl border border-border bg-secondary/60 px-3 py-2.5 outline-none" />
+                </label>
+              ) : null}
             </div>
 
             <label className="mt-4 block space-y-2 text-sm font-medium text-foreground">
@@ -280,7 +288,9 @@ const SellerProductEditorPage = () => {
             <h3 className="text-lg font-black">Quick summary</h3>
             <div className="mt-4 space-y-3 text-sm text-muted-foreground">
               <div className="flex items-center justify-between"><span>Starting price</span><span className="font-semibold text-foreground">${Number(form.price || 0).toFixed(2)}</span></div>
-              <div className="flex items-center justify-between"><span>Discount</span><span className="font-semibold text-foreground">${summary.savings.toFixed(2)}</span></div>
+              {summary.showDiscount ? (
+                <div className="flex items-center justify-between"><span>Discount</span><span className="font-semibold text-foreground">${summary.savings.toFixed(2)}</span></div>
+              ) : null}
               <div className="flex items-center justify-between"><span>Stock</span><span className="font-semibold text-foreground">{inventoryRequired && readyInventoryCount > 0 ? readyInventoryCount : Number(form.stock || 0)}</span></div>
               <div className="flex items-center justify-between"><span>Delivery</span><span className="font-semibold text-foreground">{summary.deliveryLabel}</span></div>
               {inventoryRequired ? (

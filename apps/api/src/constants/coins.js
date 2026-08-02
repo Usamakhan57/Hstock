@@ -17,6 +17,8 @@ export const SUPPORTED_COINS = Object.freeze([
   'DAI',
   'BUSD',
   'MATIC',
+  'POL',
+  'XMR',
   'AVAX',
   'SHIB',
   'LINK',
@@ -59,6 +61,7 @@ export const CRYPTOMUS_NETWORKS = Object.freeze([
   'NEAR',
   'APT',
   'SUI',
+  'XMR',
 ]);
 
 export const COIN_NETWORK_MAP = Object.freeze({
@@ -76,6 +79,8 @@ export const COIN_NETWORK_MAP = Object.freeze({
   DAI: ['ERC20', 'BEP20', 'POLYGON'],
   BUSD: ['BEP20', 'BSC', 'ERC20'],
   MATIC: ['POLYGON', 'ERC20'],
+  POL: ['POLYGON', 'ERC20'],
+  XMR: ['XMR'],
   AVAX: ['AVALANCHE'],
   SHIB: ['ERC20', 'BEP20'],
   LINK: ['ERC20', 'BEP20', 'ARBITRUM'],
@@ -122,6 +127,7 @@ export const NETWORK_ADDRESS_PATTERNS = Object.freeze({
   APT: /^(0x)?[a-fA-F0-9]{64}$/,
   SUI: /^(0x)?[a-fA-F0-9]{64}$/,
   ATOM: /^cosmos1[a-z0-9]{38}$/,
+  XMR: /^[48][0-9AB][1-9A-HJ-NP-Za-km-z]{93}$/,
 });
 
 export default {
