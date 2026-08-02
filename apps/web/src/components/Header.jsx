@@ -260,12 +260,12 @@ const SearchSuggestions = ({ query, recent, onPick, onClearRecent }) => {
             <div className="flex flex-wrap gap-2 border-t border-border pt-3">
               {suggestions.categories.map((c) => (
                 <Link key={c.id} to={`/category/${c.slug}`} onMouseDown={(e) => e.preventDefault()} className="inline-flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-full bg-secondary/70 hover:bg-secondary transition-colors">
-                  Category: {c.name} <ArrowUpRight className="w-3 h-3" aria-hidden="true" />
+                  Service: {c.name} <ArrowUpRight className="w-3 h-3" aria-hidden="true" />
                 </Link>
               ))}
               {suggestions.artists.map((a) => (
                 <Link key={a.slug} to={`/seller/${a.slug}`} onMouseDown={(e) => e.preventDefault()} className="inline-flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-full border border-border hover:bg-secondary transition-colors">
-                  Artist: {a.name} <ArrowUpRight className="w-3 h-3" aria-hidden="true" />
+                  Seller: {a.name} <ArrowUpRight className="w-3 h-3" aria-hidden="true" />
                 </Link>
               ))}
             </div>
@@ -504,9 +504,9 @@ const Header = () => {
             )}
 
             {isUserLoggedIn && (
-              <Link to="/wallet" aria-label="Payments wallet" className="flex items-center gap-1.5 pl-2.5 pr-3 sm:pl-3 sm:pr-4 py-1.5 sm:py-2 rounded-full bg-secondary hover:bg-secondary/70 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+              <Link to="/wallet" aria-label="Wallet" className="flex items-center gap-1.5 pl-2.5 pr-3 sm:pl-3 sm:pr-4 py-1.5 sm:py-2 rounded-full bg-secondary hover:bg-secondary/70 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
                 <Wallet className="w-[18px] h-[18px] sm:w-5 sm:h-5 text-primary" aria-hidden="true" />
-                <span className="text-sm font-semibold hidden sm:inline">Payments</span>
+                <span className="text-sm font-semibold hidden sm:inline">Wallet</span>
               </Link>
             )}
 
@@ -658,8 +658,8 @@ const Header = () => {
 
           {isUserLoggedIn && !isSellerUser && (
             <div className="border-t border-border pt-4 flex items-center gap-3">
-              <Link to="/wallet" aria-label="Payments wallet" className="flex-1 flex items-center justify-center gap-2 py-3 rounded-full bg-secondary text-primary text-sm font-semibold">
-                <Wallet className="w-5 h-5" aria-hidden="true" /> Payments
+              <Link to="/wallet" aria-label="Wallet" className="flex-1 flex items-center justify-center gap-2 py-3 rounded-full bg-secondary text-primary text-sm font-semibold">
+                <Wallet className="w-5 h-5" aria-hidden="true" /> Wallet
               </Link>
             </div>
           )}

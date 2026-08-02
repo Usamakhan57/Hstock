@@ -118,7 +118,20 @@ const PurchaseModal = ({ product, license, open, onOpenChange }) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[calc(100vw-32px)] max-w-[420px] sm:max-w-[90vw] md:max-w-[640px] rounded-[24px] border border-border bg-background px-4 py-5 sm:px-6 sm:py-6 md:px-7 md:py-7">
+      <DialogContent
+        className="flex max-h-[90dvh] w-[calc(100vw-32px)] max-w-[420px] flex-col gap-0 overflow-hidden rounded-[24px] border border-border bg-background p-0 sm:max-w-[90vw] md:max-w-[640px]"
+        onOpenAutoFocus={(event) => {
+          // Keep focus inside the scrollable body so wheel/touch scrolling works immediately.
+          event.preventDefault();
+          event.currentTarget?.querySelector?.('[data-purchase-scroll]')?.focus?.({ preventScroll: true });
+        }}
+      >
+        <div
+          data-purchase-scroll
+          tabIndex={-1}
+          className="max-h-[90dvh] overflow-y-auto overscroll-contain px-4 py-5 outline-none sm:px-6 sm:py-6 md:px-7 md:py-7"
+          style={{ WebkitOverflowScrolling: 'touch' }}
+        >
         <DialogTitle className="text-xl font-bold">Confirm Purchase</DialogTitle>
         <DialogDescription className="sr-only">Confirm your ApnaStore purchase and pay with wallet or Cryptomus</DialogDescription>
 
@@ -250,6 +263,7 @@ const PurchaseModal = ({ product, license, open, onOpenChange }) => {
                 : 'Confirm & Pay with Cryptomus'}
           </span>
         </button>
+        </div>
       </DialogContent>
     </Dialog>
   );

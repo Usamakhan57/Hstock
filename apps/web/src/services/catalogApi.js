@@ -6,6 +6,11 @@ import {
   mapBackendSeller,
 } from '../lib/mappers/catalogMappers';
 import { PRICE_RANGES, DEFAULT_FILTERS, SORT_ALIASES } from '../constants';
+import {
+  filterCategoriesBySearch,
+  filterProductsBySearchRelevance,
+  tokenizeSearchQuery,
+} from '../lib/productSearch';
 import { isManualHandover } from './productMeta';
 
 function normalizeSort(sort) {
@@ -193,10 +198,18 @@ export const productsApi = {
   async search(q) {
     const needle = (q || '').trim();
     if (!needle) return { products: [], categories: [], artists: [] };
-    const [{ items: products }, { items: categories }] = await Promise.all([
+    const tokens = tokenizeSearchQuery(needle);
+    if (!tokens.length) return { products: [], categories: [], artists: [] };
+
+    const [{ items: rawProducts }, { items: rawCategories }] = await Promise.all([
       fetchProducts({ search: needle, limit: 50 }),
       fetchCategories({ search: needle, limit: 20 }),
     ]);
+
+    // Client relevance guard: drop unrelated hits (e.g. Gmail for "Instagram account").
+    const products = filterProductsBySearchRelevance(rawProducts, needle);
+    const categories = filterCategoriesBySearch(rawCategories, needle);
+
     const artistsMap = new Map();
     products.forEach((p) => {
       if (p.sellerId || p.artist) {
