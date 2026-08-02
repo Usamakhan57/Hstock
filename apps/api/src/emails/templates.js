@@ -49,11 +49,13 @@ export function buildEmailTemplate(type, data = {}) {
       subject: 'Reset your ApnaStore password',
       html: layout({
         title: 'Password reset',
-        bodyHtml: `<p>Hi ${data.name || 'there'},</p><p>We received a request to reset your password.</p>
+        bodyHtml: `<p>Hi ${data.name || 'there'},</p>
+          <p>We received a request to reset your ApnaStore password (buyer or seller account).</p>
           <p><a href="${data.resetUrl || frontend}" style="display:inline-block;padding:10px 18px;background:#6C3BFF;color:#fff;border-radius:999px;text-decoration:none;">Reset password</a></p>
-          <p style="color:#6b7280;font-size:12px;">This link expires soon. If you did not request it, ignore this email.</p>`,
+          <p style="color:#6b7280;font-size:12px;word-break:break-all;">Or paste this link into your browser:<br/>${data.resetUrl || frontend}</p>
+          <p style="color:#6b7280;font-size:12px;">This link expires in ${data.expiresInMinutes || 60} minutes and can be used once. If you did not request it, ignore this email.</p>`,
       }),
-      text: `Reset your password: ${data.resetUrl || frontend}`,
+      text: `Reset your ApnaStore password (valid ${data.expiresInMinutes || 60} minutes, one-time use):\n${data.resetUrl || frontend}`,
     },
     order_created: {
       subject: `Order ${data.orderNumber || ''} created`,

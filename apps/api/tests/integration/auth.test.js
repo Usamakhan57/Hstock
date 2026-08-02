@@ -145,6 +145,7 @@ test('forgot + reset password flow', async () => {
 
   assert.equal(forgot.status, 200);
   assert.ok(forgot.body.data.token);
+  assert.match(String(forgot.body.data.resetUrl || ''), /\/reset-password\?token=/);
 
   const reset = await request(app)
     .post('/api/v1/auth/reset-password')
@@ -155,11 +156,28 @@ test('forgot + reset password flow', async () => {
 
   assert.equal(reset.status, 200);
 
+  // Token is single-use.
+  const reuse = await request(app)
+    .post('/api/v1/auth/reset-password')
+    .send({
+      token: forgot.body.data.token,
+      password: 'AnotherPassword123!',
+    });
+  assert.equal(reuse.status, 400);
+
   const login = await request(app)
     .post('/api/v1/auth/login')
     .send({ email: 'reset@example.com', password: 'NewPassword123!' });
 
   assert.equal(login.status, 200);
+});
+
+test('forgot password for unknown email still returns success', async () => {
+  const forgot = await request(app)
+    .post('/api/v1/auth/forgot-password')
+    .send({ email: 'nobody-here@example.com' });
+  assert.equal(forgot.status, 200);
+  assert.equal(forgot.body.data.sent, true);
 });
 
 test('email verification infrastructure', async () => {

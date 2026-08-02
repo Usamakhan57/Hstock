@@ -102,8 +102,15 @@ export function errorHandler(err, req, res, _next) {
     });
   }
 
-  // Never leak internal/provider details on 5xx in production
-  const hideDetails = env.isProduction && statusCode >= 500;
+  // Never leak internal/provider stacks on unexpected 5xx in production.
+  // Keep operational mail configuration errors actionable for operators/UI.
+  const preserveOperationalCodes = new Set([
+    'SMTP_NOT_CONFIGURED',
+    'SMTP_SEND_FAILED',
+  ]);
+  const hideDetails = env.isProduction
+    && statusCode >= 500
+    && !preserveOperationalCodes.has(code);
   return sendError(res, {
     statusCode,
     message: hideDetails ? 'Internal server error' : message,

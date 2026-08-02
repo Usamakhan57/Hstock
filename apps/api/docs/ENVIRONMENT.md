@@ -38,7 +38,7 @@ cp .env.example .env
 |----------|---------|
 | `NODE_ENV=production` | Enables production guards |
 | `ENABLE_JOBS=true` | Escrow auto-release, payment sync, cleanup |
-| `SMTP_HOST` / `SMTP_USER` / `SMTP_PASS` / `EMAIL_FROM` | Transactional email |
+| `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` / `SMTP_PASS` / `EMAIL_FROM` / `EMAIL_REPLY_TO` | Transactional email (required in production for password reset; empty SMTP vars fail loudly) |
 | `COOKIE_SECURE=true` | Secure refresh cookies |
 | `COOKIE_SAME_SITE=lax` | CSRF-friendly cookie policy |
 | `REDIS_URL` | Optional — reserved for scaled Socket.io / rate-limit store |

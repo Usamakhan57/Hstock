@@ -16,11 +16,13 @@ const passwordResetTokenSchema = new mongoose.Schema(
     expiresAt: {
       type: Date,
       required: true,
-      index: true,
+      // Auto-delete expired tokens from MongoDB.
+      index: { expires: 0 },
     },
     usedAt: {
       type: Date,
       default: null,
+      index: true,
     },
   },
   { timestamps: true },
