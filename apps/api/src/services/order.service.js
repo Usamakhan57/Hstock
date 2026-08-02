@@ -5,7 +5,13 @@ import { roundMoney } from '../helpers/money.helper.js';
 import {
   generateOrderNumber,
   generatePaymentOrderId,
+  isDuplicateKeyError,
+  duplicateKeyFields,
 } from '../helpers/id.helper.js';
+import {
+  normalizeCryptomusNetwork,
+  networksEqual,
+} from '../helpers/cryptomusAssets.helper.js';
 import {
   ORDER_STATUS,
   PAYMENT_STATUS,
@@ -21,6 +27,8 @@ import {
   Product,
   SellerProfile,
   Order,
+  Payment,
+  Escrow,
 } from '../models/index.js';
 import * as orderRepository from '../repositories/order.repository.js';
 import * as paymentRepository from '../repositories/payment.repository.js';
@@ -35,12 +43,165 @@ import { USER_ROLES } from '../constants/roles.js';
 import { emitDomainEvent } from '../events/bus.js';
 import { DOMAIN_EVENTS } from '../constants/events.js';
 
+const CHECKOUT_CREATE_ATTEMPTS = 3;
+
 function isStaff(actor) {
   return actor?.roles?.some((r) => [
     USER_ROLES.ADMIN,
     USER_ROLES.SUPER_ADMIN,
     USER_ROLES.SUPPORT,
   ].includes(r));
+}
+
+function checkoutConflictError(error) {
+  const fields = duplicateKeyFields(error);
+  return new AppError(
+    'A checkout session could not be created due to a conflict. Please try again.',
+    409,
+    {
+      code: 'CHECKOUT_CONFLICT',
+      details: fields.length ? { fields } : undefined,
+    },
+  );
+}
+
+async function restockLimitedProduct(productId, quantity, session = null) {
+  const qty = Math.max(1, Number(quantity) || 1);
+  let productQuery = Product.findById(productId);
+  if (session) productQuery = productQuery.session(session);
+  const product = await productQuery;
+  if (!product || product.stockType !== STOCK_TYPES.LIMITED) return;
+  product.stock += qty;
+  if (product.status === PRODUCT_STATUS.OUT_OF_STOCK) {
+    product.status = PRODUCT_STATUS.LIVE;
+  }
+  if (session) await product.save({ session });
+  else await product.save();
+}
+
+/**
+ * Find an unpaid Cryptomus invoice for the same buyer + product + asset route.
+ */
+async function findReusableCryptomusCheckout({
+  buyerId,
+  productId,
+  toCurrency,
+  network,
+}) {
+  const now = new Date();
+  const pendingOrders = await Order.find({
+    buyer: buyerId,
+    product: productId,
+    status: ORDER_STATUS.PENDING_PAYMENT,
+    expiresAt: { $gt: now },
+  })
+    .sort({ createdAt: -1 })
+    .limit(8)
+    .lean();
+
+  const wantCurrency = toCurrency ? String(toCurrency).toUpperCase() : null;
+  const wantNetwork = normalizeCryptomusNetwork(network);
+
+  for (const order of pendingOrders) {
+    const payment = await Payment.findOne({
+      order: order._id,
+      buyer: buyerId,
+      gateway: 'cryptomus',
+      status: { $in: [PAYMENT_STATUS.PENDING, PAYMENT_STATUS.PROCESSING] },
+      expiresAt: { $gt: now },
+      invoiceUrl: { $nin: [null, ''] },
+      isFinal: { $ne: true },
+    }).lean();
+
+    if (!payment) continue;
+
+    const payCurrency = payment.toCurrency
+      ? String(payment.toCurrency).toUpperCase()
+      : null;
+    if (wantCurrency && payCurrency && wantCurrency !== payCurrency) continue;
+    if (wantNetwork && payment.network && !networksEqual(wantNetwork, payment.network)) {
+      continue;
+    }
+
+    const escrow = await Escrow.findOne({ order: order._id }).lean();
+    return {
+      order,
+      payment,
+      escrow,
+      reused: true,
+      cryptomusOrderId: payment.cryptomusOrderId,
+    };
+  }
+
+  return null;
+}
+
+/**
+ * Cancel other unpaid checkouts for this buyer/product so stock and unique
+ * commerce rows stay consistent when a new invoice is required.
+ */
+async function abandonUnpaidCheckoutsForProduct({
+  buyerId,
+  productId,
+  keepOrderId = null,
+  reason = 'Superseded by a new checkout attempt',
+}) {
+  const pendingOrders = await Order.find({
+    buyer: buyerId,
+    product: productId,
+    status: ORDER_STATUS.PENDING_PAYMENT,
+    ...(keepOrderId ? { _id: { $ne: keepOrderId } } : {}),
+  }).limit(20);
+
+  for (const order of pendingOrders) {
+    try {
+      await withTransaction(async (session) => {
+        const fresh = await orderRepository.findOrderById(order._id, { session });
+        if (!fresh || fresh.status !== ORDER_STATUS.PENDING_PAYMENT) return;
+
+        fresh.status = ORDER_STATUS.CANCELLED;
+        fresh.cancelledAt = new Date();
+        fresh.cancelledReason = reason;
+        await fresh.save({ session });
+
+        const payment = await paymentRepository.findPaymentByOrder(fresh._id, { session });
+        if (payment && payment.status !== PAYMENT_STATUS.PAID) {
+          payment.status = PAYMENT_STATUS.CANCELLED;
+          payment.isFinal = true;
+          payment.failureReason = reason;
+          await payment.save({ session });
+        }
+
+        await restockLimitedProduct(fresh.product, fresh.quantity, session);
+      });
+    } catch {
+      // Best-effort cleanup — checkout creation still proceeds.
+    }
+  }
+}
+
+function buildBuyNowResponse({
+  order,
+  payment,
+  escrow,
+  paymentUrl,
+  cryptomusOrderId,
+  simulated = false,
+  reused = false,
+}) {
+  return {
+    order,
+    payment,
+    escrow,
+    paymentUrl,
+    reused,
+    cryptomus: {
+      uuid: payment?.cryptomusUuid || null,
+      orderId: cryptomusOrderId,
+      simulated,
+      mode: cryptomusService.getCryptomusMode(),
+    },
+  };
 }
 
 /**
@@ -112,133 +273,191 @@ export async function buyNow(payload, actor, requestMeta = {}) {
     });
   }
 
+  const toCurrency = payload.toCurrency
+    ? String(payload.toCurrency).trim().toUpperCase()
+    : null;
+  const network = normalizeCryptomusNetwork(payload.network);
+
+  const reusable = await findReusableCryptomusCheckout({
+    buyerId: actor.id,
+    productId: product._id,
+    toCurrency,
+    network,
+  });
+
+  if (reusable?.payment?.invoiceUrl) {
+    return buildBuyNowResponse({
+      order: reusable.order,
+      payment: reusable.payment,
+      escrow: reusable.escrow,
+      paymentUrl: reusable.payment.invoiceUrl,
+      cryptomusOrderId: reusable.cryptomusOrderId,
+      simulated: Boolean(reusable.payment?.metadata?.simulated),
+      reused: true,
+    });
+  }
+
+  // Different asset route (or stale unpaid row) → drop prior unpaid checkouts first.
+  await abandonUnpaidCheckoutsForProduct({
+    buyerId: actor.id,
+    productId: product._id,
+    reason: 'Superseded by a new Cryptomus checkout',
+  });
+
   const platform = await getPlatformConfig();
   const lifetimeSeconds = platform?.orderPaymentLifetimeSeconds || 3600;
-  const orderNumber = generateOrderNumber();
-  const cryptomusOrderId = generatePaymentOrderId(orderNumber);
-  const expiresAt = addHours(new Date(), lifetimeSeconds / 3600);
 
-  const result = await withTransaction(async (session) => {
-    if (product.stockType === STOCK_TYPES.LIMITED) {
-      const updateOpts = { new: true };
-      if (session) updateOpts.session = session;
-      const updated = await Product.findOneAndUpdate(
-        {
-          _id: product._id,
-          stock: { $gte: quantity },
-          status: PRODUCT_STATUS.LIVE,
-          deletedAt: null,
-        },
-        { $inc: { stock: -quantity } },
-        updateOpts,
-      );
-      if (!updated) {
-        throw new AppError('Product is out of stock', 400, { code: 'OUT_OF_STOCK' });
+  let result = null;
+  let orderNumber = null;
+  let cryptomusOrderId = null;
+
+  for (let attempt = 1; attempt <= CHECKOUT_CREATE_ATTEMPTS; attempt += 1) {
+    orderNumber = generateOrderNumber();
+    cryptomusOrderId = generatePaymentOrderId(orderNumber);
+    const expiresAt = addHours(new Date(), lifetimeSeconds / 3600);
+
+    try {
+      result = await withTransaction(async (session) => {
+        if (product.stockType === STOCK_TYPES.LIMITED) {
+          const updateOpts = { new: true };
+          if (session) updateOpts.session = session;
+          const updated = await Product.findOneAndUpdate(
+            {
+              _id: product._id,
+              stock: { $gte: quantity },
+              status: PRODUCT_STATUS.LIVE,
+              deletedAt: null,
+            },
+            { $inc: { stock: -quantity } },
+            updateOpts,
+          );
+          if (!updated) {
+            throw new AppError('Product is out of stock', 400, { code: 'OUT_OF_STOCK' });
+          }
+          if (updated.stock === 0) {
+            updated.status = PRODUCT_STATUS.OUT_OF_STOCK;
+            if (session) await updated.save({ session });
+            else await updated.save();
+          }
+        }
+
+        const accounts = Array.from({ length: quantity }, (_, index) => ({
+          index,
+          identifier: `${orderNumber}-ACC-${index + 1}`,
+          status: 'active',
+          label: `Account ${index + 1}`,
+        }));
+
+        const order = await orderRepository.createOrder(
+          {
+            orderNumber,
+            buyer: actor.id,
+            seller: seller._id,
+            sellerUser: seller.user,
+            product: product._id,
+            productSnapshot: {
+              title: product.title,
+              slug: product.slug,
+              price: unitPrice,
+              currency: product.currency || LEDGER_CURRENCY,
+              productType: product.productType,
+              thumbnail: product.thumbnail,
+              deliveryType: product.deliveryType,
+            },
+            quantity,
+            accounts,
+            unitPrice,
+            subtotal,
+            commissionPercent: commission.percent,
+            commissionAmount: commission.commissionAmount,
+            sellerAmount: commission.sellerAmount,
+            totalAmount: subtotal,
+            currency: product.currency || LEDGER_CURRENCY,
+            status: ORDER_STATUS.PENDING_PAYMENT,
+            deliveryStatus: DELIVERY_STATUS.PENDING,
+            expiresAt,
+            metadata: {
+              toCurrency,
+              network,
+            },
+          },
+          session,
+        );
+
+        const payment = await paymentRepository.createPayment(
+          {
+            order: order._id,
+            orderNumber,
+            buyer: actor.id,
+            seller: seller._id,
+            gateway: 'cryptomus',
+            amount: subtotal,
+            currency: order.currency,
+            toCurrency,
+            network,
+            status: PAYMENT_STATUS.PENDING,
+            cryptomusUuid: null,
+            cryptomusOrderId,
+            invoiceUrl: null,
+            lifetimeSeconds,
+            expiresAt,
+            providerStatus: 'created',
+            metadata: {},
+          },
+          session,
+        );
+
+        order.payment = payment._id;
+        if (session) await order.save({ session });
+        else await order.save();
+
+        const escrow = await escrowService.createPendingEscrow({
+          order,
+          payment,
+          session,
+        });
+        order.escrow = escrow._id;
+        if (session) await order.save({ session });
+        else await order.save();
+
+        await logActivity({
+          userId: actor.id,
+          action: 'orders.buy_now',
+          resource: 'Order',
+          resourceId: order._id,
+          ip: requestMeta.ip,
+          userAgent: requestMeta.userAgent,
+          meta: {
+            productId: product._id,
+            amount: subtotal,
+            quantity,
+            cryptomusOrderId,
+            toCurrency,
+            network,
+            attempt,
+          },
+          session,
+        });
+
+        return { order, payment, escrow };
+      });
+      break;
+    } catch (error) {
+      if (isDuplicateKeyError(error) && attempt < CHECKOUT_CREATE_ATTEMPTS) {
+        continue;
       }
-      if (updated.stock === 0) {
-        updated.status = PRODUCT_STATUS.OUT_OF_STOCK;
-        if (session) await updated.save({ session });
-        else await updated.save();
+      if (isDuplicateKeyError(error)) {
+        throw checkoutConflictError(error);
       }
+      throw error;
     }
+  }
 
-    const accounts = Array.from({ length: quantity }, (_, index) => ({
-      index,
-      identifier: `${orderNumber}-ACC-${index + 1}`,
-      status: 'active',
-      label: `Account ${index + 1}`,
-    }));
-
-    const order = await orderRepository.createOrder(
-      {
-        orderNumber,
-        buyer: actor.id,
-        seller: seller._id,
-        sellerUser: seller.user,
-        product: product._id,
-        productSnapshot: {
-          title: product.title,
-          slug: product.slug,
-          price: unitPrice,
-          currency: product.currency || LEDGER_CURRENCY,
-          productType: product.productType,
-          thumbnail: product.thumbnail,
-          deliveryType: product.deliveryType,
-        },
-        quantity,
-        accounts,
-        unitPrice,
-        subtotal,
-        commissionPercent: commission.percent,
-        commissionAmount: commission.commissionAmount,
-        sellerAmount: commission.sellerAmount,
-        totalAmount: subtotal,
-        currency: product.currency || LEDGER_CURRENCY,
-        status: ORDER_STATUS.PENDING_PAYMENT,
-        deliveryStatus: DELIVERY_STATUS.PENDING,
-        expiresAt,
-        metadata: {
-          toCurrency: payload.toCurrency || null,
-          network: payload.network || null,
-        },
-      },
-      session,
-    );
-
-    const payment = await paymentRepository.createPayment(
-      {
-        order: order._id,
-        orderNumber,
-        buyer: actor.id,
-        seller: seller._id,
-        gateway: 'cryptomus',
-        amount: subtotal,
-        currency: order.currency,
-        toCurrency: payload.toCurrency || null,
-        network: payload.network || null,
-        status: PAYMENT_STATUS.PENDING,
-        cryptomusUuid: null,
-        cryptomusOrderId,
-        invoiceUrl: null,
-        lifetimeSeconds,
-        expiresAt,
-        providerStatus: 'created',
-        metadata: {},
-      },
-      session,
-    );
-
-    order.payment = payment._id;
-    if (session) await order.save({ session });
-    else await order.save();
-
-    const escrow = await escrowService.createPendingEscrow({
-      order,
-      payment,
-      session,
+  if (!result) {
+    throw new AppError('Could not create checkout session. Please try again.', 409, {
+      code: 'CHECKOUT_CONFLICT',
     });
-    order.escrow = escrow._id;
-    if (session) await order.save({ session });
-    else await order.save();
-
-    await logActivity({
-      userId: actor.id,
-      action: 'orders.buy_now',
-      resource: 'Order',
-      resourceId: order._id,
-      ip: requestMeta.ip,
-      userAgent: requestMeta.userAgent,
-      meta: {
-        productId: product._id,
-        amount: subtotal,
-        quantity,
-        cryptomusOrderId,
-      },
-      session,
-    });
-
-    return { order, payment, escrow };
-  });
+  }
 
   const callbackUrl = cryptomusService.buildCallbackUrl();
   const successBase = payload.urlSuccess || undefined;
@@ -252,8 +471,8 @@ export async function buyNow(payload, actor, requestMeta = {}) {
       amount: subtotal,
       currency: result.order.currency,
       orderId: cryptomusOrderId,
-      network: payload.network || null,
-      toCurrency: payload.toCurrency || null,
+      network,
+      toCurrency,
       lifetime: lifetimeSeconds,
       urlCallback: callbackUrl,
       urlReturn: payload.urlReturn || undefined,
@@ -273,30 +492,43 @@ export async function buyNow(payload, actor, requestMeta = {}) {
       failureReason: error.message,
       isFinal: true,
     });
+    await restockLimitedProduct(product._id, quantity);
     throw error;
   }
 
-  const payment = await paymentRepository.updatePaymentById(result.payment._id, {
-    cryptomusUuid: invoice.uuid || null,
-    invoiceUrl: invoice.url || null,
-    address: invoice.address || null,
-    providerStatus: invoice.payment_status || 'check',
-    rawInvoice: invoice,
-    metadata: { simulated },
-  });
+  let payment;
+  try {
+    payment = await paymentRepository.updatePaymentById(result.payment._id, {
+      cryptomusUuid: invoice.uuid || null,
+      invoiceUrl: invoice.url || null,
+      address: invoice.address || null,
+      providerStatus: invoice.payment_status || 'check',
+      rawInvoice: invoice,
+      metadata: { simulated },
+    });
+  } catch (error) {
+    if (isDuplicateKeyError(error)) {
+      // Another worker may have attached the same provider uuid — reload existing row.
+      const existing = await paymentRepository.findPaymentById(result.payment._id, { lean: true });
+      if (existing?.invoiceUrl) {
+        payment = existing;
+      } else {
+        throw checkoutConflictError(error);
+      }
+    } else {
+      throw error;
+    }
+  }
 
-  const response = {
+  const response = buildBuyNowResponse({
     order: (await orderRepository.findOrderById(result.order._id, { lean: true })),
     payment: payment.toObject ? payment.toObject() : payment,
     escrow: (await escrowRepository.findEscrowById(result.escrow._id, { lean: true })),
-    paymentUrl: invoice.url,
-    cryptomus: {
-      uuid: invoice.uuid,
-      orderId: cryptomusOrderId,
-      simulated,
-      mode: cryptomusService.getCryptomusMode(),
-    },
-  };
+    paymentUrl: invoice.url || payment.invoiceUrl,
+    cryptomusOrderId,
+    simulated,
+    reused: false,
+  });
 
   emitDomainEvent(DOMAIN_EVENTS.ORDER_CREATED, {
     order: response.order,
@@ -341,7 +573,7 @@ async function buyNowWithWallet({
   }
 
   const orderNumber = generateOrderNumber();
-  const walletPaymentId = `wallet_${String(orderNumber).replace(/[^a-zA-Z0-9_-]/g, '_')}`;
+  const walletPaymentId = generatePaymentOrderId(`wallet_${orderNumber}`);
   const paidAt = new Date();
 
   const result = await withTransaction(async (session) => {
@@ -603,18 +835,7 @@ export async function cancelOrder(orderId, actor, reason = 'Cancelled by user') 
       else await payment.save();
     }
 
-    // Restock
-        let productQuery = Product.findById(order.product);
-    if (session) productQuery = productQuery.session(session);
-    const product = await productQuery;
-    if (product && product.stockType === STOCK_TYPES.LIMITED) {
-      product.stock += 1;
-      if (product.status === PRODUCT_STATUS.OUT_OF_STOCK) {
-        product.status = PRODUCT_STATUS.LIVE;
-      }
-      if (session) await product.save({ session });
-      else await product.save();
-    }
+    await restockLimitedProduct(order.product, order.quantity, session);
 
     await logActivity({
       userId: actor.id,
@@ -657,17 +878,7 @@ export async function expireOrders({ limit = 100 } = {}) {
           else await payment.save();
         }
 
-        let productQuery = Product.findById(order.product);
-        if (session) productQuery = productQuery.session(session);
-        const product = await productQuery;
-        if (product && product.stockType === STOCK_TYPES.LIMITED) {
-          product.stock += 1;
-          if (product.status === PRODUCT_STATUS.OUT_OF_STOCK) {
-            product.status = PRODUCT_STATUS.LIVE;
-          }
-          if (session) await product.save({ session });
-          else await product.save();
-        }
+        await restockLimitedProduct(order.product, order.quantity, session);
       });
       results.succeeded += 1;
     } catch {

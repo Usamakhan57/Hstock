@@ -35,6 +35,19 @@ export const listCryptomusServices = asyncHandler(async (_req, res) => {
   return sendSuccess(res, { message: 'Cryptomus payment services', data });
 });
 
+export const listCheckoutAssets = asyncHandler(async (_req, res) => {
+  const data = await cryptomusService.listCheckoutAssets();
+  return sendSuccess(res, {
+    message: 'Cryptomus checkout assets',
+    data: data.assets,
+    meta: {
+      source: data.source,
+      mode: data.mode,
+      count: data.assets?.length || 0,
+    },
+  });
+});
+
 export const sandboxConfirm = asyncHandler(async (req, res) => {
   const result = await paymentService.sandboxConfirmPayment(req.params.uuid);
   return sendSuccess(res, {
@@ -49,5 +62,6 @@ export default {
   syncPayment,
   cryptomusWebhook,
   listCryptomusServices,
+  listCheckoutAssets,
   sandboxConfirm,
 };

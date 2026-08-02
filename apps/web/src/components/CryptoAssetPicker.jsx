@@ -8,11 +8,11 @@ import {
   DialogTitle,
 } from './ui/dialog';
 import {
-  filterWithdrawAssets,
-  formatAssetNetworkLabel,
-  getNetworksForCoin,
-  getWithdrawAsset,
-  resolveNetworkForCoin,
+  filterAssetCatalog,
+  formatCatalogRoute,
+  getAssetFromCatalog,
+  getNetworksFromCatalog,
+  resolveNetworkFromCatalog,
   WITHDRAW_CRYPTO_ASSETS,
 } from '../constants/cryptoAssets';
 
@@ -31,7 +31,7 @@ function AssetIcon({ asset, size = 'md' }) {
 
 /**
  * Cryptomus-style currency / network picker.
- * Uses nested Dialogs so selection works inside the withdraw modal
+ * Uses nested Dialogs so selection works inside parent modals
  * (portals to body were blocked by Radix pointer-events).
  */
 const CryptoAssetPicker = ({
@@ -40,15 +40,26 @@ const CryptoAssetPicker = ({
   onCoinChange,
   onNetworkChange,
   disabled = false,
+  assets = WITHDRAW_CRYPTO_ASSETS,
+  currencyTitle = 'Withdraw asset',
+  currencyDescription = 'Select a currency for this withdrawal.',
+  routeLabel = 'Selected payout route',
 }) => {
   const [currencyOpen, setCurrencyOpen] = useState(false);
   const [networkOpen, setNetworkOpen] = useState(false);
   const [query, setQuery] = useState('');
 
-  const asset = useMemo(() => getWithdrawAsset(coin), [coin]);
-  const networks = useMemo(() => getNetworksForCoin(coin), [coin]);
-  const filteredAssets = useMemo(() => filterWithdrawAssets(query), [query]);
-  const selectedNetwork = networks.find((item) => item.code === network) || networks[0];
+  const catalog = useMemo(
+    () => (Array.isArray(assets) && assets.length ? assets : WITHDRAW_CRYPTO_ASSETS),
+    [assets],
+  );
+
+  const asset = useMemo(() => getAssetFromCatalog(catalog, coin), [catalog, coin]);
+  const networks = useMemo(() => getNetworksFromCatalog(catalog, coin), [catalog, coin]);
+  const filteredAssets = useMemo(() => filterAssetCatalog(catalog, query), [catalog, query]);
+  const selectedNetwork = networks.find(
+    (item) => String(item.code).toLowerCase() === String(network || '').toLowerCase(),
+  ) || networks[0];
 
   useEffect(() => {
     if (!currencyOpen) setQuery('');
@@ -56,17 +67,17 @@ const CryptoAssetPicker = ({
 
   // Keep network valid whenever coin/network props drift.
   useEffect(() => {
-    const resolved = resolveNetworkForCoin(coin, network);
+    const resolved = resolveNetworkFromCatalog(catalog, coin, network);
     if (resolved && resolved !== network) {
       onNetworkChange?.(resolved);
     }
-  }, [coin, network, onNetworkChange]);
+  }, [catalog, coin, network, onNetworkChange]);
 
   const selectCoin = (symbol, event) => {
     event?.preventDefault?.();
     event?.stopPropagation?.();
     const nextSymbol = String(symbol || '').toUpperCase();
-    const nextNetwork = resolveNetworkForCoin(nextSymbol, network);
+    const nextNetwork = resolveNetworkFromCatalog(catalog, nextSymbol, network);
     onCoinChange?.(nextSymbol);
     onNetworkChange?.(nextNetwork);
     setCurrencyOpen(false);
@@ -75,7 +86,7 @@ const CryptoAssetPicker = ({
   const selectNetwork = (code, event) => {
     event?.preventDefault?.();
     event?.stopPropagation?.();
-    onNetworkChange?.(String(code || '').toUpperCase());
+    onNetworkChange?.(String(code || ''));
     setNetworkOpen(false);
   };
 
@@ -123,9 +134,9 @@ const CryptoAssetPicker = ({
       </div>
 
       <p className="text-xs text-muted-foreground" data-testid="crypto-selected-route">
-        Selected payout route:{' '}
+        {routeLabel}:{' '}
         <span className="font-semibold text-foreground">
-          {formatAssetNetworkLabel(coin, selectedNetwork?.code || network)}
+          {formatCatalogRoute(catalog, coin, selectedNetwork?.code || network)}
         </span>
       </p>
 
@@ -140,8 +151,8 @@ const CryptoAssetPicker = ({
           }}
         >
           <DialogHeader className="border-b border-border px-4 py-4 text-left">
-            <DialogTitle>Withdraw asset</DialogTitle>
-            <DialogDescription>Select a currency for this withdrawal.</DialogDescription>
+            <DialogTitle>{currencyTitle}</DialogTitle>
+            <DialogDescription>{currencyDescription}</DialogDescription>
           </DialogHeader>
           <div className="border-b border-border px-4 py-3">
             <label className="relative block">
@@ -192,7 +203,7 @@ const CryptoAssetPicker = ({
             )}
           </div>
           <p className="border-t border-border px-4 py-2 text-[11px] text-muted-foreground">
-            {WITHDRAW_CRYPTO_ASSETS.length} supported currencies
+            {catalog.length} supported currencies
           </p>
         </DialogContent>
       </Dialog>
@@ -211,7 +222,8 @@ const CryptoAssetPicker = ({
             data-testid="crypto-network-list"
           >
             {networks.map((item) => {
-              const selected = item.code === (selectedNetwork?.code || network);
+              const selected = String(item.code).toLowerCase()
+                === String(selectedNetwork?.code || network || '').toLowerCase();
               return (
                 <button
                   key={item.code}
@@ -222,7 +234,7 @@ const CryptoAssetPicker = ({
                   className={`mb-1 flex w-full touch-manipulation items-center gap-3 rounded-2xl px-3 py-3 text-left transition ${selected ? 'bg-primary/10' : 'hover:bg-secondary active:bg-secondary'}`}
                 >
                   <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-secondary text-[10px] font-black text-foreground">
-                    {item.code.slice(0, 4)}
+                    {String(item.code).slice(0, 4).toUpperCase()}
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="block text-sm font-bold text-foreground">{item.label}</span>

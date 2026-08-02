@@ -41,12 +41,26 @@ export function errorHandler(err, req, res, _next) {
   if (err.code === 11000) {
     statusCode = 409;
     const keyPattern = err.keyPattern || {};
+    const fields = Object.keys(keyPattern);
     if (keyPattern.assetIdentifierNormalized) {
       message = ASSET_DUPLICATE_MESSAGE;
       code = ASSET_DUPLICATE_CODE;
+    } else if (
+      fields.some((field) => [
+        'orderNumber',
+        'cryptomusOrderId',
+        'cryptomusUuid',
+        'order',
+        'depositNumber',
+      ].includes(field))
+    ) {
+      message = 'A checkout session could not be created due to a conflict. Please try again.';
+      code = 'CHECKOUT_CONFLICT';
+      details = { fields };
     } else {
-      message = 'Duplicate key conflict';
+      message = 'This record already exists. Please refresh and try again.';
       code = 'DUPLICATE_KEY';
+      details = fields.length ? { fields } : details;
     }
   }
 

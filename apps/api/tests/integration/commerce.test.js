@@ -126,15 +126,59 @@ test('buy now creates order + simulated cryptomus invoice', async () => {
   const buy = await request(app)
     .post('/api/v1/orders/buy-now')
     .set('Authorization', `Bearer ${buyerToken}`)
-    .send({ productId });
+    .send({ productId, toCurrency: 'USDT', network: 'tron' });
 
   assert.equal(buy.status, 201, JSON.stringify(buy.body));
   assert.equal(buy.body.data.order.status, 'pending_payment');
   assert.ok(buy.body.data.paymentUrl);
   assert.equal(buy.body.data.cryptomus.simulated, true);
+  assert.equal(buy.body.data.reused, false);
   assert.equal(buy.body.data.order.commissionPercent, 10);
   assert.equal(buy.body.data.order.commissionAmount, 10);
   assert.equal(buy.body.data.order.sellerAmount, 90);
+});
+
+test('buy now reuses existing unpaid cryptomus invoice', async () => {
+  const adminToken = await createAdminToken();
+  const { token: sellerToken } = await createSeller();
+  const { token: buyerToken } = await createBuyer();
+  const product = await createLiveProduct(adminToken, sellerToken);
+  const productId = product.id || product._id;
+
+  const first = await request(app)
+    .post('/api/v1/orders/buy-now')
+    .set('Authorization', `Bearer ${buyerToken}`)
+    .send({ productId, toCurrency: 'USDT', network: 'TRC20' });
+
+  assert.equal(first.status, 201, JSON.stringify(first.body));
+
+  const second = await request(app)
+    .post('/api/v1/orders/buy-now')
+    .set('Authorization', `Bearer ${buyerToken}`)
+    .send({ productId, toCurrency: 'USDT', network: 'tron' });
+
+  assert.equal(second.status, 201, JSON.stringify(second.body));
+  assert.equal(second.body.data.reused, true);
+  assert.equal(second.body.data.order._id, first.body.data.order._id);
+  assert.equal(second.body.data.payment._id, first.body.data.payment._id);
+  assert.equal(second.body.data.cryptomus.orderId, first.body.data.cryptomus.orderId);
+  assert.equal(second.body.data.paymentUrl, first.body.data.paymentUrl);
+});
+
+test('checkout assets endpoint returns currencies with networks', async () => {
+  const { token: buyerToken } = await createBuyer();
+  const res = await request(app)
+    .get('/api/v1/payments/cryptomus/checkout-assets')
+    .set('Authorization', `Bearer ${buyerToken}`);
+
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  assert.ok(Array.isArray(res.body.data));
+  assert.ok(res.body.data.length >= 8);
+  const usdt = res.body.data.find((asset) => asset.symbol === 'USDT');
+  assert.ok(usdt);
+  assert.ok(Array.isArray(usdt.networks));
+  assert.ok(usdt.networks.some((n) => n.code === 'tron'));
+  assert.equal(res.body.meta?.source, 'fallback');
 });
 
 test('payment confirmation locks escrow and credits seller pending', async () => {

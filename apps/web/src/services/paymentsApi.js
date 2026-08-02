@@ -27,6 +27,22 @@ export const paymentsApi = {
     clearRequestCache('orders');
     return mapBackendPayment(data);
   },
+
+  /**
+   * Dynamic Cryptomus currencies + networks for checkout.
+   * Falls back to offline catalog when the API is unreachable.
+   */
+  async listCheckoutAssets() {
+    const key = cacheKey('payments', { scope: 'checkout-assets' });
+    return cachedRequest(key, async () => {
+      const { data, meta } = await get('/payments/cryptomus/checkout-assets');
+      return {
+        assets: Array.isArray(data) ? data : [],
+        source: meta?.source || 'cryptomus',
+        mode: meta?.mode || null,
+      };
+    }, 60_000);
+  },
 };
 
 export default paymentsApi;

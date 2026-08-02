@@ -36,6 +36,14 @@ router.get(
   paymentsController.listCryptomusServices,
 );
 
+/** Authenticated buyers/sellers — dynamic Cryptomus currencies + networks for checkout */
+router.get(
+  '/cryptomus/checkout-assets',
+  requireAuth,
+  requirePermission(PERMISSIONS.PAYMENTS_READ),
+  paymentsController.listCheckoutAssets,
+);
+
 router.get(
   '/:id',
   requireAuth,

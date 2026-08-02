@@ -44,13 +44,23 @@ export const WITHDRAWAL_STATUS = {
 export const DEFAULT_COMMISSION_PERCENT = 10;
 
 /** Compact checkout options (purchase modal). Withdrawals use WITHDRAW_CRYPTO_ASSETS. */
+/** @deprecated Prefer dynamic checkout assets from paymentsApi.listCheckoutAssets() */
 export const PAYMENT_CURRENCIES = [
-  { coin: 'USDT', network: 'TRC20', label: 'USDT · TRC20' },
-  { coin: 'USDT', network: 'ERC20', label: 'USDT · ERC20' },
-  { coin: 'BTC', network: 'BTC', label: 'Bitcoin' },
-  { coin: 'ETH', network: 'ETH', label: 'Ethereum' },
-  { coin: 'USDC', network: 'ERC20', label: 'USDC · ERC20' },
-  { coin: 'SOL', network: 'SOL', label: 'Solana' },
+  { coin: 'USDT', network: 'tron', label: 'USDT · TRC20' },
+  { coin: 'USDT', network: 'eth', label: 'USDT · ERC20' },
+  { coin: 'USDT', network: 'bsc', label: 'USDT · BEP20' },
+  { coin: 'USDT', network: 'polygon', label: 'USDT · Polygon' },
+  { coin: 'USDC', network: 'eth', label: 'USDC · ERC20' },
+  { coin: 'BTC', network: 'btc', label: 'Bitcoin' },
+  { coin: 'ETH', network: 'eth', label: 'Ethereum' },
+  { coin: 'BNB', network: 'bsc', label: 'BNB · BEP20' },
+  { coin: 'TRX', network: 'tron', label: 'TRX' },
+  { coin: 'TON', network: 'ton', label: 'TON' },
+  { coin: 'SOL', network: 'sol', label: 'Solana' },
+  { coin: 'XRP', network: 'xrp', label: 'XRP' },
+  { coin: 'DOGE', network: 'doge', label: 'DOGE' },
+  { coin: 'LTC', network: 'ltc', label: 'Litecoin' },
+  { coin: 'XMR', network: 'monero', label: 'Monero' },
 ];
 
 export { WITHDRAW_CRYPTO_ASSETS } from './cryptoAssets';
