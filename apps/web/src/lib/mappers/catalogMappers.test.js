@@ -43,4 +43,25 @@ describe('catalogMappers', () => {
     expect(mapBackendCategory({ _id: 'c1', name: 'Domains', slug: 'domains' }).slug).toBe('domains');
     expect(mapBackendSeller({ _id: 's1', storeName: 'Acme', storeSlug: 'acme', status: 'approved' }).verified).toBe(true);
   });
+
+  it('does not treat Lucide icon names as category image URLs', () => {
+    const mapped = mapBackendCategory({
+      _id: 'c2',
+      name: 'Instagram Accounts',
+      slug: 'instagram-accounts',
+      icon: 'Instagram',
+    });
+    expect(mapped.image).toBeNull();
+    expect(mapped.icon).toBe('Instagram');
+
+    const withImage = mapBackendCategory({
+      _id: 'c3',
+      name: 'Netflix',
+      slug: 'netflix',
+      icon: 'Youtube',
+      image: 'https://cdn.example/netflix.png',
+    });
+    expect(withImage.image).toBe('https://cdn.example/netflix.png');
+    expect(withImage.icon).toBe('Youtube');
+  });
 });
