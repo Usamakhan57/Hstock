@@ -1,6 +1,14 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
-import { ArrowLeft, ImagePlus, Loader2, Sparkles, PackageCheck } from 'lucide-react';
+import {
+  ArrowLeft,
+  ImagePlus,
+  Loader2,
+  PackageCheck,
+  Save,
+  Tag,
+  Info,
+} from 'lucide-react';
 import { useToast } from '../../../hooks/use-toast';
 import { createSellerProduct, getSellerProduct, updateSellerProduct } from '../api/sellerProducts';
 import { MAX_IMAGE_UPLOAD_MB, uploadProductImage, validateImageFile } from '../../../lib/imageUpload';
@@ -28,8 +36,14 @@ const defaultDraft = {
   marketplaceType: 'account',
   listingType: 'social-account',
   status: 'draft',
+  visibility: 'public',
   thumbnail: '',
   gallery: [],
+  whatsIncluded: '',
+  seoTitle: '',
+  seoDescription: '',
+  seoKeywords: [],
+  tagsText: '',
 };
 
 function parseOptionalNumber(value) {
@@ -38,31 +52,74 @@ function parseOptionalNumber(value) {
   return Number.isFinite(next) ? next : '';
 }
 
+function Section({ title, subtitle, children, badge = null }) {
+  return (
+    <section className="rounded-[1.5rem] border border-border bg-white p-5 shadow-sm sm:p-6">
+      <div className="mb-5 flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <h3 className="text-lg font-black text-foreground">{title}</h3>
+          {subtitle ? <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p> : null}
+        </div>
+        {badge}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function Field({ label, children, hint = null, required = false }) {
+  return (
+    <label className="block space-y-2 text-sm font-medium text-foreground">
+      <span className="inline-flex items-center gap-1.5">
+        {label}
+        {required ? <span className="rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-red-600">required</span> : null}
+      </span>
+      {children}
+      {hint ? <span className="block text-xs font-normal text-muted-foreground">{hint}</span> : null}
+    </label>
+  );
+}
+
+const inputClass = 'w-full rounded-2xl border border-border bg-secondary/60 px-3 py-2.5 outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/10';
+
 const SellerProductEditorPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [form, setForm] = useState(defaultDraft);
   const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(Boolean(id));
   const [imageFileName, setImageFileName] = useState('');
   const [imageUploading, setImageUploading] = useState(false);
   const [inventoryAccounts, setInventoryAccounts] = useState([]);
 
   useEffect(() => {
-    if (!id) return;
+    if (!id) return undefined;
     let mounted = true;
-    getSellerProduct(id).then((product) => {
-      if (!mounted || !product) return;
-      setForm({
-        ...defaultDraft,
-        ...product,
-        categoryId: product.categoryId || null,
-        category: product.category || '',
-        price: product.price == null || product.price === '' ? '' : Number(product.price),
-        salePrice: product.salePrice == null || product.salePrice === '' ? '' : Number(product.salePrice),
+    setLoading(true);
+    getSellerProduct(id)
+      .then((product) => {
+        if (!mounted || !product) return;
+        const keywords = Array.isArray(product.seoKeywords) ? product.seoKeywords : [];
+        setForm({
+          ...defaultDraft,
+          ...product,
+          categoryId: product.categoryId || null,
+          category: product.category || '',
+          price: product.price == null || product.price === '' ? '' : Number(product.price),
+          salePrice: product.salePrice == null || product.salePrice === '' ? '' : Number(product.salePrice),
+          visibility: product.visibility || 'public',
+          whatsIncluded: product.whatsIncluded || '',
+          seoTitle: product.seoTitle || '',
+          seoDescription: product.seoDescription || '',
+          seoKeywords: keywords,
+          tagsText: keywords.join(', '),
+        });
+        setImageFileName(product.thumbnail ? 'Current image set' : '');
+      })
+      .finally(() => {
+        if (mounted) setLoading(false);
       });
-      setImageFileName(product.thumbnail ? 'Current image set' : '');
-    });
     return () => { mounted = false; };
   }, [id]);
 
@@ -70,6 +127,7 @@ const SellerProductEditorPage = () => {
   const manualDelivery = isManualDelivery(form.deliveryType);
   const inventoryRequired = isInventoryRequired(form.deliveryType);
   const readyInventoryCount = countReadyInventory(inventoryAccounts);
+  const descriptionCount = String(form.description || '').length;
 
   const handleImageUpload = async (event) => {
     const file = event.target.files?.[0];
@@ -117,7 +175,7 @@ const SellerProductEditorPage = () => {
       return;
     }
 
-    if (publish && inventoryRequired && readyInventoryCount < 1) {
+    if (publish && inventoryRequired && readyInventoryCount < 1 && !isEditing) {
       toast({
         title: 'Inventory required',
         description: 'Import and validate at least one account before publishing an Instant Access product.',
@@ -128,7 +186,12 @@ const SellerProductEditorPage = () => {
 
     setSaving(true);
     try {
-      const stockValue = publish && inventoryRequired
+      const keywords = String(form.tagsText || '')
+        .split(',')
+        .map((item) => item.trim())
+        .filter(Boolean);
+
+      const stockValue = publish && inventoryRequired && readyInventoryCount > 0
         ? readyInventoryCount
         : Number(form.stock || 0);
 
@@ -148,11 +211,13 @@ const SellerProductEditorPage = () => {
         productType: form.productType,
         thumbnail: form.thumbnail,
         gallery: form.gallery,
-        status: publish ? (manualDelivery ? 'pending' : 'live') : 'draft',
+        status: publish ? (manualDelivery ? 'pending' : form.status === 'live' ? 'live' : 'pending') : 'draft',
+        visibility: form.visibility || 'public',
         whatsIncluded: form.whatsIncluded,
         seoTitle: form.seoTitle,
         seoDescription: form.seoDescription,
-        seoKeywords: form.seoKeywords,
+        seoKeywords: keywords,
+        tagsText: form.tagsText,
         inventoryType: inventoryRequired ? 'tracked' : (form.inventoryType || 'manual'),
         stockType: form.stockType || 'limited',
         inventorySourceFormat: 'paste',
@@ -164,7 +229,7 @@ const SellerProductEditorPage = () => {
       await (isEditing
         ? updateSellerProduct(id, payload, {
           publish,
-          inventoryAccounts: inventoryRequired ? inventoryAccounts : null,
+          inventoryAccounts: inventoryRequired && readyInventoryCount > 0 ? inventoryAccounts : null,
         })
         : createSellerProduct(payload, {
           publish,
@@ -175,8 +240,10 @@ const SellerProductEditorPage = () => {
         title: publish ? 'Product published' : 'Product saved',
         description: publish
           ? (manualDelivery
-            ? 'Manual Delivery listing is ready — inventory import is not required.'
-            : `${readyInventoryCount} Instant Access accounts are ready.`)
+            ? 'Manual Delivery listing submitted for the ApnaStore workflow.'
+            : readyInventoryCount > 0
+              ? `${readyInventoryCount} Instant Access accounts are ready.`
+              : 'Listing saved. Manage inventory anytime from My Products.')
           : 'Your draft is now available in My Products.',
       });
       navigate('/seller/products');
@@ -192,57 +259,89 @@ const SellerProductEditorPage = () => {
     const sale = Number(form.salePrice || 0);
     const showDiscount = !isManualDelivery(form.deliveryType);
     return {
-      savings: showDiscount && price > sale ? price - sale : 0,
+      savings: showDiscount && price > sale && sale > 0 ? price - sale : 0,
       showDiscount,
       deliveryLabel: getDeliveryLabel(form.deliveryType),
     };
   }, [form.price, form.salePrice, form.deliveryType]);
 
+  if (loading) {
+    return (
+      <div className="rounded-[1.5rem] border border-border bg-white p-6 text-sm text-muted-foreground shadow-sm">
+        Loading product editor…
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-6">
+    <div className="mx-auto max-w-[1080px] space-y-6 px-4 py-8 sm:px-6 lg:px-10">
       <div className="rounded-[1.5rem] border border-border bg-white p-5 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.3em] text-primary">
-              <Link to="/seller/products" className="inline-flex items-center gap-1 text-primary hover:opacity-80"><ArrowLeft className="h-3.5 w-3.5" /> Back</Link>
-            </div>
-            <h2 className="mt-2 text-2xl font-black">{isEditing ? 'Edit product' : 'Upload product'}</h2>
+            <Link
+              to="/seller/products"
+              className="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-[0.28em] text-primary hover:opacity-80"
+            >
+              <ArrowLeft className="h-3.5 w-3.5" /> Back to Products
+            </Link>
+            <h1 className="mt-2 text-2xl font-black tracking-tight text-foreground">
+              {isEditing ? 'Edit Product' : 'Add Product'}
+            </h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              Create a clear listing with pricing, delivery options, and media — then publish into the ApnaStore workflow.
+              Professional listing workflow — same fields for create and edit.
             </p>
           </div>
           <div className="rounded-2xl border border-primary/10 bg-primary/[0.05] px-4 py-3 text-sm text-muted-foreground">
-            <div className="flex items-center gap-2 font-semibold text-foreground"><Sparkles className="h-4 w-4 text-primary" /> ApnaStore-ready listing</div>
-            <p className="mt-1">Delivery type controls whether inventory import is required.</p>
+            <div className="flex items-center gap-2 font-semibold text-foreground">
+              <PackageCheck className="h-4 w-4 text-primary" />
+              {summary.deliveryLabel}
+            </div>
+            <p className="mt-1">
+              {manualDelivery
+                ? 'Manual delivery — set stock without account import.'
+                : 'Instant Access — import inventory before going live.'}
+            </p>
           </div>
         </div>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[1.4fr_0.8fr]">
+      <div className="grid gap-6 xl:grid-cols-[1.45fr_0.85fr]">
         <div className="space-y-6">
-          <section className="rounded-[1.5rem] border border-border bg-white p-6 shadow-sm">
-            <h3 className="text-lg font-black">Product Details</h3>
-            <div className="mt-5 grid gap-4 md:grid-cols-2">
-              <label className="space-y-2 text-sm font-medium text-foreground">
-                <span>Title</span>
-                <input value={form.title} onChange={(e) => updateField('title', e.target.value)} className="w-full rounded-2xl border border-border bg-secondary/60 px-3 py-2.5 outline-none" placeholder="e.g. Premium Instagram growth account" />
-              </label>
-              <div className="space-y-2 text-sm font-medium text-foreground">
-                <span>Category</span>
-                <CategorySearchSelect
-                  value={form.categoryId}
-                  placeholder="Select category"
-                  onChange={({ categoryId, category }) => {
-                    setForm((prev) => ({
-                      ...prev,
-                      categoryId,
-                      category,
-                    }));
-                  }}
+          <Section title="Basic Information" subtitle="Title and buyer-facing copy.">
+            <div className="grid gap-4">
+              <Field label="Product Title" required>
+                <input
+                  value={form.title}
+                  onChange={(e) => updateField('title', e.target.value)}
+                  className={inputClass}
+                  placeholder="e.g. Premium Instagram growth account"
+                  maxLength={200}
                 />
-              </div>
-              <label className="space-y-2 text-sm font-medium text-foreground">
-                <span>Price</span>
+              </Field>
+              <Field label="Short description" hint={`${String(form.shortDescription || '').length}/500`}>
+                <textarea
+                  value={form.shortDescription}
+                  onChange={(e) => updateField('shortDescription', e.target.value.slice(0, 500))}
+                  rows={2}
+                  className={inputClass}
+                  placeholder="Concise summary shown on cards and search."
+                />
+              </Field>
+              <Field label="Description" hint={`${descriptionCount}/500 characters recommended for mobile clarity`}>
+                <textarea
+                  value={form.description}
+                  onChange={(e) => updateField('description', e.target.value)}
+                  rows={6}
+                  className={inputClass}
+                  placeholder="Describe what buyers receive, handover steps, and value."
+                />
+              </Field>
+            </div>
+          </Section>
+
+          <Section title="Pricing" subtitle="List price and optional sale price for Instant Access.">
+            <div className="grid gap-4 md:grid-cols-2">
+              <Field label="Price ($)" required>
                 <input
                   type="number"
                   min="0"
@@ -250,13 +349,12 @@ const SellerProductEditorPage = () => {
                   inputMode="decimal"
                   value={form.price === '' || form.price == null ? '' : form.price}
                   onChange={(e) => updateField('price', parseOptionalNumber(e.target.value))}
-                  placeholder="Enter price"
-                  className="w-full rounded-2xl border border-border bg-secondary/60 px-3 py-2.5 outline-none"
+                  placeholder="0.00"
+                  className={inputClass}
                 />
-              </label>
+              </Field>
               {!manualDelivery ? (
-                <label className="space-y-2 text-sm font-medium text-foreground">
-                  <span>Sale Price</span>
+                <Field label="Sale Price ($)" hint="Optional display discount. Leave blank to hide.">
                   <input
                     type="number"
                     min="0"
@@ -264,115 +362,261 @@ const SellerProductEditorPage = () => {
                     inputMode="decimal"
                     value={form.salePrice === '' || form.salePrice == null ? '' : form.salePrice}
                     onChange={(e) => updateField('salePrice', parseOptionalNumber(e.target.value))}
-                    placeholder="Optional discount price"
-                    className="w-full rounded-2xl border border-border bg-secondary/60 px-3 py-2.5 outline-none"
+                    placeholder="Optional"
+                    className={inputClass}
                   />
-                </label>
-              ) : null}
+                </Field>
+              ) : (
+                <div className="rounded-2xl border border-border bg-secondary/40 p-4 text-sm text-muted-foreground">
+                  Sale price is not used for Manual Delivery listings.
+                </div>
+              )}
             </div>
+          </Section>
 
-            <label className="mt-4 block space-y-2 text-sm font-medium text-foreground">
-              <span>Short description</span>
-              <textarea value={form.shortDescription} onChange={(e) => updateField('shortDescription', e.target.value)} rows={3} className="w-full rounded-2xl border border-border bg-secondary/60 px-3 py-2.5 outline-none" placeholder="Add a concise buyer-facing summary." />
-            </label>
+          <Section title="Category" subtitle="Helps buyers discover your listing.">
+            <Field label="Category">
+              <CategorySearchSelect
+                value={form.categoryId}
+                placeholder="Select category"
+                onChange={({ categoryId, category }) => {
+                  setForm((prev) => ({
+                    ...prev,
+                    categoryId,
+                    category,
+                  }));
+                }}
+              />
+            </Field>
+          </Section>
 
-            <label className="mt-4 block space-y-2 text-sm font-medium text-foreground">
-              <span>Description</span>
-              <textarea value={form.description} onChange={(e) => updateField('description', e.target.value)} rows={6} className="w-full rounded-2xl border border-border bg-secondary/60 px-3 py-2.5 outline-none" placeholder="Describe what buyers receive, the handover, and the value proposition." />
-            </label>
-          </section>
-
-          <section className="rounded-[1.5rem] border border-border bg-white p-6 shadow-sm">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <h3 className="text-lg font-black">Delivery and stock</h3>
-              <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-primary">{summary.deliveryLabel}</span>
-            </div>
-            <div className="mt-5 grid gap-4 md:grid-cols-3">
-              <label className="space-y-2 text-sm font-medium text-foreground">
-                <span>Delivery Type</span>
+          <Section
+            title="Delivery Method"
+            subtitle="Controls Instant Access inventory vs Manual Delivery stock."
+            badge={(
+              <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
+                {summary.deliveryLabel}
+              </span>
+            )}
+          >
+            <div className="grid gap-4 md:grid-cols-3">
+              <Field label="Delivery Type" required>
                 <select
                   value={form.deliveryType}
                   onChange={(e) => handleDeliveryTypeChange(e.target.value)}
-                  className="w-full rounded-2xl border border-border bg-secondary/60 px-3 py-2.5 outline-none"
+                  className={inputClass}
                 >
                   {DELIVERY_OPTIONS.map((option) => (
                     <option key={option.value} value={option.value}>{option.label}</option>
                   ))}
                 </select>
-              </label>
-              <label className="space-y-2 text-sm font-medium text-foreground">
-                <span>Initial Stock</span>
-                <input type="number" value={form.stock} onChange={(e) => updateField('stock', Number(e.target.value))} className="w-full rounded-2xl border border-border bg-secondary/60 px-3 py-2.5 outline-none" />
-              </label>
-              <label className="space-y-2 text-sm font-medium text-foreground">
-                <span>Low Stock Threshold</span>
-                <input type="number" value={form.lowStockThreshold} onChange={(e) => updateField('lowStockThreshold', Number(e.target.value))} className="w-full rounded-2xl border border-border bg-secondary/60 px-3 py-2.5 outline-none" />
-              </label>
+              </Field>
+              <Field label="Initial Stock" hint={manualDelivery ? 'Set manually for Manual Delivery.' : 'Synced from inventory when Instant Access publishes.'}>
+                <input
+                  type="number"
+                  min="0"
+                  value={form.stock}
+                  onChange={(e) => updateField('stock', Number(e.target.value))}
+                  className={inputClass}
+                />
+              </Field>
+              <Field label="Low Stock Threshold" hint="Used for seller alerts in the dashboard.">
+                <input
+                  type="number"
+                  min="0"
+                  value={form.lowStockThreshold}
+                  onChange={(e) => updateField('lowStockThreshold', Number(e.target.value))}
+                  className={inputClass}
+                />
+              </Field>
             </div>
-            {manualDelivery ? (
-              <p className="mt-4 text-sm text-muted-foreground">
-                Manual Delivery does not use inventory import. Set stock manually and publish when the listing details are ready.
+            <p className="mt-4 text-sm text-muted-foreground">
+              {manualDelivery
+                ? 'Auto: System delivers instantly. Manual: You deliver within your deadline.'
+                : 'Auto: System delivers instantly. Manual: You deliver within your deadline.'}
+            </p>
+          </Section>
+
+          <Section
+            title="Bulk Discount (optional)"
+            subtitle="Future-ready pricing tiers for larger Instant Access orders."
+            badge={<Tag className="h-4 w-4 text-muted-foreground" />}
+          >
+            <div className="rounded-2xl border border-sky-200 bg-sky-50/80 p-4 text-sm text-sky-950">
+              <p>
+                Lower the price per unit when buyers order more. Example: 50+ = $5.00 each, 100+ = $4.00 each.
+                Each tier must be cheaper than the base price. Instant Access only.
               </p>
-            ) : (
-              <p className="mt-4 text-sm text-muted-foreground">
-                Instant Access requires inventory import before publishing. Use the section below to paste or upload accounts.
-              </p>
-            )}
-          </section>
+              <button
+                type="button"
+                disabled
+                className="mt-3 inline-flex cursor-not-allowed items-center rounded-full border border-sky-300 bg-white px-4 py-2 text-sm font-semibold text-sky-700 opacity-70"
+              >
+                + Add discount tier
+              </button>
+              <p className="mt-2 text-xs text-sky-800/80">Coming soon — checkout still uses your base price.</p>
+            </div>
+          </Section>
+
+          <Section
+            title="How To Login"
+            subtitle="Buyers see this after purchase — login URL, 2FA app, IP/region notes, etc."
+            badge={<span className="rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-red-600">required for delivery</span>}
+          >
+            <Field label="Delivery instructions / what’s included">
+              <textarea
+                value={form.whatsIncluded}
+                onChange={(e) => updateField('whatsIncluded', e.target.value)}
+                rows={5}
+                className={inputClass}
+                placeholder="High quality accounts with 2FA key included. All accounts are fully verified and secure."
+              />
+            </Field>
+          </Section>
+
+          <Section title="SEO" subtitle="Optional search metadata for your listing page.">
+            <div className="grid gap-4">
+              <Field label="SEO Title">
+                <input
+                  value={form.seoTitle}
+                  onChange={(e) => updateField('seoTitle', e.target.value)}
+                  className={inputClass}
+                  placeholder="Defaults to product title when empty"
+                  maxLength={200}
+                />
+              </Field>
+              <Field label="SEO Description">
+                <textarea
+                  value={form.seoDescription}
+                  onChange={(e) => updateField('seoDescription', e.target.value)}
+                  rows={3}
+                  className={inputClass}
+                  placeholder="Short meta description for search engines"
+                  maxLength={500}
+                />
+              </Field>
+            </div>
+          </Section>
+
+          <Section title="Tags" subtitle="Comma-separated keywords stored with SEO keywords.">
+            <Field label="Tags" hint="Example: gmail, aged, 2fa">
+              <input
+                value={form.tagsText}
+                onChange={(e) => updateField('tagsText', e.target.value)}
+                className={inputClass}
+                placeholder="tag1, tag2, tag3"
+              />
+            </Field>
+          </Section>
+
+          <Section title="Visibility & Publishing" subtitle="Control storefront visibility and publish state.">
+            <div className="grid gap-4 md:grid-cols-2">
+              <Field label="Visibility">
+                <select
+                  value={form.visibility || 'public'}
+                  onChange={(e) => updateField('visibility', e.target.value)}
+                  className={inputClass}
+                >
+                  <option value="public">Public</option>
+                  <option value="unlisted">Unlisted</option>
+                  <option value="private">Private</option>
+                </select>
+              </Field>
+              <div className="rounded-2xl border border-border bg-secondary/40 p-4 text-sm text-muted-foreground">
+                <div className="flex items-start gap-2">
+                  <Info className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                  <p>
+                    Save Draft keeps the listing private to your seller portal.
+                    Publish submits Instant Access live (or Manual Delivery for review) using existing ApnaStore rules.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </Section>
         </div>
 
-        <div className="space-y-6">
-          <section className="rounded-[1.5rem] border border-border bg-white p-6 shadow-sm">
-            <h3 className="text-lg font-black">Product Image</h3>
-            <label className={`mt-4 flex cursor-pointer flex-col items-center justify-center rounded-[1.25rem] border border-dashed border-border bg-secondary/40 p-6 text-center text-sm text-muted-foreground ${imageUploading ? 'opacity-70 pointer-events-none' : ''}`}>
+        <div className="space-y-6 xl:sticky xl:top-6 xl:self-start">
+          <Section title="Images" subtitle="Primary thumbnail shown on cards and product pages.">
+            <label className={`flex cursor-pointer flex-col items-center justify-center rounded-[1.25rem] border border-dashed border-border bg-secondary/40 p-6 text-center text-sm text-muted-foreground ${imageUploading ? 'pointer-events-none opacity-70' : ''}`}>
               {imageUploading ? <Loader2 className="mb-3 h-8 w-8 animate-spin text-primary" /> : <ImagePlus className="mb-3 h-8 w-8 text-primary" />}
               <span className="font-semibold text-foreground">{imageUploading ? 'Uploading…' : 'Upload product image'}</span>
               <span className="mt-1">JPG, PNG, WEBP · max {MAX_IMAGE_UPLOAD_MB} MB</span>
-              <input type="file" accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp" className="hidden" onChange={handleImageUpload} disabled={imageUploading} />
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
+                className="hidden"
+                onChange={handleImageUpload}
+                disabled={imageUploading}
+              />
             </label>
             {imageFileName ? <p className="mt-3 text-sm text-muted-foreground">Selected: {imageFileName}</p> : null}
-            {form.thumbnail ? <img src={form.thumbnail} alt={form.title || 'Product preview'} className="mt-4 h-40 w-full rounded-[1rem] object-cover" /> : null}
-          </section>
+            {form.thumbnail ? (
+              <img
+                src={form.thumbnail}
+                alt={form.title || 'Product preview'}
+                className="mt-4 h-44 w-full rounded-[1rem] object-cover"
+              />
+            ) : null}
+          </Section>
 
-          <section className="rounded-[1.5rem] border border-border bg-white p-6 shadow-sm">
-            <h3 className="text-lg font-black">Quick summary</h3>
-            <div className="mt-4 space-y-3 text-sm text-muted-foreground">
+          <Section title="Quick summary">
+            <div className="space-y-3 text-sm text-muted-foreground">
               <div className="flex items-center justify-between"><span>Starting price</span><span className="font-semibold text-foreground">${Number(form.price || 0).toFixed(2)}</span></div>
-              {summary.showDiscount ? (
+              {summary.showDiscount && summary.savings > 0 ? (
                 <div className="flex items-center justify-between"><span>Discount</span><span className="font-semibold text-foreground">${summary.savings.toFixed(2)}</span></div>
               ) : null}
               <div className="flex items-center justify-between"><span>Stock</span><span className="font-semibold text-foreground">{inventoryRequired && readyInventoryCount > 0 ? readyInventoryCount : Number(form.stock || 0)}</span></div>
               <div className="flex items-center justify-between"><span>Delivery</span><span className="font-semibold text-foreground">{summary.deliveryLabel}</span></div>
+              <div className="flex items-center justify-between"><span>Visibility</span><span className="font-semibold capitalize text-foreground">{form.visibility || 'public'}</span></div>
               {inventoryRequired ? (
                 <div className="flex items-center justify-between"><span>Inventory ready</span><span className="font-semibold text-foreground">{readyInventoryCount}</span></div>
               ) : null}
             </div>
-            <div className="mt-5 rounded-2xl border border-primary/10 bg-primary/[0.05] p-4 text-sm text-muted-foreground">
-              <div className="flex items-center gap-2 font-semibold text-foreground">
-                <PackageCheck className="h-4 w-4 text-primary" />
-                {manualDelivery
-                  ? 'Manual Delivery: publish with product details and stock only.'
-                  : 'Instant Access: import inventory below, then publish.'}
-              </div>
-            </div>
-          </section>
+          </Section>
         </div>
       </div>
 
       {inventoryRequired ? (
-        <InventoryImportSection
-          productId={id}
-          accounts={inventoryAccounts}
-          onAccountsChange={setInventoryAccounts}
-        />
+        <div className="space-y-3">
+          <div>
+            <h3 className="text-lg font-black text-foreground">Inventory Upload & Preview</h3>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Paste or upload accounts for Instant Access. Validate before publishing.
+            </p>
+          </div>
+          <InventoryImportSection
+            productId={id}
+            accounts={inventoryAccounts}
+            onAccountsChange={setInventoryAccounts}
+          />
+          {isEditing ? (
+            <p className="text-sm text-muted-foreground">
+              Prefer managing live stock separately?{' '}
+              <Link to={`/seller/upload-accounts/${id}`} className="font-semibold text-primary hover:underline">
+                Open Inventory Management
+              </Link>
+            </p>
+          ) : null}
+        </div>
       ) : null}
 
-      <div className="flex flex-wrap items-center justify-end gap-3 rounded-[1.5rem] border border-border bg-white p-5 shadow-sm">
-        <button type="button" onClick={() => handleSubmit(false)} disabled={saving} className="rounded-full border border-border px-5 py-2.5 text-sm font-semibold text-foreground transition hover:bg-secondary disabled:opacity-60">
-          {saving ? 'Saving...' : 'Save draft'}
+      <div className="sticky bottom-20 z-10 flex flex-wrap items-center justify-end gap-3 rounded-[1.5rem] border border-border bg-white/95 p-4 shadow-lg backdrop-blur lg:bottom-6">
+        <button
+          type="button"
+          onClick={() => handleSubmit(false)}
+          disabled={saving}
+          className="rounded-full border border-border px-5 py-2.5 text-sm font-semibold text-foreground transition hover:bg-secondary disabled:opacity-60"
+        >
+          {saving ? 'Saving…' : 'Save draft'}
         </button>
-        <button type="button" onClick={() => handleSubmit(true)} disabled={saving} className="rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-white transition hover:opacity-95 disabled:opacity-60">
-          {saving ? 'Publishing...' : 'Publish'}
+        <button
+          type="button"
+          onClick={() => handleSubmit(true)}
+          disabled={saving}
+          className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-white transition hover:opacity-95 disabled:opacity-60"
+        >
+          <Save className="h-4 w-4" />
+          {saving ? 'Publishing…' : isEditing ? 'Update Product' : 'Publish'}
         </button>
       </div>
     </div>

@@ -2,7 +2,10 @@ import { describe, expect, it } from 'vitest';
 import {
   buildSalesChart,
   buildBestSelling,
+  buildLowestStock,
+  buildMostViewed,
   buildTopCategories,
+  buildActionRequired,
   summarizeSellerStats,
 } from './sellerAnalytics';
 
@@ -15,6 +18,7 @@ describe('sellerAnalytics', () => {
       sellerAmount: 36,
       quantity: 2,
       date: new Date().toISOString(),
+      buyer: { email: 'a@x.com' },
       product: { id: 'p1', title: 'Pack A', cat: 'Instagram', img: '' },
     },
     {
@@ -24,6 +28,7 @@ describe('sellerAnalytics', () => {
       sellerAmount: 18,
       quantity: 1,
       date: new Date().toISOString(),
+      buyer: { email: 'a@x.com' },
       product: { id: 'p1', title: 'Pack A', cat: 'Instagram', img: '' },
       disputeOpen: true,
     },
@@ -33,7 +38,33 @@ describe('sellerAnalytics', () => {
       amount: 10,
       quantity: 1,
       date: new Date().toISOString(),
+      buyer: { email: 'b@y.com' },
       product: { id: 'p2', title: 'Pack B', cat: 'TikTok', img: '' },
+    },
+  ];
+
+  const products = [
+    {
+      id: 'p1',
+      title: 'Pack A',
+      status: 'live',
+      stock: 0,
+      stockType: 'limited',
+      deliveryType: 'automatic',
+      metrics: { views: 120, revenue: 80 },
+      soldCount: 3,
+      thumbnail: '',
+    },
+    {
+      id: 'p2',
+      title: 'Pack B',
+      status: 'draft',
+      stock: 12,
+      stockType: 'limited',
+      deliveryType: 'manual',
+      metrics: { views: 10, revenue: 0 },
+      soldCount: 0,
+      thumbnail: '',
     },
   ];
 
@@ -54,10 +85,32 @@ describe('sellerAnalytics', () => {
     expect(cats[0].name).toBe('Instagram');
   });
 
+  it('builds lowest stock and most viewed lists', () => {
+    const lowest = buildLowestStock(products, 5);
+    expect(lowest[0].id).toBe('p1');
+    expect(lowest[0].stock).toBe(0);
+
+    const viewed = buildMostViewed(products, 5);
+    expect(viewed[0].id).toBe('p1');
+    expect(viewed[0].views).toBe(120);
+  });
+
+  it('builds action-required cards from inventory and disputes', () => {
+    const actions = buildActionRequired({
+      products,
+      orders,
+      disputes: [{ id: 'd1', status: 'open' }],
+      seller: { telegramConnected: false },
+    });
+    expect(actions.some((a) => a.id === 'out-of-stock')).toBe(true);
+    expect(actions.some((a) => a.id === 'disputes')).toBe(true);
+    expect(actions.some((a) => a.id === 'telegram')).toBe(true);
+  });
+
   it('summarizes dashboard KPIs', () => {
     const stats = summarizeSellerStats({
       orders,
-      products: [{ status: 'live' }, { status: 'draft' }],
+      products,
       wallet: { pendingBalance: 18, releasedBalance: 36, availableBalance: 36 },
       escrow: [{ status: 'disputed' }],
       withdrawals: [{ status: 'pending' }],
@@ -67,5 +120,8 @@ describe('sellerAnalytics', () => {
     expect(stats.revenue).toBe(36);
     expect(stats.activeListings).toBe(1);
     expect(stats.pendingWithdrawals).toBe(1);
+    expect(stats.outOfStock).toBe(1);
+    expect(stats.repeatBuyers).toBe(1);
+    expect(stats.netProfit).toBe(36);
   });
 });
