@@ -191,7 +191,10 @@ export const revealCredentialsSchema = {
 export const sendReplacementSchema = {
   params: z.object({ id: objectIdSchema }),
   body: z.object({
-    notes: z.string().trim().max(5000).optional(),
+    notes: z.string().max(5000).optional(),
+    /** Preferred: exact replacement text, stored as-is (no parsing). */
+    credentialBlob: z.string().min(1).max(100000).optional(),
+    /** Legacy structured accounts (still accepted). */
     accounts: z.array(z.object({
       accountIdentifier: z.string().trim().min(1).max(200),
       notes: z.string().trim().max(2000).optional(),
@@ -207,7 +210,17 @@ export const sendReplacementSchema = {
       secretKey: z.string().trim().max(500).optional(),
       licenseKey: z.string().trim().max(500).optional(),
       apiKey: z.string().trim().max(500).optional(),
-    }).strict()).min(1).max(100),
+    }).strict()).min(1).max(100).optional(),
+  }).superRefine((value, ctx) => {
+    const hasBlob = typeof value.credentialBlob === 'string' && value.credentialBlob.trim().length > 0;
+    const hasAccounts = Array.isArray(value.accounts) && value.accounts.length > 0;
+    if (!hasBlob && !hasAccounts) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Provide credentialBlob or accounts',
+        path: ['credentialBlob'],
+      });
+    }
   }),
 };
 

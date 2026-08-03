@@ -9,6 +9,7 @@ function idOf(value) {
 export const DISPUTE_STATUS_LABEL = {
   open: 'Open',
   under_review: 'Under Review',
+  waiting_for_buyer_confirmation: 'Waiting for Buyer Confirmation',
   resolved: 'Resolved',
   closed: 'Closed',
 };
@@ -20,9 +21,14 @@ export const TIMELINE_EVENT_LABEL = {
   evidence_uploaded: 'Evidence Uploaded',
   ocr_flagged: 'OCR Review Flagged',
   replacement_sent: 'Replacement Submitted',
-  replacement_accepted: 'Replacement Accepted',
-  replacement_rejected: 'Replacement Rejected',
+  replacement_accepted: 'Buyer Accepted Replacement',
+  replacement_rejected: 'Buyer Rejected Replacement',
+  buyer_viewed_replacement: 'Buyer Viewed Replacement',
+  buyer_accepted_replacement: 'Buyer Accepted Replacement',
+  buyer_closed_dispute: 'Buyer Closed Dispute',
+  buyer_rejected_replacement: 'Buyer Rejected Replacement',
   refund_approved: 'Refund Approved',
+  refund_issued: 'Refund Issued',
   escrow_released: 'Escrow Released',
   escrow_held: 'Escrow Held',
   admin_decision: 'Admin Action',
@@ -173,6 +179,7 @@ export function mapReplacement(replacement) {
     status,
     statusLabel: REPLACEMENT_STATUS_LABEL[status] || status,
     notes: replacement.notes || '',
+    hasCredentialBlob: Boolean(replacement.hasCredentialBlob),
     accounts: Array.isArray(replacement.accounts)
       ? replacement.accounts.map((account) => ({
         id: idOf(account),

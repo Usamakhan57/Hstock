@@ -141,6 +141,16 @@ export function buildEmailTemplate(type, data = {}) {
       }),
       text: `Dispute resolved for order ${data.orderNumber || ''}.`,
     },
+    replacement_requested: {
+      subject: `Replacement ready — ${data.orderNumber || 'order'}`,
+      html: layout({
+        title: 'Replacement ready to review',
+        bodyHtml: `<p>A seller submitted replacement${data.version ? ` v${data.version}` : ''} for order <strong>${data.orderNumber || ''}</strong>.</p>
+          <p>Please verify the account and confirm whether it works.</p>
+          <p><a href="${frontend}/disputes/${data.disputeId || ''}" style="display:inline-block;padding:10px 18px;background:#6C3BFF;color:#fff;border-radius:999px;text-decoration:none;">Review replacement</a></p>`,
+      }),
+      text: `Replacement ready for order ${data.orderNumber || ''}. Open ${frontend}/disputes/${data.disputeId || ''}`,
+    },
   };
 
   return templates[type] || {

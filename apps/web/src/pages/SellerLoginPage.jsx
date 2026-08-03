@@ -42,7 +42,7 @@ const SellerLoginPage = () => {
         setGoogleLoading(false);
         return;
       }
-      window.location.assign(authApi.getGoogleAuthUrl());
+      window.location.assign(authApi.getGoogleAuthUrl({ intent: 'seller', returnTo: from }));
     } catch (err) {
       toast({
         title: 'Google sign-in failed',

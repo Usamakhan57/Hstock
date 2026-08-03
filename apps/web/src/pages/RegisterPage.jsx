@@ -37,7 +37,7 @@ const RegisterPage = () => {
         setGoogleLoading(false);
         return;
       }
-      window.location.assign(authApi.getGoogleAuthUrl());
+      window.location.assign(authApi.getGoogleAuthUrl({ intent: 'buyer', returnTo: '/dashboard' }));
     } catch (err) {
       toast({
         title: 'Google sign-up failed',

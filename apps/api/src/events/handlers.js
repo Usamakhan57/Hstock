@@ -475,9 +475,16 @@ export function registerEventHandlers(eventBus) {
         await createNotification({
           userId: buyerId,
           type: 'replacement_requested',
-          title: 'Replacement requested',
-          body: `A replacement was sent for dispute on order ${order?.orderNumber || dispute?.orderNumber || ''}.`,
+          title: 'Replacement ready to review',
+          body: `A replacement was sent for dispute on order ${order?.orderNumber || dispute?.orderNumber || ''}. Please confirm whether the account works.`,
           link: dispute?._id ? `/disputes/${dispute._id}` : '/disputes',
+          sendEmail: true,
+          emailType: 'replacement_requested',
+          emailData: {
+            orderNumber: order?.orderNumber || dispute?.orderNumber,
+            version: replacement?.version,
+            disputeId: dispute?._id ? String(dispute._id) : null,
+          },
           meta: {
             disputeId: dispute?._id ? String(dispute._id) : null,
             replacementId: replacement?._id || replacement?.id || null,
@@ -488,9 +495,13 @@ export function registerEventHandlers(eventBus) {
         await createNotification({
           userId: sellerId,
           type: 'replacement_requested',
-          title: 'Replacement requested',
-          body: `Replacement v${replacement?.version || ''} was sent for order ${order?.orderNumber || ''}.`,
+          title: 'Replacement submitted',
+          body: `Replacement v${replacement?.version || ''} was sent for order ${order?.orderNumber || ''}. Waiting for buyer confirmation.`,
           link: dispute?._id ? `/seller/disputes/${dispute._id}` : '/seller/disputes',
+          meta: {
+            disputeId: dispute?._id ? String(dispute._id) : null,
+            replacementId: replacement?._id || replacement?.id || null,
+          },
         });
       }
     } catch (error) {

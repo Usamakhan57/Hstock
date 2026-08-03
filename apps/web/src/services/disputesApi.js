@@ -73,8 +73,12 @@ export const disputesApi = {
     return { items };
   },
 
-  async sendReplacement(id, { notes, accounts }) {
-    const { data, message } = await post(`/disputes/${id}/replacements`, { notes, accounts });
+  async sendReplacement(id, { notes, accounts, credentialBlob } = {}) {
+    const body = {};
+    if (notes) body.notes = notes;
+    if (typeof credentialBlob === 'string') body.credentialBlob = credentialBlob;
+    if (Array.isArray(accounts) && accounts.length) body.accounts = accounts;
+    const { data, message } = await post(`/disputes/${id}/replacements`, body);
     clearDisputeCaches();
     return { replacement: mapReplacement(data), message };
   },
@@ -86,6 +90,14 @@ export const disputesApi = {
     );
     clearDisputeCaches();
     return { replacement: mapReplacement(data), message };
+  },
+
+  async revealReplacementBlob(id, replacementId) {
+    const { data } = await post(
+      `/disputes/${id}/replacements/${replacementId}/reveal`,
+      {},
+    );
+    return data;
   },
 
   async revealReplacementCredentials(id, replacementId, accountId) {

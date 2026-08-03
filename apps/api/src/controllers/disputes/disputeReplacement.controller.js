@@ -51,6 +51,16 @@ export const revealReplacementCredentials = asyncHandler(async (req, res) => {
   return sendSuccess(res, { message: 'Replacement credentials revealed', data });
 });
 
+export const revealReplacementBlob = asyncHandler(async (req, res) => {
+  const data = await disputeReplacementService.revealReplacementBlob(
+    req.params.id,
+    req.params.replacementId,
+    req.user,
+    requestMeta(req),
+  );
+  return sendSuccess(res, { message: 'Replacement credentials revealed', data });
+});
+
 export const getDashboard = asyncHandler(async (req, res) => {
   const data = await disputeService.getDisputeDashboard(req.params.id, req.user);
   return sendSuccess(res, { message: 'Dispute dashboard', data });
@@ -66,6 +76,7 @@ export default {
   listReplacements,
   respondToReplacement,
   revealReplacementCredentials,
+  revealReplacementBlob,
   getDashboard,
   getTimeline,
 };

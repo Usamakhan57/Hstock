@@ -27,6 +27,7 @@ describe('AuthRoles', () => {
   it('routes users to the correct default home', () => {
     expect(defaultHomeForUser({ roles: [ROLES.ADMIN] })).toBe('/admin');
     expect(defaultHomeForUser({ roles: [ROLES.SELLER] })).toBe('/seller/dashboard');
-    expect(defaultHomeForUser({ roles: [ROLES.BUYER] })).toBe('/');
+    expect(defaultHomeForUser({ roles: [ROLES.BUYER] })).toBe('/dashboard');
+    expect(defaultHomeForUser({ roles: [ROLES.BUYER, ROLES.SELLER] })).toBe('/seller/dashboard');
   });
 });

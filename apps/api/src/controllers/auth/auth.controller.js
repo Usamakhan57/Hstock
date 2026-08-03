@@ -149,31 +149,6 @@ export const googleStatus = asyncHandler(async (_req, res) => {
   });
 });
 
-export const googleCallback = asyncHandler(async (req, res) => {
-  const { env } = await import('../../config/env.js');
-  const frontend = (env.FRONTEND_URL || 'http://localhost:3000').replace(/\/$/, '');
-
-  if (!req.user) {
-    return res.redirect(`${frontend}/login?google=error&reason=denied`);
-  }
-
-  try {
-    const result = await authService.loginOrRegisterWithGoogle(req.user, requestMeta(req));
-    authService.setRefreshCookie(res, result.refreshToken);
-    const params = new URLSearchParams({
-      google: 'success',
-      accessToken: result.accessToken,
-      refreshToken: result.refreshToken,
-      created: result.created ? '1' : '0',
-      linked: result.linked ? '1' : '0',
-    });
-    return res.redirect(`${frontend}/auth/google/callback?${params.toString()}`);
-  } catch (error) {
-    const reason = encodeURIComponent(error.message || 'google_auth_failed');
-    return res.redirect(`${frontend}/login?google=error&reason=${reason}`);
-  }
-});
-
 export default {
   registerBuyer,
   registerSeller,
@@ -187,5 +162,4 @@ export default {
   verifyEmail,
   me,
   googleStatus,
-  googleCallback,
 };

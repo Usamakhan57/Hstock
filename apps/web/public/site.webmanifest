@@ -2,20 +2,25 @@
   "name": "ApnaStore",
   "short_name": "ApnaStore",
   "description": "Secure digital marketplace for accounts, assets, and tools.",
+  "id": "/",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
+  "orientation": "any",
   "background_color": "#000000",
   "theme_color": "#6C3BFF",
   "icons": [
     {
       "src": "/android-chrome-192x192.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     },
     {
       "src": "/android-chrome-512x512.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     },
     {
       "src": "/apple-touch-icon.png",
