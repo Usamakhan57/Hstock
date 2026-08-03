@@ -167,6 +167,25 @@ const paymentSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.Mixed,
       default: {},
     },
+    /**
+     * Client-provided checkout attempt id. Duplicate Buy Now / Confirm clicks
+     * with the same key must resolve to the same Payment + Cryptomus invoice.
+     */
+    idempotencyKey: {
+      type: String,
+      default: undefined,
+      trim: true,
+      maxlength: 128,
+    },
+    /**
+     * Stable fingerprint of buyer + product + qty + asset route.
+     * Unique among non-final pending/processing payments so concurrent
+     * checkouts cannot create multiple Cryptomus invoices.
+     */
+    checkoutFingerprint: {
+      type: String,
+      default: undefined,
+    },
   },
   { timestamps: true },
 );
@@ -175,6 +194,26 @@ paymentSchema.index({ status: 1, createdAt: -1 });
 paymentSchema.index({ buyer: 1, createdAt: -1 });
 paymentSchema.index({ seller: 1, status: 1, createdAt: -1 });
 paymentSchema.index({ status: 1, lastSyncedAt: 1, createdAt: 1 });
+paymentSchema.index(
+  { buyer: 1, idempotencyKey: 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      idempotencyKey: { $type: 'string' },
+    },
+  },
+);
+paymentSchema.index(
+  { checkoutFingerprint: 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      checkoutFingerprint: { $type: 'string' },
+      isFinal: false,
+      status: { $in: ['pending', 'processing'] },
+    },
+  },
+);
 
 const Payment = mongoose.models.Payment || mongoose.model('Payment', paymentSchema);
 

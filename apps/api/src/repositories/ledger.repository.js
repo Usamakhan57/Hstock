@@ -30,8 +30,17 @@ export async function sumByTransfer(transferId, session = null) {
   return LedgerEntry.aggregate(pipeline);
 }
 
+export async function findEntriesByTransferId(transferId, { session = null, lean = true } = {}) {
+  if (!transferId) return [];
+  let query = LedgerEntry.find({ transferId });
+  if (session) query = query.session(session);
+  if (lean) query = query.lean();
+  return query;
+}
+
 export default {
   createLedgerEntries,
   listLedgerEntries,
   sumByTransfer,
+  findEntriesByTransferId,
 };

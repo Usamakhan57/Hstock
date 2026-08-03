@@ -268,7 +268,7 @@ const OrderDeliveryPanel = ({ orderId, deliveryStatus }) => {
                   account.fields?.[key] ? (
                     <div key={key} className="grid grid-cols-[7rem_1fr] gap-3 text-sm">
                       <dt className="text-muted-foreground">{FIELD_LABELS[key] || key}</dt>
-                      <dd className="font-mono break-all font-semibold">{account.fields[key]}</dd>
+                      <dd className="whitespace-pre-wrap break-words font-mono font-semibold">{account.fields[key]}</dd>
                     </div>
                   ) : null
                 ))}

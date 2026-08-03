@@ -304,12 +304,13 @@ export function assertWebhookNotExpired(payload) {
 }
 
 export function buildWebhookEventKey(payload) {
+  // Exclude `sign` so semantically identical retries with a refreshed signature
+  // still collapse onto one processed event.
   const uuid = payload?.uuid || 'none';
   const orderId = payload?.order_id || 'none';
   const status = payload?.status || payload?.payment_status || 'none';
   const txid = payload?.txid || 'none';
-  const sign = payload?.sign || '';
-  return sha256Hex(`${uuid}|${orderId}|${status}|${txid}|${sign}`);
+  return sha256Hex(`${uuid}|${orderId}|${status}|${txid}`);
 }
 
 export function buildCallbackUrl() {

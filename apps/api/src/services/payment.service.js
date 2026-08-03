@@ -87,6 +87,36 @@ export async function applyProviderPaymentUpdate({
   const mapped = cryptomusService.mapCryptomusStatusToPaymentStatus(providerStatus);
   const previous = fresh.status;
 
+  // Already-final paid payments: ignore further charge transitions; repair escrow only.
+  if (previous === PAYMENT_STATUS.PAID) {
+    const order = await orderRepository.findOrderById(fresh.order, { session });
+    if (order && order.status !== ORDER_STATUS.ESCROW && order.status !== ORDER_STATUS.COMPLETED) {
+      await escrowService.lockEscrowAfterPayment({
+        orderId: fresh.order,
+        paymentId: fresh._id,
+        session,
+      });
+    }
+    fresh.providerStatus = providerStatus;
+    fresh.lastSyncedAt = new Date();
+    if (raw) fresh.rawLastWebhook = raw;
+    if (txid) fresh.txid = txid;
+    if (session) await fresh.save({ session });
+    else await fresh.save();
+    return { payment: fresh, alreadyPaid: true };
+  }
+
+  // Ignore provider updates for orders that are already terminal non-payment states
+  // unless this update is a successful paid confirmation for a previously cancelled row.
+  const orderEarly = await orderRepository.findOrderById(fresh.order, { session });
+  if (
+    orderEarly
+    && [ORDER_STATUS.COMPLETED, ORDER_STATUS.ESCROW].includes(orderEarly.status)
+    && mapped !== PAYMENT_STATUS.PAID
+  ) {
+    return { payment: fresh, alreadyPaid: true };
+  }
+
   fresh.providerStatus = providerStatus;
   fresh.lastSyncedAt = new Date();
   if (raw) fresh.rawLastWebhook = raw;
@@ -99,8 +129,35 @@ export async function applyProviderPaymentUpdate({
   if (raw?.is_final !== undefined) fresh.isFinal = Boolean(raw.is_final);
 
   if (mapped === PAYMENT_STATUS.PAID) {
-    if (previous === PAYMENT_STATUS.PAID) {
-      // Ensure escrow lock happened even if a prior attempt was interrupted
+    // Atomic claim: only the first successful paid transition wins.
+    const claimFilter = {
+      _id: fresh._id,
+      status: { $ne: PAYMENT_STATUS.PAID },
+    };
+    const claimUpdate = {
+      $set: {
+        status: PAYMENT_STATUS.PAID,
+        paidAt: new Date(),
+        isFinal: true,
+        providerStatus,
+        lastSyncedAt: new Date(),
+      },
+      $unset: { checkoutFingerprint: 1 },
+    };
+    if (txid) claimUpdate.$set.txid = txid;
+    if (raw) claimUpdate.$set.rawLastWebhook = raw;
+    if (raw?.address) claimUpdate.$set.address = raw.address;
+    if (raw?.payer_amount) claimUpdate.$set.payerAmount = String(raw.payer_amount);
+    if (raw?.payer_currency) claimUpdate.$set.payerCurrency = raw.payer_currency;
+    if (raw?.merchant_amount) claimUpdate.$set.merchantAmount = String(raw.merchant_amount);
+    if (raw?.payment_amount) claimUpdate.$set.paymentAmount = String(raw.payment_amount);
+
+    const claimOpts = { new: true };
+    if (session) claimOpts.session = session;
+    const claimed = await Payment.findOneAndUpdate(claimFilter, claimUpdate, claimOpts);
+
+    if (!claimed) {
+      const already = await paymentRepository.findPaymentById(fresh._id, { session });
       const order = await orderRepository.findOrderById(fresh.order, { session });
       if (order && order.status !== ORDER_STATUS.ESCROW && order.status !== ORDER_STATUS.COMPLETED) {
         await escrowService.lockEscrowAfterPayment({
@@ -109,47 +166,39 @@ export async function applyProviderPaymentUpdate({
           session,
         });
       }
-      if (session) await fresh.save({ session });
-      else await fresh.save();
-      return { payment: fresh, alreadyPaid: true };
+      return { payment: already || fresh, alreadyPaid: true };
     }
 
-    fresh.status = PAYMENT_STATUS.PAID;
-    fresh.paidAt = new Date();
-    fresh.isFinal = true;
-    if (session) await fresh.save({ session });
-    else await fresh.save();
-
-    const order = await orderRepository.findOrderById(fresh.order, { session });
+    const order = await orderRepository.findOrderById(claimed.order, { session });
     if (order) {
       order.status = ORDER_STATUS.PAID;
-      order.paidAt = fresh.paidAt;
+      order.paidAt = claimed.paidAt;
       if (session) await order.save({ session });
       else await order.save();
     }
 
     await escrowService.lockEscrowAfterPayment({
-      orderId: fresh.order,
-      paymentId: fresh._id,
+      orderId: claimed.order,
+      paymentId: claimed._id,
       session,
     });
 
     await logActivity({
-      userId: fresh.buyer,
+      userId: claimed.buyer,
       action: 'payments.paid',
       resource: 'Payment',
-      resourceId: fresh._id,
-      meta: { providerStatus, source, orderId: fresh.order },
+      resourceId: claimed._id,
+      meta: { providerStatus, source, orderId: claimed.order },
       session,
     });
 
-    const paidOrder = await orderRepository.findOrderById(fresh.order, { session });
+    const paidOrder = await orderRepository.findOrderById(claimed.order, { session });
     emitDomainEvent(DOMAIN_EVENTS.PAYMENT_SUCCESS, {
-      payment: fresh.toObject ? fresh.toObject() : fresh,
+      payment: claimed.toObject ? claimed.toObject() : claimed,
       order: paidOrder?.toObject ? paidOrder.toObject() : paidOrder,
     });
 
-    return { payment: fresh, alreadyPaid: false };
+    return { payment: claimed, alreadyPaid: false };
   }
 
   if (mapped === PAYMENT_STATUS.PROCESSING || mapped === PAYMENT_STATUS.PARTIAL) {
@@ -165,12 +214,15 @@ export async function applyProviderPaymentUpdate({
   } else if (mapped === PAYMENT_STATUS.EXPIRED && previous !== PAYMENT_STATUS.PAID) {
     fresh.status = PAYMENT_STATUS.EXPIRED;
     fresh.isFinal = true;
+    fresh.checkoutFingerprint = undefined;
   } else if (mapped === PAYMENT_STATUS.CANCELLED && previous !== PAYMENT_STATUS.PAID) {
     fresh.status = PAYMENT_STATUS.CANCELLED;
     fresh.isFinal = true;
+    fresh.checkoutFingerprint = undefined;
   } else if (mapped === PAYMENT_STATUS.FAILED && previous !== PAYMENT_STATUS.PAID) {
     fresh.status = PAYMENT_STATUS.FAILED;
     fresh.failureReason = raw?.status || providerStatus;
+    fresh.checkoutFingerprint = undefined;
   } else if (mapped === PAYMENT_STATUS.REFUNDED) {
     fresh.status = PAYMENT_STATUS.REFUNDED;
   }
@@ -216,6 +268,55 @@ export async function handleCryptomusWebhook(payload, { ip = null } = {}) {
         duplicate: true,
         eventId: existing._id,
         message: 'Webhook currently processing',
+      };
+    }
+  }
+
+  // Fast path: payment already paid — persist event as processed without re-charging.
+  if (payload.uuid || payload.order_id) {
+    let knownPayment = null;
+    if (payload.uuid) {
+      knownPayment = await paymentRepository.findPaymentByCryptomusUuid(payload.uuid, { lean: true });
+    }
+    if (!knownPayment && payload.order_id) {
+      knownPayment = await paymentRepository.findPaymentByCryptomusOrderId(payload.order_id, {
+        lean: true,
+      });
+    }
+    if (knownPayment?.status === PAYMENT_STATUS.PAID) {
+      let event = existing;
+      if (!event) {
+        try {
+          event = await webhookRepository.createWebhookEvent({
+            provider: 'cryptomus',
+            eventKey,
+            externalId: payload.uuid || null,
+            orderId: payload.order_id || null,
+            signature: payload.sign || null,
+            payloadHash: sha256Hex(JSON.stringify(payload)),
+            status: WEBHOOK_EVENT_STATUS.PROCESSED,
+            providerStatus: payload.status || payload.payment_status || null,
+            ip,
+            payload,
+            payment: knownPayment._id,
+            order: knownPayment.order,
+            processedAt: new Date(),
+          });
+        } catch (error) {
+          if (error?.code === 11000) {
+            return { duplicate: true, message: 'Webhook duplicate event key' };
+          }
+          throw error;
+        }
+      }
+      return {
+        duplicate: true,
+        eventId: event?._id,
+        paymentId: knownPayment._id,
+        status: knownPayment.status,
+        alreadyPaid: true,
+        kind: 'order_payment',
+        message: 'Payment already completed',
       };
     }
   }

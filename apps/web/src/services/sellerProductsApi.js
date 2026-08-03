@@ -13,17 +13,20 @@ function clearProductCaches() {
 function toInventoryAccounts(accounts = []) {
   return (Array.isArray(accounts) ? accounts : [])
     .filter((row) => row && (row.status === 'uploaded' || row.validation === 'valid' || row.fields))
-    .map((row) => ({
-      fields: {
-        email: row.fields?.email || row.values?.[0] || '',
-        password: row.fields?.password || row.values?.[1] || '',
-        recovery: row.fields?.recovery || row.values?.[2] || '',
-        '2fa': row.fields?.['2fa'] || row.values?.[3] || '',
-        cookie: row.fields?.cookie || row.values?.[4] || '',
-        token: row.fields?.token || row.values?.[5] || '',
-      },
-    }))
-    .filter((row) => Object.values(row.fields).some(Boolean));
+    .map((row) => {
+      const fields = row.fields || {};
+      return {
+        fields: {
+          email: fields.email ?? row.values?.[0] ?? '',
+          password: fields.password ?? row.values?.[1] ?? '',
+          recovery: fields.recovery ?? row.values?.[2] ?? '',
+          '2fa': fields['2fa'] ?? row.values?.[3] ?? '',
+          cookie: fields.cookie ?? row.values?.[4] ?? '',
+          token: fields.token ?? row.values?.[5] ?? '',
+        },
+      };
+    })
+    .filter((row) => Object.values(row.fields).some((value) => String(value ?? '').length > 0));
 }
 
 export const sellerProductsApi = {
