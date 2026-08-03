@@ -1,10 +1,11 @@
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useStore } from '../context/StoreContext';
-import { hasRole } from '../context/AuthRoles';
+import { hasRole, isAdmin } from '../context/AuthRoles';
 
 /**
  * Role-based route guard. Waits for auth bootstrap before redirecting.
+ * Admins who hit buyer/seller routes are sent to /admin (isolated panel).
  */
 const RequireRole = ({ roles = [], children, redirectTo = '/login' }) => {
   const { user, authReady } = useStore();
@@ -23,6 +24,9 @@ const RequireRole = ({ roles = [], children, redirectTo = '/login' }) => {
   }
 
   if (roles.length && !hasRole(user, roles)) {
+    if (isAdmin(user)) {
+      return <Navigate to="/admin" replace />;
+    }
     return <Navigate to="/403" replace />;
   }
 

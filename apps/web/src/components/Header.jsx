@@ -8,6 +8,7 @@ import {
 import Logo from './Logo';
 import { useStore } from '../context/StoreContext';
 import { useSellerAuth } from '../context/SellerAuthContext';
+import { isAdmin } from '../context/AuthRoles';
 import { productsApi, walletApi } from '../services/api';
 import SellerSidebar from './SellerSidebar';
 import { getCategoryTreeForStorefront } from '../services/categoryRepository';
@@ -293,7 +294,10 @@ const Header = () => {
   const { user, logout, notifications, markNotificationRead, catalogVersion } = useStore();
   const { seller, isAuthenticated: isSellerAuthenticated, logout: logoutSeller } = useSellerAuth();
   const isUserLoggedIn = Boolean(user);
-  const isSellerUser = Boolean(user?.roles?.includes?.('seller') || isSellerAuthenticated);
+  const isAdminUser = isAdmin(user);
+  // Admins are isolated to /admin — never show buyer/seller marketplace controls.
+  const isSellerUser = !isAdminUser && Boolean(user?.roles?.includes?.('seller') || isSellerAuthenticated);
+  const showBuyerControls = isUserLoggedIn && !isAdminUser;
   const sellerNotificationsCount = notifications.filter((n) => !n.read).length;
   const [sellerWalletBalance, setSellerWalletBalance] = useState(0);
   const megaRef = useRef(null);
@@ -545,7 +549,7 @@ const Header = () => {
               </Link>
             )}
 
-            {isUserLoggedIn && (
+            {showBuyerControls && (
               <Link
                 to="/dashboard"
                 aria-label="Buyer dashboard"
@@ -626,7 +630,7 @@ const Header = () => {
               ))}
             </nav>
 
-            {!isSellerUser && (
+            {!isSellerUser && !isAdminUser && (
               <Link
                 to="/become-a-seller"
                 className="ml-auto text-sm font-semibold text-primary hover:opacity-80 transition-opacity focus-visible:outline-none focus-visible:underline"
@@ -693,7 +697,7 @@ const Header = () => {
                 {l.name}
               </Link>
             ))}
-            {!isSellerUser && (
+            {!isSellerUser && !isAdminUser && (
               <Link to="/become-a-seller" className="block px-3 py-2.5 rounded-xl text-sm font-semibold text-primary hover:bg-secondary">
                 Become a Seller
               </Link>
@@ -708,7 +712,7 @@ const Header = () => {
             </div>
           )}
 
-          {isUserLoggedIn && !isSellerUser && (
+          {showBuyerControls && !isSellerUser && (
             <div className="border-t border-border pt-4 flex items-center gap-3">
               <Link to="/dashboard" aria-label="Buyer dashboard" className="flex-1 flex items-center justify-center gap-2 py-3 rounded-full bg-secondary text-primary text-sm font-semibold active:scale-[0.98] transition-transform">
                 <User className="w-5 h-5" aria-hidden="true" /> Buyer

@@ -1,13 +1,14 @@
 import React, { createContext, useContext, useMemo } from 'react';
 import { useStore } from './StoreContext';
 import { authApi } from '../services/authApi';
-import { isSeller, isAdmin } from './AuthRoles';
+import { isSeller } from './AuthRoles';
 import { getRememberMe, persistSession, getAccessToken } from '../lib/tokenStorage';
 
 const SellerAuthContext = createContext(null);
 
 function canAccessSellerPortal(user) {
-  return isSeller(user) || isAdmin(user);
+  // Admins use the isolated Admin Panel — never the seller portal.
+  return isSeller(user);
 }
 
 /**
