@@ -1,13 +1,27 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Loader2, Send } from 'lucide-react';
 import { Switch } from '../ui/switch';
 import { useToast } from '../../hooks/use-toast';
 import { telegramApi } from '../../services/telegramApi';
 
-const TelegramConnectSection = ({ compact = false, onStatusChange } = {}) => {
+const POLL_INTERVAL_MS = 2500;
+const POLL_TIMEOUT_MS = 2 * 60 * 1000;
+
+const TelegramConnectSection = ({
+  compact = false,
+  onStatusChange,
+  /** When true, poll /telegram/me after opening the bot until connected. */
+  pollUntilConnected = false,
+  showDisconnect = true,
+  showNotificationToggle = true,
+  title = 'Telegram Notifications',
+  description = 'Connect once and receive marketplace updates directly in Telegram.',
+  connectLabel = 'Connect Telegram',
+} = {}) => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [connecting, setConnecting] = useState(false);
   const [status, setStatus] = useState({
     connected: false,
     username: null,
@@ -15,23 +29,55 @@ const TelegramConnectSection = ({ compact = false, onStatusChange } = {}) => {
     connectedAt: null,
     notificationsEnabled: true,
   });
+  const pollTimerRef = useRef(null);
+  const pollDeadlineRef = useRef(0);
 
-  const refresh = useCallback(async () => {
-    setLoading(true);
+  const stopPolling = useCallback(() => {
+    if (pollTimerRef.current) {
+      clearInterval(pollTimerRef.current);
+      pollTimerRef.current = null;
+    }
+    setConnecting(false);
+  }, []);
+
+  const refresh = useCallback(async ({ silent = false } = {}) => {
+    if (!silent) setLoading(true);
     try {
       const next = await telegramApi.status();
       setStatus(next);
       onStatusChange?.(next);
+      if (next.connected) stopPolling();
+      return next;
     } catch {
       // Keep local defaults when API is unavailable.
+      return null;
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
-  }, [onStatusChange]);
+  }, [onStatusChange, stopPolling]);
 
   useEffect(() => {
     refresh();
-  }, [refresh]);
+    return () => stopPolling();
+  }, [refresh, stopPolling]);
+
+  const startPolling = useCallback(() => {
+    if (!pollUntilConnected) return;
+    stopPolling();
+    setConnecting(true);
+    pollDeadlineRef.current = Date.now() + POLL_TIMEOUT_MS;
+    pollTimerRef.current = setInterval(async () => {
+      if (Date.now() > pollDeadlineRef.current) {
+        stopPolling();
+        toast({
+          title: 'Still waiting for Telegram',
+          description: 'Open the bot and press Start, then click Connect Telegram again.',
+        });
+        return;
+      }
+      await refresh({ silent: true });
+    }, POLL_INTERVAL_MS);
+  }, [pollUntilConnected, refresh, stopPolling, toast]);
 
   const connect = async () => {
     setBusy(true);
@@ -44,13 +90,22 @@ const TelegramConnectSection = ({ compact = false, onStatusChange } = {}) => {
           description: 'Press Start in the ApnaStore bot to finish connecting.',
         });
       }
-      if (result.status) setStatus(result.status);
+      if (result.status) {
+        setStatus(result.status);
+        onStatusChange?.(result.status);
+        if (result.status.connected) {
+          stopPolling();
+          return;
+        }
+      }
+      startPolling();
     } catch (err) {
       toast({
         title: 'Could not start Telegram connect',
         description: err.message || 'Please try again.',
         variant: 'destructive',
       });
+      stopPolling();
     } finally {
       setBusy(false);
     }
@@ -94,16 +149,22 @@ const TelegramConnectSection = ({ compact = false, onStatusChange } = {}) => {
     }
   };
 
+  const statusLabel = status.connected
+    ? 'Connected ✅'
+    : connecting
+      ? 'Connecting...'
+      : 'Not Connected';
+
   return (
     <div className={`bg-white rounded-3xl border border-border soft-shadow ${compact ? 'p-5' : 'p-6'} space-y-4`}>
       <div className="flex items-start justify-between gap-3">
         <div>
           <h3 className="font-bold text-sm flex items-center gap-2">
             <Send className="w-4 h-4 text-primary" />
-            Telegram Notifications
+            {title}
           </h3>
           <p className="text-xs text-muted-foreground mt-1">
-            Connect once and receive marketplace updates directly in Telegram.
+            {description}
           </p>
         </div>
         {loading && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
@@ -112,9 +173,14 @@ const TelegramConnectSection = ({ compact = false, onStatusChange } = {}) => {
       <div className="rounded-2xl bg-secondary/50 px-4 py-3 text-sm">
         <p className="font-semibold">Connection Status</p>
         {status.connected ? (
-          <p className="mt-1 text-emerald-700 font-medium">🟢 Connected</p>
+          <p className="mt-1 text-emerald-700 font-medium">○ {statusLabel}</p>
+        ) : connecting ? (
+          <p className="mt-1 text-sky-700 font-medium inline-flex items-center gap-1.5">
+            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            ○ {statusLabel}
+          </p>
         ) : (
-          <p className="mt-1 text-muted-foreground">○ Not Connected</p>
+          <p className="mt-1 text-muted-foreground">○ {statusLabel}</p>
         )}
       </div>
 
@@ -131,30 +197,34 @@ const TelegramConnectSection = ({ compact = false, onStatusChange } = {}) => {
             </div>
           </div>
 
-          <label className="flex items-start justify-between gap-3 cursor-pointer py-1">
-            <span>
-              <span className="block text-sm font-medium">Receive Telegram Notifications</span>
-              <span className="block text-xs text-muted-foreground mt-0.5">
-                Enable or disable marketplace alerts without disconnecting.
+          {showNotificationToggle ? (
+            <label className="flex items-start justify-between gap-3 cursor-pointer py-1">
+              <span>
+                <span className="block text-sm font-medium">Receive Telegram Notifications</span>
+                <span className="block text-xs text-muted-foreground mt-0.5">
+                  Enable or disable marketplace alerts without disconnecting.
+                </span>
               </span>
-            </span>
-            <Switch
-              checked={status.notificationsEnabled}
-              onCheckedChange={toggleNotifications}
-              disabled={busy}
-              className="mt-0.5 shrink-0"
-            />
-          </label>
+              <Switch
+                checked={status.notificationsEnabled}
+                onCheckedChange={toggleNotifications}
+                disabled={busy}
+                className="mt-0.5 shrink-0"
+              />
+            </label>
+          ) : null}
 
-          <button
-            type="button"
-            onClick={disconnect}
-            disabled={busy}
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full border border-border text-sm font-semibold hover:bg-secondary/60 transition-colors disabled:opacity-60"
-          >
-            {busy && <Loader2 className="w-4 h-4 animate-spin" />}
-            Disconnect Telegram
-          </button>
+          {showDisconnect ? (
+            <button
+              type="button"
+              onClick={disconnect}
+              disabled={busy}
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full border border-border text-sm font-semibold hover:bg-secondary/60 transition-colors disabled:opacity-60"
+            >
+              {busy && <Loader2 className="w-4 h-4 animate-spin" />}
+              Disconnect Telegram
+            </button>
+          ) : null}
         </>
       ) : (
         <button
@@ -163,8 +233,8 @@ const TelegramConnectSection = ({ compact = false, onStatusChange } = {}) => {
           disabled={busy || loading}
           className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full brand-gradient text-white text-sm font-semibold soft-shadow hover:opacity-95 transition-all disabled:opacity-60"
         >
-          {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-          Connect Telegram
+          {busy || connecting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+          {connecting ? 'Connecting…' : connectLabel}
         </button>
       )}
     </div>

@@ -1,12 +1,14 @@
-import React from 'react';
-import { ExternalLink, Link2, Ban } from 'lucide-react';
+import React, { useCallback, useEffect, useState } from 'react';
+import { ExternalLink, Link2, Ban, Loader2, Send } from 'lucide-react';
+import { telegramApi } from '../../../services/telegramApi';
+import { useToast } from '../../../hooks/use-toast';
 
 /**
  * Prominent seller approval status card shown at the top of the seller dashboard.
  */
 const SellerVerificationBanner = ({ seller }) => {
+  const { toast } = useToast();
   const status = String(seller?.status || 'pending').toLowerCase();
-  const commission = Number(seller?.commissionRate ?? seller?.commission ?? 15);
   const storeSlug = seller?.slug
     || (seller?.storeName || '')
       .trim()
@@ -21,10 +23,65 @@ const SellerVerificationBanner = ({ seller }) => {
   const isRejected = status === 'rejected';
   const isSuspended = status === 'suspended';
 
+  const [telegramLoading, setTelegramLoading] = useState(isApproved);
+  const [telegramBusy, setTelegramBusy] = useState(false);
+  const [telegramConnected, setTelegramConnected] = useState(false);
+  const [telegramUsername, setTelegramUsername] = useState(null);
+
+  const refreshTelegram = useCallback(async () => {
+    if (!isApproved) return;
+    setTelegramLoading(true);
+    try {
+      const next = await telegramApi.status();
+      setTelegramConnected(Boolean(next.connected));
+      setTelegramUsername(next.username || null);
+    } catch {
+      setTelegramConnected(false);
+    } finally {
+      setTelegramLoading(false);
+    }
+  }, [isApproved]);
+
+  useEffect(() => {
+    refreshTelegram();
+  }, [refreshTelegram]);
+
+  const handleConnectTelegram = async () => {
+    if (telegramConnected || telegramBusy) return;
+    setTelegramBusy(true);
+    try {
+      const result = await telegramApi.connect();
+      if (result.url) {
+        window.open(result.url, '_blank', 'noopener,noreferrer');
+        toast({
+          title: 'Continue in Telegram',
+          description: 'Press Start in the ApnaStore bot to finish connecting.',
+        });
+      }
+      if (result.status?.connected) {
+        setTelegramConnected(true);
+        setTelegramUsername(result.status.username || null);
+      } else {
+        // Soft refresh shortly after the user returns from Telegram.
+        setTimeout(() => {
+          refreshTelegram();
+        }, 4000);
+      }
+    } catch (err) {
+      toast({
+        title: 'Could not start Telegram connect',
+        description: err.message || 'Please try again from Seller Settings.',
+        variant: 'destructive',
+      });
+    } finally {
+      setTelegramBusy(false);
+    }
+  };
+
   if (isApproved) {
     return (
       <div className="mb-8 rounded-[1.75rem] border border-emerald-200 bg-emerald-50 p-6 shadow-sm">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div className="flex flex-col gap-4">
           <div>
             <h2 className="text-lg font-black tracking-tight text-emerald-900">
               ✅ Seller Account Approved
@@ -32,17 +89,13 @@ const SellerVerificationBanner = ({ seller }) => {
             <p className="mt-2 max-w-2xl text-sm text-emerald-800/90">
               Your store is now live and your products are visible in the marketplace.
             </p>
-            <dl className="mt-4 grid gap-2 text-sm sm:grid-cols-2">
+            <dl className="mt-4 grid gap-2 text-sm">
               <div>
                 <dt className="text-emerald-700/80">Status</dt>
                 <dd className="font-semibold text-emerald-950">Approved</dd>
               </div>
-              <div>
-                <dt className="text-emerald-700/80">Commission</dt>
-                <dd className="font-semibold text-emerald-950">{commission}%</dd>
-              </div>
               {storeUrl ? (
-                <div className="sm:col-span-2">
+                <div>
                   <dt className="text-emerald-700/80">Public Store URL</dt>
                   <dd className="mt-0.5 break-all font-medium text-emerald-950">
                     <a href={storeUrl} className="inline-flex items-center gap-1.5 hover:underline" target="_blank" rel="noreferrer">
@@ -54,17 +107,46 @@ const SellerVerificationBanner = ({ seller }) => {
               ) : null}
             </dl>
           </div>
-          {storeUrl ? (
-            <a
-              href={storeUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-full bg-emerald-600 px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700"
-            >
-              Open Store
-              <ExternalLink className="h-4 w-4" />
-            </a>
-          ) : null}
+
+          <div className="flex flex-col gap-3">
+            {storeUrl ? (
+              <a
+                href={storeUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-full bg-emerald-600 px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700"
+              >
+                Open Store
+                <ExternalLink className="h-4 w-4" />
+              </a>
+            ) : null}
+
+            {telegramLoading ? (
+              <div className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-full border border-emerald-200 bg-white/70 px-5 text-sm font-semibold text-emerald-900">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Checking Telegram…
+              </div>
+            ) : telegramConnected ? (
+              <div className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-full border border-emerald-300 bg-white px-5 text-sm font-semibold text-emerald-800">
+                <Send className="h-4 w-4 text-[#229ED9]" />
+                Telegram Connected ✅
+                {telegramUsername ? (
+                  <span className="font-medium text-emerald-700/80">@{telegramUsername}</span>
+                ) : null}
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={handleConnectTelegram}
+                disabled={telegramBusy}
+                className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-full px-5 text-sm font-semibold text-white shadow-sm transition hover:opacity-95 disabled:opacity-60"
+                style={{ backgroundColor: '#229ED9' }}
+              >
+                {telegramBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                Connect Telegram
+              </button>
+            )}
+          </div>
         </div>
       </div>
     );
