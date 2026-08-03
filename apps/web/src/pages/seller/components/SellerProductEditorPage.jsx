@@ -155,11 +155,21 @@ const SellerProductEditorPage = () => {
         seoKeywords: form.seoKeywords,
         inventoryType: inventoryRequired ? 'tracked' : (form.inventoryType || 'manual'),
         stockType: form.stockType || 'limited',
+        inventorySourceFormat: 'paste',
+        ...(inventoryRequired && readyInventoryCount > 0
+          ? { inventoryAccounts }
+          : {}),
       };
 
       await (isEditing
-        ? updateSellerProduct(id, payload, { publish })
-        : createSellerProduct(payload, { publish }));
+        ? updateSellerProduct(id, payload, {
+          publish,
+          inventoryAccounts: inventoryRequired ? inventoryAccounts : null,
+        })
+        : createSellerProduct(payload, {
+          publish,
+          inventoryAccounts: inventoryRequired ? inventoryAccounts : [],
+        }));
 
       toast({
         title: publish ? 'Product published' : 'Product saved',

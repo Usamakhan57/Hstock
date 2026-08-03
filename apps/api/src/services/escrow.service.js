@@ -18,6 +18,35 @@ import { DISPUTE_TIMELINE_EVENTS } from '../constants/disputeFinal.js';
 import * as disputeTimelineService from './disputeTimeline.service.js';
 import { emitDomainEvent } from '../events/bus.js';
 import { DOMAIN_EVENTS } from '../constants/events.js';
+import { DELIVERY_TYPES } from '../constants/productTypes.js';
+import { logger } from '../config/logger.js';
+
+/**
+ * Instant Access auto-delivery after escrow lock.
+ * Failures must NEVER roll back escrow — delivery is independent.
+ */
+async function tryFulfillInstantAccess(order, session = null) {
+  const deliveryType = order?.productSnapshot?.deliveryType;
+  if (deliveryType && deliveryType !== DELIVERY_TYPES.AUTOMATIC) {
+    return null;
+  }
+  if (order?.deliveryStatus === DELIVERY_STATUS.DELIVERED
+    && order?.metadata?.instantAccessDelivered) {
+    return null;
+  }
+
+  try {
+    const { fulfillInstantAccessOrder } = await import('./inventory.service.js');
+    return await fulfillInstantAccessOrder(order, { session });
+  } catch (error) {
+    logger.error('Instant Access auto-delivery failed (escrow remains locked)', {
+      orderId: String(order?._id || ''),
+      code: error?.code || null,
+      message: error?.message || String(error),
+    });
+    return null;
+  }
+}
 
 /**
  * Create escrow in pending state (linked to order/payment before lock).
@@ -84,10 +113,14 @@ export async function lockEscrowAfterPayment({
         order.escrow = escrow._id;
         order.escrowedAt = order.escrowedAt || escrow.lockedAt || new Date();
         order.paidAt = order.paidAt || order.escrowedAt;
-        order.deliveryStatus = DELIVERY_STATUS.AWAITING_DELIVERY;
+        if (order.deliveryStatus !== DELIVERY_STATUS.DELIVERED) {
+          order.deliveryStatus = DELIVERY_STATUS.AWAITING_DELIVERY;
+        }
         if (activeSession) await order.save({ session: activeSession });
         else await order.save();
       }
+      // Retry Instant Access delivery if escrow already locked but delivery missing
+      await tryFulfillInstantAccess(order, activeSession);
       return escrow;
     }
 
@@ -131,6 +164,9 @@ export async function lockEscrowAfterPayment({
     if (activeSession) await order.save({ session: activeSession });
     else await order.save();
 
+    // Instant Access: reserve inventory + attach credentials (does not block escrow)
+    await tryFulfillInstantAccess(order, activeSession);
+
     await logActivity({
       userId: actorId,
       action: 'escrow.locked',
@@ -140,6 +176,7 @@ export async function lockEscrowAfterPayment({
         orderId: order._id,
         releaseAt: escrow.releaseAt,
         amount: order.totalAmount,
+        deliveryStatus: order.deliveryStatus,
       },
       session: activeSession,
     });

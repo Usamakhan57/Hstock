@@ -2,6 +2,7 @@ import { asyncHandler } from '../../utils/asyncHandler.js';
 import { sendSuccess } from '../../utils/response.js';
 import * as orderService from '../../services/order.service.js';
 import * as escrowService from '../../services/escrow.service.js';
+import * as inventoryService from '../../services/inventory.service.js';
 
 export const buyNow = asyncHandler(async (req, res) => {
   const data = await orderService.buyNow(req.body, req.user, {
@@ -29,6 +30,11 @@ export const getOrder = asyncHandler(async (req, res) => {
   return sendSuccess(res, { message: 'Order', data });
 });
 
+export const getDelivery = asyncHandler(async (req, res) => {
+  const data = await inventoryService.getOrderDeliveryForBuyer(req.params.id, req.user);
+  return sendSuccess(res, { message: 'Order delivery', data });
+});
+
 export const cancelOrder = asyncHandler(async (req, res) => {
   const data = await orderService.cancelOrder(
     req.params.id,
@@ -47,6 +53,7 @@ export default {
   buyNow,
   listOrders,
   getOrder,
+  getDelivery,
   cancelOrder,
   markDelivered,
 };
