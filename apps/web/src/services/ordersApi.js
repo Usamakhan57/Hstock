@@ -16,6 +16,7 @@ export const ordersApi = {
     paymentMethod = 'cryptomus',
     toCurrency = 'USDT',
     network = 'tron',
+    idempotencyKey,
   }) {
     const urls = originUrls();
     const { data } = await post('/orders/buy-now', {
@@ -26,6 +27,7 @@ export const ordersApi = {
       network: paymentMethod === 'wallet' ? undefined : network,
       urlSuccess: urls.urlSuccess,
       urlReturn: urls.urlReturn,
+      ...(idempotencyKey ? { idempotencyKey } : {}),
     });
 
     // Persist order refs so /order-success can resolve after Cryptomus redirect.

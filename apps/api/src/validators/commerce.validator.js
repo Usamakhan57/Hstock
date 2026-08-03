@@ -21,6 +21,8 @@ export const buyNowSchema = {
     network: z.string().trim().min(2).max(30).optional(),
     urlReturn: z.string().url().optional(),
     urlSuccess: z.string().url().optional(),
+    /** Client checkout attempt id — duplicate submits reuse the same invoice */
+    idempotencyKey: z.string().trim().min(8).max(128).optional(),
   }),
 };
 

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ShieldCheck, AlertTriangle, Loader2, CheckCircle2, Wallet } from 'lucide-react';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from './ui/dialog';
@@ -13,6 +13,13 @@ import {
   CHECKOUT_CRYPTO_ASSETS,
   resolveNetworkFromCatalog,
 } from '../constants/cryptoAssets';
+
+function createCheckoutIdempotencyKey() {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return `chk_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 12)}`;
+}
 
 function isOwnProduct(product, user, profiles) {
   if (!product) return false;
@@ -45,6 +52,8 @@ const PurchaseModal = ({ product, license, open, onOpenChange }) => {
     resolveNetworkFromCatalog(CHECKOUT_CRYPTO_ASSETS, CHECKOUT_CRYPTO_ASSETS[0].symbol, null),
   );
   const [wallet, setWallet] = useState(null);
+  const submittingRef = useRef(false);
+  const idempotencyKeyRef = useRef(null);
 
   const quantity = Math.max(1, Number(product?.quantity) || 1);
   const unitPrice = formatMoney(
@@ -93,11 +102,22 @@ const PurchaseModal = ({ product, license, open, onOpenChange }) => {
     return () => { cancelled = true; };
   }, [open, user]);
 
+  useEffect(() => {
+    if (!open) {
+      submittingRef.current = false;
+      idempotencyKeyRef.current = null;
+    }
+  }, [open]);
+
   if (!product) return null;
 
   const handleConfirm = async () => {
-    if (!canPurchase) return;
+    if (!canPurchase || submittingRef.current) return;
+    submittingRef.current = true;
     setSubmitting(true);
+    if (!idempotencyKeyRef.current) {
+      idempotencyKeyRef.current = createCheckoutIdempotencyKey();
+    }
     try {
       const result = await ordersApi.buyNow({
         productId: product.id || product._id,
@@ -105,9 +125,11 @@ const PurchaseModal = ({ product, license, open, onOpenChange }) => {
         paymentMethod: paySource,
         toCurrency: coin,
         network,
+        idempotencyKey: idempotencyKeyRef.current,
       });
 
       onOpenChange(false);
+      idempotencyKeyRef.current = null;
 
       if (paySource === 'wallet') {
         toast({
@@ -146,6 +168,7 @@ const PurchaseModal = ({ product, license, open, onOpenChange }) => {
         navigate('/login', { state: { from: { pathname: `/product/${product.id}` } } });
       }
     } finally {
+      submittingRef.current = false;
       setSubmitting(false);
     }
   };

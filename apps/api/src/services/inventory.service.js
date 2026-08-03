@@ -67,8 +67,9 @@ function normalizeFields(rawFields = {}) {
   const fields = {};
   for (const [rawKey, rawValue] of Object.entries(rawFields || {})) {
     if (rawValue === undefined || rawValue === null) continue;
-    const value = String(rawValue).trim();
-    if (!value) continue;
+    // Preserve credential text exactly (newlines, commas, blank lines, etc.).
+    const value = String(rawValue);
+    if (value === '') continue;
     const alias = FIELD_ALIASES[String(rawKey).trim().toLowerCase()] || String(rawKey).trim();
     fields[alias] = value;
   }

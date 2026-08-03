@@ -128,12 +128,49 @@ export async function lockEscrowAfterPayment({
     const hours = platform?.escrowAutoReleaseHours || 24;
     const now = new Date();
 
-    escrow.status = ESCROW_STATUS.LOCKED;
-    escrow.lockedAt = now;
-    escrow.releaseAt = addHours(now, hours);
-    escrow.payment = paymentId;
-    if (activeSession) await escrow.save({ session: activeSession });
-    else await escrow.save();
+    // Atomic claim — only the first lock transition records ledger / wallet credit.
+    const claimOpts = { new: true };
+    if (activeSession) claimOpts.session = activeSession;
+    const claimed = await Escrow.findOneAndUpdate(
+      {
+        _id: escrow._id,
+        status: ESCROW_STATUS.PENDING,
+      },
+      {
+        $set: {
+          status: ESCROW_STATUS.LOCKED,
+          lockedAt: now,
+          releaseAt: addHours(now, hours),
+          payment: paymentId,
+        },
+      },
+      claimOpts,
+    );
+
+    if (!claimed) {
+      const current = await escrowRepository.findEscrowByOrder(orderId, {
+        session: activeSession,
+      });
+      if (current?.status === ESCROW_STATUS.LOCKED) {
+        if (order.status !== ORDER_STATUS.ESCROW && order.status !== ORDER_STATUS.COMPLETED
+          && order.status !== ORDER_STATUS.DISPUTED) {
+          order.status = ORDER_STATUS.ESCROW;
+          order.escrow = current._id;
+          order.escrowedAt = order.escrowedAt || current.lockedAt || now;
+          order.paidAt = order.paidAt || order.escrowedAt;
+          if (order.deliveryStatus !== DELIVERY_STATUS.DELIVERED) {
+            order.deliveryStatus = DELIVERY_STATUS.AWAITING_DELIVERY;
+          }
+          if (activeSession) await order.save({ session: activeSession });
+          else await order.save();
+        }
+        await tryFulfillInstantAccess(order, activeSession);
+        return current;
+      }
+      return current || escrow;
+    }
+
+    escrow = claimed;
 
     const wallet = await walletService.getOrCreateSellerWallet(
       order.seller,

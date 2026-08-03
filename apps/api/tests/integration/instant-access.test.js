@@ -353,3 +353,42 @@ test('Manual Delivery products are not auto-fulfilled', async () => {
   assert.equal(delivery.body.data.delivered, false);
   assert.equal(delivery.body.data.accounts.length, 0);
 });
+
+test('Instant Access: delivers full multi-code 2FA / recovery field exactly', async () => {
+  const recoveryCodes = '111111,222222,333333,444444,555555\n666666;777777|888888\t999999\n\nAAAA-BBBB';
+  const adminToken = await createAdminToken();
+  const { token: sellerToken } = await createSeller();
+  const { token: buyerToken } = await createBuyer();
+  const product = await createInstantAccessProduct(adminToken, sellerToken, [
+    {
+      email: 'gmail.account@gmail.com',
+      password: 'ExactPass!',
+      recovery: 'backup@gmail.com',
+      '2fa': recoveryCodes,
+      cookie: 'cookie-value',
+      token: 'token-value',
+    },
+  ]);
+  const productId = product.id || product._id;
+
+  const buy = await request(app)
+    .post('/api/v1/orders/buy-now')
+    .set('Authorization', `Bearer ${buyerToken}`)
+    .send({ productId });
+  assert.equal(buy.status, 201, JSON.stringify(buy.body));
+
+  await request(app)
+    .post(`/api/v1/payments/cryptomus/sandbox/${buy.body.data.cryptomus.uuid}`)
+    .send({});
+
+  const delivery = await request(app)
+    .get(`/api/v1/orders/${buy.body.data.order._id}/delivery`)
+    .set('Authorization', `Bearer ${buyerToken}`);
+
+  assert.equal(delivery.status, 200, JSON.stringify(delivery.body));
+  assert.equal(delivery.body.data.delivered, true);
+  assert.equal(delivery.body.data.accounts[0].fields['2fa'], recoveryCodes);
+  assert.equal(delivery.body.data.accounts[0].fields.recovery, 'backup@gmail.com');
+  assert.equal(delivery.body.data.accounts[0].fields.cookie, 'cookie-value');
+  assert.equal(delivery.body.data.accounts[0].fields.token, 'token-value');
+});

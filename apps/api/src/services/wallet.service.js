@@ -66,6 +66,16 @@ export async function recordBuyerPaymentIntoEscrow({
   source = 'cryptomus',
 }) {
   const value = roundMoney(amount);
+  const paymentId = context?.payment ? String(context.payment) : null;
+  const fundTransferId = paymentId ? `escrow_fund_${paymentId}` : null;
+  const pendingTransferId = paymentId ? `escrow_pending_alloc_${paymentId}` : null;
+
+  if (fundTransferId) {
+    const existing = await ledgerRepository.findEntriesByTransferId(fundTransferId, { session });
+    if (existing?.length) {
+      return wallet;
+    }
+  }
 
   const fundingLine = source === 'wallet'
     ? {
@@ -86,6 +96,7 @@ export async function recordBuyerPaymentIntoEscrow({
   await ledgerService.recordTransfer({
     session,
     createdBy,
+    transferId: fundTransferId || undefined,
     context: {
       ...context,
       seller: wallet.seller,
@@ -111,6 +122,7 @@ export async function recordBuyerPaymentIntoEscrow({
   await ledgerService.recordTransfer({
     session,
     createdBy,
+    transferId: pendingTransferId || undefined,
     context: {
       ...context,
       seller: wallet.seller,

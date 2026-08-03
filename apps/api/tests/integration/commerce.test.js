@@ -167,6 +167,103 @@ test('buy now reuses existing unpaid cryptomus invoice', async () => {
   assert.equal(second.body.data.paymentUrl, first.body.data.paymentUrl);
 });
 
+test('concurrent buy-now requests create only one cryptomus payment', async () => {
+  const adminToken = await createAdminToken();
+  const { token: sellerToken } = await createSeller();
+  const { token: buyerToken } = await createBuyer();
+  const product = await createLiveProduct(adminToken, sellerToken);
+  const productId = product.id || product._id;
+  const idempotencyKey = `test-concurrent-${Date.now()}`;
+
+  const [a, b, c] = await Promise.all([
+    request(app)
+      .post('/api/v1/orders/buy-now')
+      .set('Authorization', `Bearer ${buyerToken}`)
+      .send({ productId, toCurrency: 'USDT', network: 'tron', idempotencyKey }),
+    request(app)
+      .post('/api/v1/orders/buy-now')
+      .set('Authorization', `Bearer ${buyerToken}`)
+      .send({ productId, toCurrency: 'USDT', network: 'tron', idempotencyKey }),
+    request(app)
+      .post('/api/v1/orders/buy-now')
+      .set('Authorization', `Bearer ${buyerToken}`)
+      .send({ productId, toCurrency: 'USDT', network: 'tron', idempotencyKey }),
+  ]);
+
+  assert.equal(a.status, 201, JSON.stringify(a.body));
+  assert.equal(b.status, 201, JSON.stringify(b.body));
+  assert.equal(c.status, 201, JSON.stringify(c.body));
+
+  const paymentIds = new Set([
+    a.body.data.payment._id,
+    b.body.data.payment._id,
+    c.body.data.payment._id,
+  ]);
+  const orderIds = new Set([
+    a.body.data.order._id,
+    b.body.data.order._id,
+    c.body.data.order._id,
+  ]);
+  const cryptomusOrderIds = new Set([
+    a.body.data.cryptomus.orderId,
+    b.body.data.cryptomus.orderId,
+    c.body.data.cryptomus.orderId,
+  ]);
+
+  assert.equal(paymentIds.size, 1, 'expected a single payment document');
+  assert.equal(orderIds.size, 1, 'expected a single order document');
+  assert.equal(cryptomusOrderIds.size, 1, 'expected a single Cryptomus order_id');
+  assert.equal(a.body.data.paymentUrl, b.body.data.paymentUrl);
+  assert.equal(b.body.data.paymentUrl, c.body.data.paymentUrl);
+
+  const { Payment } = await import('../../src/models/index.js');
+  const payments = await Payment.find({ buyer: a.body.data.payment.buyer, gateway: 'cryptomus' });
+  assert.equal(payments.length, 1);
+});
+
+test('duplicate webhook paid events charge only once', async () => {
+  const adminToken = await createAdminToken();
+  const { token: sellerToken, seller } = await createSeller();
+  const { token: buyerToken } = await createBuyer();
+  const product = await createLiveProduct(adminToken, sellerToken);
+
+  const buy = await request(app)
+    .post('/api/v1/orders/buy-now')
+    .set('Authorization', `Bearer ${buyerToken}`)
+    .send({ productId: product.id || product._id });
+
+  assert.equal(buy.status, 201, JSON.stringify(buy.body));
+  const uuid = buy.body.data.cryptomus.uuid;
+  const paymentId = buy.body.data.payment._id;
+
+  const first = await request(app)
+    .post(`/api/v1/payments/cryptomus/sandbox/${uuid}`)
+    .send({});
+  const second = await request(app)
+    .post(`/api/v1/payments/cryptomus/sandbox/${uuid}`)
+    .send({});
+
+  assert.equal(first.status, 200, JSON.stringify(first.body));
+  assert.equal(second.status, 200, JSON.stringify(second.body));
+  assert.equal(first.body.data.status, 'paid');
+  assert.equal(second.body.data.status, 'paid');
+
+  const wallet = await request(app)
+    .get('/api/v1/wallet/me')
+    .set('Authorization', `Bearer ${sellerToken}`);
+  assert.equal(wallet.body.data.pendingBalance, 100);
+
+  const sellerId = seller.id || seller._id;
+  const escrows = await Escrow.find({ seller: sellerId });
+  assert.equal(escrows.length, 1);
+  assert.equal(escrows[0].status, 'locked');
+
+  const fundEntries = await LedgerEntry.find({
+    transferId: `escrow_fund_${paymentId}`,
+  });
+  assert.equal(fundEntries.length, 2);
+});
+
 test('checkout assets endpoint returns currencies with networks', async () => {
   const { token: buyerToken } = await createBuyer();
   const res = await request(app)

@@ -227,6 +227,7 @@ const InventoryImportSection = ({
               <option value="tab">Tab</option>
               <option value="comma">Comma</option>
               <option value="semicolon">Semicolon</option>
+              <option value="pipe">Pipe</option>
             </select>
           </label>
           <label className="space-y-2 text-sm font-medium text-foreground">

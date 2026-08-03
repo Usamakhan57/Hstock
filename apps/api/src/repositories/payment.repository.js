@@ -34,6 +34,32 @@ export async function findPaymentByCryptomusUuid(uuid, { session = null, lean = 
   return query;
 }
 
+export async function findPaymentByIdempotencyKey(buyerId, idempotencyKey, {
+  session = null,
+  lean = false,
+} = {}) {
+  if (!idempotencyKey) return null;
+  let query = Payment.findOne({ buyer: buyerId, idempotencyKey: String(idempotencyKey) });
+  if (session) query = query.session(session);
+  if (lean) query = query.lean();
+  return query;
+}
+
+export async function findActivePaymentByFingerprint(checkoutFingerprint, {
+  session = null,
+  lean = false,
+} = {}) {
+  if (!checkoutFingerprint) return null;
+  let query = Payment.findOne({
+    checkoutFingerprint: String(checkoutFingerprint),
+    isFinal: { $ne: true },
+    status: { $in: ['pending', 'processing'] },
+  }).sort({ createdAt: -1 });
+  if (session) query = query.session(session);
+  if (lean) query = query.lean();
+  return query;
+}
+
 export async function updatePaymentById(id, update, session = null) {
   return Payment.findByIdAndUpdate(id, update, { new: true, ...withSession(session) });
 }
@@ -61,6 +87,8 @@ export default {
   findPaymentByOrder,
   findPaymentByCryptomusOrderId,
   findPaymentByCryptomusUuid,
+  findPaymentByIdempotencyKey,
+  findActivePaymentByFingerprint,
   updatePaymentById,
   listPayments,
   findPaymentsNeedingSync,
