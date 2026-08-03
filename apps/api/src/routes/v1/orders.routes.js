@@ -18,6 +18,8 @@ import * as ordersController from '../../controllers/orders/orders.controller.js
 
 const router = Router();
 
+// Buyer Instant Access credentials (available after payment; survives completion)
+
 router.post(
   '/buy-now',
   requireAuth,
@@ -33,6 +35,14 @@ router.get(
   requirePermission(PERMISSIONS.ORDERS_READ),
   validate(listOrdersSchema),
   ordersController.listOrders,
+);
+
+router.get(
+  '/:id/delivery',
+  requireAuth,
+  requirePermission(PERMISSIONS.ORDERS_READ),
+  validate(orderIdSchema),
+  ordersController.getDelivery,
 );
 
 router.get(

@@ -114,6 +114,12 @@ export function buildOrderTimeline(order, payment, escrow) {
       date: order.escrowedAt || escrow?.lockedAt || null,
     },
     {
+      key: 'delivered',
+      label: 'Delivered',
+      done: order.deliveryStatus === 'delivered' || !!order.deliveredAt || ['delivered', 'completed'].includes(order.status),
+      date: order.deliveredAt || null,
+    },
+    {
       key: 'escrow_released',
       label: 'Escrow Released',
       done: escrow?.status === 'released' || order.status === 'completed',

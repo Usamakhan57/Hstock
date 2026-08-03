@@ -26,7 +26,14 @@ const DownloadsPage = () => {
   const items = useMemo(
     () => orders
       .filter((o) => [ORDER_STATUS.PAID, ORDER_STATUS.ESCROW, ORDER_STATUS.DELIVERED, ORDER_STATUS.COMPLETED].includes(o.status))
-      .map((o) => ({ ...o.product, orderId: o.id, date: o.date, statusLabel: o.statusLabel })),
+      .map((o) => ({
+        ...o.product,
+        orderId: o.id,
+        orderMongoId: o._id,
+        date: o.date,
+        statusLabel: o.deliveryStatus === 'delivered' ? 'Delivered' : o.statusLabel,
+        deliveryStatus: o.deliveryStatus,
+      })),
     [orders],
   );
 
@@ -40,11 +47,37 @@ const DownloadsPage = () => {
 
   const changeQuery = (v) => { setQuery(v); setPage(1); };
 
-  const download = (item) => {
-    toast({
-      title: 'Access available in order details',
-      description: `${item.title} — open the order for delivery status.`,
-    });
+  const download = async (item) => {
+    try {
+      const delivery = await ordersApi.getDelivery(item.orderMongoId || item.orderId);
+      if (!delivery?.delivered || !delivery.accounts?.length) {
+        toast({
+          title: 'Delivery not ready',
+          description: `${item.title} — open the order for delivery status.`,
+        });
+        return;
+      }
+      const lines = delivery.accounts.map((account, index) => {
+        const fields = account.fields || {};
+        const body = Object.entries(fields).map(([key, value]) => `${key}: ${value}`).join('\n');
+        return `Account ${index + 1}\n${body}`;
+      }).join('\n\n');
+      const blob = new Blob([lines], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = `${item.orderId}-credentials.txt`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      toast({
+        title: 'Could not download',
+        description: err.message || 'Open the order to view credentials.',
+        variant: 'destructive',
+      });
+    }
   };
 
   return (

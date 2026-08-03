@@ -1,4 +1,4 @@
-import { get, post, patch, del } from '../lib/apiClient';
+import { get, post, patch, del, put } from '../lib/apiClient';
 import { mapSellerProduct, toBackendProductPayload } from '../lib/mappers/sellerProductMappers';
 import { cacheKey, cachedRequest, clearRequestCache } from '../lib/requestCache';
 
@@ -7,6 +7,23 @@ function clearProductCaches() {
   clearRequestCache('seller-product');
   clearRequestCache('products');
   clearRequestCache('product');
+  clearRequestCache('seller-inventory');
+}
+
+function toInventoryAccounts(accounts = []) {
+  return (Array.isArray(accounts) ? accounts : [])
+    .filter((row) => row && (row.status === 'uploaded' || row.validation === 'valid' || row.fields))
+    .map((row) => ({
+      fields: {
+        email: row.fields?.email || row.values?.[0] || '',
+        password: row.fields?.password || row.values?.[1] || '',
+        recovery: row.fields?.recovery || row.values?.[2] || '',
+        '2fa': row.fields?.['2fa'] || row.values?.[3] || '',
+        cookie: row.fields?.cookie || row.values?.[4] || '',
+        token: row.fields?.token || row.values?.[5] || '',
+      },
+    }))
+    .filter((row) => Object.values(row.fields).some(Boolean));
 }
 
 export const sellerProductsApi = {
@@ -30,11 +47,19 @@ export const sellerProductsApi = {
     }, 4_000);
   },
 
-  async create(form, { publish = false } = {}) {
+  async create(form, { publish = false, inventoryAccounts = [] } = {}) {
     const payload = toBackendProductPayload(form, { publish });
     const { data } = await post('/products', payload);
     clearProductCaches();
-    const product = mapSellerProduct(data);
+    let product = mapSellerProduct(data);
+
+    if (product?.id && inventoryAccounts.length) {
+      await this.replaceInventory(product.id, inventoryAccounts, {
+        sourceFormat: form.inventorySourceFormat || 'paste',
+      });
+      product = await this.get(product.id);
+    }
+
     if (publish && product?.id && product.status === 'draft') {
       try {
         const submitted = await this.submit(product.id);
@@ -46,11 +71,19 @@ export const sellerProductsApi = {
     return product;
   },
 
-  async update(id, form, { publish = false } = {}) {
+  async update(id, form, { publish = false, inventoryAccounts = null } = {}) {
     const payload = toBackendProductPayload(form, { publish });
     const { data } = await patch(`/products/${id}`, payload);
     clearProductCaches();
-    const product = mapSellerProduct(data);
+    let product = mapSellerProduct(data);
+
+    if (product?.id && Array.isArray(inventoryAccounts) && inventoryAccounts.length) {
+      await this.replaceInventory(product.id, inventoryAccounts, {
+        sourceFormat: form.inventorySourceFormat || 'paste',
+      });
+      product = await this.get(product.id);
+    }
+
     if (publish && product?.id && ['draft', 'rejected'].includes(product.status)) {
       try {
         return await this.submit(product.id);
@@ -59,6 +92,30 @@ export const sellerProductsApi = {
       }
     }
     return product;
+  },
+
+  async replaceInventory(id, accounts, { sourceFormat = 'paste', mode = 'replace_available' } = {}) {
+    const payload = {
+      accounts: toInventoryAccounts(accounts),
+      sourceFormat,
+      mode,
+    };
+    if (!payload.accounts.length) {
+      throw new Error('No valid inventory accounts to upload');
+    }
+    const { data } = await put(`/products/${id}/inventory`, payload);
+    clearProductCaches();
+    return data;
+  },
+
+  async listInventory(id, { includeSold = false } = {}) {
+    const key = cacheKey('seller-inventory', { id, includeSold });
+    return cachedRequest(key, async () => {
+      const { data } = await get(`/products/${id}/inventory`, {
+        params: includeSold ? { includeSold: 'true' } : undefined,
+      });
+      return data;
+    }, 4_000);
   },
 
   async remove(id) {

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { ArrowLeft, ShieldCheck } from 'lucide-react';
 import { useToast } from '../../../hooks/use-toast';
-import { getSellerProduct, updateSellerProduct } from '../api/sellerProducts';
+import { getSellerProduct, updateSellerProduct, replaceSellerInventory } from '../api/sellerProducts';
 import InventoryImportSection from './InventoryImportSection';
 import {
   countReadyInventory,
@@ -55,6 +55,7 @@ const UploadAccountsPage = () => {
 
     try {
       const liveStock = countReadyInventory(accounts);
+      await replaceSellerInventory(productId, accounts, { sourceFormat: 'paste' });
       await updateSellerProduct(productId, {
         ...product,
         status: 'live',

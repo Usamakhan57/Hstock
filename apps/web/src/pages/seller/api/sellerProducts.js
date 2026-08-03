@@ -14,11 +14,27 @@ export async function getSellerProduct(id) {
 }
 
 export async function createSellerProduct(payload, options = {}) {
-  return sellerProductsApi.create(payload, options);
+  const { inventoryAccounts, ...form } = payload || {};
+  return sellerProductsApi.create(form, {
+    ...options,
+    inventoryAccounts: inventoryAccounts || options.inventoryAccounts || [],
+  });
 }
 
 export async function updateSellerProduct(id, payload, options = {}) {
-  return sellerProductsApi.update(id, payload, options);
+  const { inventoryAccounts, ...form } = payload || {};
+  return sellerProductsApi.update(id, form, {
+    ...options,
+    inventoryAccounts: inventoryAccounts ?? options.inventoryAccounts ?? null,
+  });
+}
+
+export async function replaceSellerInventory(id, accounts, options = {}) {
+  return sellerProductsApi.replaceInventory(id, accounts, options);
+}
+
+export async function getSellerInventory(id, options = {}) {
+  return sellerProductsApi.listInventory(id, options);
 }
 
 export async function deleteSellerProduct(id) {

@@ -21,6 +21,7 @@ import {
   PRODUCT_STATUS,
   APPROVAL_STATUS,
   STOCK_TYPES,
+  DELIVERY_TYPES,
 } from '../constants/productTypes.js';
 import { LEDGER_CURRENCY } from '../constants/currencies.js';
 import {
@@ -247,6 +248,18 @@ export async function buyNow(payload, actor, requestMeta = {}) {
 
   if (product.stockType === STOCK_TYPES.LIMITED && product.stock < quantity) {
     throw new AppError('Product is out of stock', 400, { code: 'OUT_OF_STOCK' });
+  }
+
+  // Instant Access: require enough unsold inventory rows (reservation happens after payment).
+  if (product.deliveryType === DELIVERY_TYPES.AUTOMATIC) {
+    const { countAvailableInventory } = await import('./inventory.service.js');
+    const availableInventory = await countAvailableInventory(product._id);
+    if (availableInventory < quantity) {
+      throw new AppError('Product is out of stock', 400, {
+        code: 'OUT_OF_STOCK',
+        details: { availableInventory },
+      });
+    }
   }
 
   const unitPrice = roundMoney(product.price);

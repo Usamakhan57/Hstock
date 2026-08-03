@@ -80,6 +80,14 @@ export const ordersApi = {
     clearRequestCache('orders');
     return mapBackendOrder(data);
   },
+
+  async getDelivery(idOrNumber) {
+    const key = cacheKey('order-delivery', { idOrNumber });
+    return cachedRequest(key, async () => {
+      const { data } = await get(`/orders/${idOrNumber}/delivery`);
+      return data;
+    }, 5_000);
+  },
 };
 
 export default ordersApi;

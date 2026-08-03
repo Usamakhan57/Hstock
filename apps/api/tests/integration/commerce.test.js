@@ -77,10 +77,12 @@ async function createLiveProduct(adminToken, sellerToken) {
       category: category.body.data._id,
       stock: 5,
       stockType: 'limited',
+      // Commerce escrow tests use Manual Delivery (Instant Access covered separately).
+      deliveryType: 'manual',
       digital: {
-        downloadType: 'automatic',
-        automatic: true,
-        manual: false,
+        downloadType: 'manual',
+        automatic: false,
+        manual: true,
         downloadUrl: 'https://files.example.com/license.txt',
         fileType: 'txt',
         deliveryInstructions: 'Keys delivered after payment',

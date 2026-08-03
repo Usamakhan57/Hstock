@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import Seo from '../../components/Seo';
 import AccountLayout from './AccountLayout';
+import OrderDeliveryPanel from '../../components/OrderDeliveryPanel';
 import { NetworkErrorState } from '../../components/ErrorState';
 import { ProductDetailSkeleton } from '../../components/Skeletons';
 import { useFetch } from '../../hooks/useFetch';
@@ -151,33 +152,46 @@ const OrderDetailPage = () => {
               </ol>
             </div>
 
+            <OrderDeliveryPanel
+              orderId={order._id || order.id}
+              deliveryStatus={order.deliveryStatus}
+            />
+
             <div className="bg-white rounded-3xl border border-border soft-shadow p-5">
               <h2 className="font-bold mb-4">Order Status</h2>
               <div className="grid sm:grid-cols-3 gap-4">
                 <div className="flex items-center gap-3 rounded-2xl border border-border p-4">
                   <CreditCard className="w-5 h-5 text-primary shrink-0" />
                   <div>
-                    <p className="text-xs text-muted-foreground">Payment Status</p>
+                    <p className="text-xs text-muted-foreground">Payment</p>
                     <span className={`inline-block mt-1 text-xs font-semibold px-2.5 py-1 rounded-full ${paymentStyle[order.paymentStatus] || 'bg-secondary'}`}>
-                      {order.paymentStatusLabel}
+                      {order.paymentStatus === 'paid' ? 'Paid' : order.paymentStatusLabel}
                     </span>
                   </div>
                 </div>
                 <div className="flex items-center gap-3 rounded-2xl border border-border p-4">
                   <Truck className="w-5 h-5 text-primary shrink-0" />
                   <div>
-                    <p className="text-xs text-muted-foreground">Order Status</p>
-                    <span className="inline-block mt-1 text-xs font-semibold px-2.5 py-1 rounded-full bg-secondary">
-                      {order.statusLabel}
+                    <p className="text-xs text-muted-foreground">Delivery</p>
+                    <span className={`inline-block mt-1 text-xs font-semibold px-2.5 py-1 rounded-full ${
+                      order.deliveryStatus === 'delivered'
+                        ? 'bg-emerald-100 text-emerald-700'
+                        : 'bg-secondary'
+                    }`}>
+                      {order.deliveryStatus === 'delivered'
+                        ? 'Delivered'
+                        : order.deliveryStatus === 'awaiting_delivery'
+                          ? 'Awaiting Delivery'
+                          : (order.deliveryStatus || 'Pending')}
                     </span>
                   </div>
                 </div>
                 <div className="flex items-center gap-3 rounded-2xl border border-border p-4">
                   <ShieldCheck className="w-5 h-5 text-primary shrink-0" />
                   <div>
-                    <p className="text-xs text-muted-foreground">Escrow Status</p>
+                    <p className="text-xs text-muted-foreground">Escrow</p>
                     <span className={`inline-block mt-1 text-xs font-semibold px-2.5 py-1 rounded-full ${escrowStyle[order.escrowStatus] || 'bg-secondary'}`}>
-                      {order.escrowStatusLabel}
+                      {order.escrowStatus === 'locked' ? 'Held' : order.escrowStatusLabel}
                     </span>
                   </div>
                 </div>
