@@ -114,9 +114,19 @@ export function toBackendProductPayload(form, { publish = false } = {}) {
     || LISTING_TYPE_TO_PRODUCT_TYPE[listingType]
     || 'social_accounts';
 
-  const status = publish
-    ? (form.status === 'live' ? 'live' : 'pending')
-    : (form.status === 'live' ? 'live' : 'draft');
+  const allowedStatuses = new Set([
+    'draft',
+    'pending',
+    'rejected',
+    'live',
+    'disabled',
+    'out_of_stock',
+    'archived',
+  ]);
+  let status = allowedStatuses.has(form.status) ? form.status : 'draft';
+  if (publish && (status === 'draft' || status === 'rejected')) {
+    status = 'pending';
+  }
 
   const thumbnail = form.thumbnail && String(form.thumbnail).startsWith('http')
     ? form.thumbnail
@@ -125,6 +135,13 @@ export function toBackendProductPayload(form, { publish = false } = {}) {
   const gallery = (Array.isArray(form.gallery) ? form.gallery : [])
     .filter((url) => typeof url === 'string' && (url.startsWith('http') || url.startsWith('data:')))
     .slice(0, 10);
+
+  const seoKeywords = Array.isArray(form.seoKeywords)
+    ? form.seoKeywords
+    : String(form.seoKeywords || form.tagsText || '')
+      .split(',')
+      .map((item) => item.trim())
+      .filter(Boolean);
 
   const payload = {
     title: String(form.title || '').trim(),
@@ -138,9 +155,10 @@ export function toBackendProductPayload(form, { publish = false } = {}) {
       ? 'unlimited'
       : 'limited',
     status,
+    visibility: form.visibility || 'public',
     seoTitle: form.seoTitle || undefined,
     seoDescription: form.seoDescription || undefined,
-    seoKeywords: Array.isArray(form.seoKeywords) ? form.seoKeywords : undefined,
+    seoKeywords: seoKeywords.length ? seoKeywords : undefined,
     digital: {
       downloadType: form.deliveryType === 'manual' ? 'manual' : 'automatic',
       manual: form.deliveryType === 'manual',

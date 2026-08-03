@@ -219,16 +219,27 @@ const InventoryImportSection = ({
         <div className="mt-5 grid gap-4 md:grid-cols-2">
           <label className="space-y-2 text-sm font-medium text-foreground">
             <span>Divider Selection</span>
-            <select
-              value={divider}
-              onChange={(e) => setDivider(e.target.value)}
-              className="w-full rounded-2xl border border-border bg-secondary/60 px-3 py-2.5 outline-none"
-            >
-              <option value="tab">Tab</option>
-              <option value="comma">Comma</option>
-              <option value="semicolon">Semicolon</option>
-              <option value="pipe">Pipe</option>
-            </select>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+              {[
+                ['tab', 'Tab'],
+                ['comma', ','],
+                ['semicolon', ';'],
+                ['pipe', '|'],
+              ].map(([value, label]) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setDivider(value)}
+                  className={`rounded-2xl border px-3 py-2.5 text-sm font-semibold ${
+                    divider === value
+                      ? 'border-primary bg-primary text-white'
+                      : 'border-border bg-secondary/60 text-foreground'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
           </label>
           <label className="space-y-2 text-sm font-medium text-foreground">
             <span>Field mapping</span>

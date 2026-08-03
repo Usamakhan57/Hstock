@@ -35,8 +35,11 @@ import { disputesApi } from '../services/disputesApi';
 import {
   buildSalesChart,
   buildBestSelling,
+  buildLowestStock,
+  buildMostViewed,
   buildTopCategories,
   buildDownloadsFromOrders,
+  buildActionRequired,
   summarizeSellerStats,
 } from '../lib/sellerAnalytics';
 import { NetworkErrorState } from '../components/ErrorState';
@@ -54,6 +57,7 @@ import SellerNotificationsTab from './seller/components/SellerNotificationsTab';
 import SellerMessagesTab from './seller/components/SellerMessagesTab';
 import SellerEscrowTab from './seller/components/SellerEscrowTab';
 import SellerVerificationBanner from './seller/components/SellerVerificationBanner';
+import SellerMobileNav from './seller/components/SellerMobileNav';
 
 const tabs = [
   { key: 'overview', label: 'Overview', icon: LayoutDashboard },
@@ -184,8 +188,12 @@ const SellerDashboard = () => {
   }, [currentTab]);
 
   const analytics = useMemo(() => {
-    const salesChart = buildSalesChart(commerce.orders, 14);
-    const bestSelling = buildBestSelling(commerce.orders, sellerProducts, 6);
+    const salesChart7 = buildSalesChart(commerce.orders, 7);
+    const salesChart30 = buildSalesChart(commerce.orders, 30);
+    const salesChart = salesChart30;
+    const bestSelling = buildBestSelling(commerce.orders, sellerProducts, 8);
+    const lowestStock = buildLowestStock(sellerProducts, 8);
+    const mostViewed = buildMostViewed(sellerProducts, 8);
     const topCategories = buildTopCategories(commerce.orders, sellerProducts, 6);
     const downloads = buildDownloadsFromOrders(commerce.orders);
     const stats = summarizeSellerStats({
@@ -194,9 +202,27 @@ const SellerDashboard = () => {
       wallet: commerce.wallet,
       escrow: commerce.escrow,
       withdrawals: commerce.withdrawals,
+      disputes: commerce.disputes,
     });
-    return { salesChart, bestSelling, topCategories, downloads, stats };
-  }, [commerce, sellerProducts]);
+    const actionRequired = buildActionRequired({
+      products: sellerProducts,
+      orders: commerce.orders,
+      disputes: commerce.disputes,
+      seller,
+    });
+    return {
+      salesChart,
+      salesChart7,
+      salesChart30,
+      bestSelling,
+      lowestStock,
+      mostViewed,
+      topCategories,
+      downloads,
+      stats,
+      actionRequired,
+    };
+  }, [commerce, sellerProducts, seller]);
 
   const overviewOrders = commerce.orders.map((o) => ({
     id: o.id,
@@ -353,59 +379,36 @@ const SellerDashboard = () => {
             </aside>
           </div>
 
-          <main className="mx-auto max-w-[1080px] px-4 py-8 sm:px-6 lg:px-10">
+          <main className="mx-auto max-w-[1080px] px-4 py-8 pb-28 sm:px-6 lg:px-10 lg:pb-10">
             <SellerVerificationBanner seller={seller} />
 
-            <div className="mb-10 flex flex-col gap-6 rounded-[2rem] border border-border bg-white p-8 shadow-sm">
-              <div>
-                <p className="text-xs uppercase tracking-[0.3em] text-primary">Seller Dashboard</p>
-                <h1 className="mt-3 text-3xl font-black tracking-tight text-foreground">Manage your ApnaStore seller portal</h1>
-                <p className="mt-3 max-w-2xl text-sm text-muted-foreground">
-                  View performance, publish new listings, and manage orders, wallet payouts, and store settings from one unified seller workspace.
-                </p>
-              </div>
-
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                <div className="rounded-[1.5rem] border border-border bg-secondary/40 p-4">
-                  <p className="text-xs text-muted-foreground">Sales summary</p>
-                  <p className="mt-1 text-lg font-black">${analytics.stats.revenue.toFixed(2)}</p>
+            {tab !== 'overview' ? (
+              <div className="mb-8 flex flex-col gap-4 rounded-[1.75rem] border border-border bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-6">
+                <div className="min-w-0">
+                  <p className="text-xs uppercase tracking-[0.28em] text-primary">Seller portal</p>
+                  <h1 className="mt-2 truncate text-2xl font-black tracking-tight text-foreground">
+                    {tabs.find((item) => item.key === tab)?.label || 'Dashboard'}
+                  </h1>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {seller?.storeName || 'Your store'} · Joined {joinedDate}
+                  </p>
                 </div>
-                <div className="rounded-[1.5rem] border border-border bg-secondary/40 p-4">
-                  <p className="text-xs text-muted-foreground">Pending / Completed</p>
-                  <p className="mt-1 text-lg font-black">{analytics.stats.pendingOrders} / {analytics.stats.completedOrders}</p>
-                </div>
-                <div className="rounded-[1.5rem] border border-border bg-secondary/40 p-4">
-                  <p className="text-xs text-muted-foreground">Disputed orders</p>
-                  <p className="mt-1 text-lg font-black">{analytics.stats.disputedOrders}</p>
-                </div>
-                <div className="rounded-[1.5rem] border border-border bg-secondary/40 p-4">
-                  <p className="text-xs text-muted-foreground">Escrow / Released</p>
-                  <p className="mt-1 text-lg font-black">${analytics.stats.escrowBalance.toFixed(2)} / ${analytics.stats.releasedBalance.toFixed(2)}</p>
-                </div>
-              </div>
-
-              <div className="grid gap-3 sm:grid-cols-[1.2fr_auto]">
-                <div className="rounded-[1.75rem] border border-border bg-white p-5 shadow-sm">
-                  <p className="text-sm text-muted-foreground">Signed in as</p>
-                  <p className="mt-2 text-lg font-semibold text-foreground">{seller?.email}</p>
-                  <p className="mt-1 text-sm text-muted-foreground">Joined {joinedDate}</p>
-                </div>
-                <div className="flex flex-col gap-3 sm:items-end">
+                <div className="flex flex-wrap gap-2">
                   <Link
                     to="/seller/products/new"
-                    className="inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-primary to-accent px-5 py-3 text-sm font-semibold text-white shadow-sm hover:opacity-95 transition-opacity"
+                    className="inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-primary to-accent px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:opacity-95"
                   >
                     <Plus className="h-4 w-4" /> Add Product
                   </Link>
-                  <button
-                    onClick={handleLogout}
-                    className="inline-flex items-center justify-center gap-2 rounded-full border border-border bg-white px-5 py-3 text-sm font-semibold text-foreground shadow-sm hover:bg-secondary transition-colors"
+                  <Link
+                    to="/seller/earnings"
+                    className="inline-flex items-center justify-center gap-2 rounded-full border border-border bg-white px-5 py-2.5 text-sm font-semibold text-foreground hover:bg-secondary"
                   >
-                    Sign out
-                  </button>
+                    <Wallet className="h-4 w-4 text-primary" /> Withdraw
+                  </Link>
                 </div>
               </div>
-            </div>
+            ) : null}
 
             {dataLoading ? (
               <div className="space-y-3">
@@ -417,12 +420,17 @@ const SellerDashboard = () => {
               <div className="space-y-8">
                 {tab === 'overview' && (
                   <SellerOverviewTab
+                    seller={seller}
                     products={sellerProducts}
                     orders={overviewOrders}
-                    reviews={[]}
-                    salesChart={analytics.salesChart}
+                    stats={analytics.stats}
+                    salesChart7={analytics.salesChart7}
+                    salesChart30={analytics.salesChart30}
                     bestSelling={analytics.bestSelling}
-                    storeViews={analytics.stats.ordersCount}
+                    lowestStock={analytics.lowestStock}
+                    mostViewed={analytics.mostViewed}
+                    actionRequired={analytics.actionRequired}
+                    joinedDate={joinedDate}
                   />
                 )}
                 {tab === 'products' && <SellerProductsTab />}
@@ -438,15 +446,17 @@ const SellerDashboard = () => {
                     withdrawals={commerce.withdrawals}
                     onRefresh={refreshCommerce}
                     canWithdraw={String(seller?.status || '').toLowerCase() === 'approved'}
+                    stats={analytics.stats}
                   />
                 )}
                 {tab === 'analytics' && (
                   <SellerAnalyticsTab
                     orders={overviewOrders}
-                    salesChart={analytics.salesChart}
+                    salesChart={analytics.salesChart30}
+                    salesChart7={analytics.salesChart7}
                     bestSelling={analytics.bestSelling}
                     topCategories={analytics.topCategories}
-                    storeViews={Math.max(analytics.stats.ordersCount, 1)}
+                    stats={analytics.stats}
                   />
                 )}
                 {(tab === 'messages' || tab === 'disputes') && <SellerMessagesTab />}
@@ -481,6 +491,7 @@ const SellerDashboard = () => {
               </div>
             )}
           </main>
+          <SellerMobileNav current={tab} onNavigate={changeTab} />
         </div>
       </div>
     </div>
