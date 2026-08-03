@@ -26,7 +26,7 @@ const SidebarHeader = ({ seller, walletBalance, notificationsCount, onNavigate }
       </div>
       <span className="inline-flex items-center gap-1 rounded-full border border-[#E5E7EB] bg-secondary px-2.5 py-1 text-[11px] font-semibold text-muted-foreground shrink-0">
         <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
-        Live
+        {String(seller?.status || '').toLowerCase() === 'approved' ? 'Live' : 'Pending'}
       </span>
     </div>
 

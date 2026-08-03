@@ -9,7 +9,7 @@ describe('SidebarHeader', () => {
     const html = renderToStaticMarkup(
       <MemoryRouter>
         <SidebarHeader
-          seller={{ storeName: 'Demo Store', email: 'demo@example.com' }}
+          seller={{ storeName: 'Demo Store', email: 'demo@example.com', status: 'approved' }}
           walletBalance={12.5}
           notificationsCount={3}
         />
@@ -22,5 +22,19 @@ describe('SidebarHeader', () => {
     expect(html).toContain('Open alerts');
     expect(html).toContain('$12.50');
     expect(html).toContain('3 unread');
+    expect(html).toContain('Live');
+  });
+
+  it('shows Pending badge when seller is not approved', () => {
+    const html = renderToStaticMarkup(
+      <MemoryRouter>
+        <SidebarHeader
+          seller={{ storeName: 'Pending Store', email: 'p@example.com', status: 'pending' }}
+          walletBalance={0}
+          notificationsCount={0}
+        />
+      </MemoryRouter>,
+    );
+    expect(html).toContain('Pending');
   });
 });

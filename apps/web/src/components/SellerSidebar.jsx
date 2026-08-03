@@ -1,6 +1,19 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ArrowLeft, Bell, LayoutDashboard, LogOut, MessageCircleQuestion, Package, Settings, ShieldCheck, ShoppingCart, Wallet } from 'lucide-react';
+import {
+  ArrowLeft,
+  BarChart3,
+  Boxes,
+  LayoutDashboard,
+  LogOut,
+  MessageCircleQuestion,
+  Package,
+  Settings,
+  ShieldCheck,
+  ShoppingCart,
+  Users,
+  Wallet,
+} from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import SidebarOverlay from './SidebarOverlay';
 import SidebarHeader from './SidebarHeader';
@@ -18,9 +31,12 @@ const SellerSidebar = ({ open, closing, onClose, seller, walletBalance, notifica
     { label: 'Dashboard', to: '/seller/dashboard', icon: LayoutDashboard },
     { label: 'Products', to: '/seller/products', icon: Package },
     { label: 'Orders', to: '/seller/orders', icon: ShoppingCart },
-    { label: 'Disputes', to: '/seller/messages', icon: ShieldCheck },
+    { label: 'Customers', to: '/seller/reviews', icon: Users },
+    { label: 'Inventory', to: '/seller/products', icon: Boxes },
+    { label: 'Analytics', to: '/seller/analytics', icon: BarChart3 },
+    { label: 'Wallet', to: '/seller/earnings', icon: Wallet },
     { label: 'Withdrawals', to: '/seller/earnings', icon: Wallet },
-    { label: 'Referral & Rewards', to: '/seller/notifications', icon: Bell },
+    { label: 'Disputes', to: '/seller/disputes', icon: ShieldCheck },
     { label: 'Settings', to: '/seller/settings', icon: Settings },
     { label: 'Support', to: '/support', icon: MessageCircleQuestion },
   ], []);
@@ -114,7 +130,9 @@ const SellerSidebar = ({ open, closing, onClose, seller, walletBalance, notifica
     : '-translate-y-full sm:translate-y-0 sm:translate-x-full';
 
   return createPortal(
-    <div className="fixed inset-0 z-[45] pointer-events-none" data-testid="seller-drawer-root">
+    // z-[100]+ sits above marketplace header (z-50) on desktop.
+    // Mobile panel is still offset under the header so the header stays visible.
+    <div className="fixed inset-0 z-[100] pointer-events-none" data-testid="seller-drawer-root">
       <div className="pointer-events-auto">
         <SidebarOverlay open={showOpen} onClose={onClose} />
       </div>
@@ -124,11 +142,11 @@ const SellerSidebar = ({ open, closing, onClose, seller, walletBalance, notifica
         aria-label="Seller sidebar"
         aria-modal="true"
         data-testid="seller-drawer-panel"
-        className={`pointer-events-auto fixed inset-x-0 top-[calc(4rem+env(safe-area-inset-top,0px))] z-[46] flex max-h-[calc(100dvh-4rem-env(safe-area-inset-top,0px)-env(safe-area-inset-bottom,0px))] w-full flex-col overflow-hidden bg-white shadow-[0_20px_80px_-24px_rgba(15,23,42,0.35)] border-b border-[#E5E7EB] transition-transform duration-300 ease-out sm:inset-y-0 sm:left-auto sm:right-0 sm:top-0 sm:max-h-[100dvh] sm:h-[100vh] sm:w-[380px] sm:border-b-0 sm:border-l lg:w-[420px] ${panelMotion}`}
+        className={`pointer-events-auto fixed inset-x-0 top-[calc(4rem+env(safe-area-inset-top,0px))] z-[101] flex max-h-[calc(100dvh-4rem-env(safe-area-inset-top,0px)-env(safe-area-inset-bottom,0px))] w-full flex-col overflow-hidden bg-white shadow-[0_20px_80px_-24px_rgba(15,23,42,0.35)] border-b border-[#E5E7EB] transition-transform duration-300 ease-out sm:inset-y-0 sm:left-auto sm:right-0 sm:top-0 sm:max-h-[100dvh] sm:h-[100vh] sm:w-[380px] sm:border-b-0 sm:border-l lg:w-[420px] ${panelMotion}`}
       >
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-safe" style={{ WebkitOverflowScrolling: 'touch' }}>
           <div className="flex min-h-full flex-col">
-            <div className="sticky top-0 z-20 border-b border-[#E5E7EB] bg-white px-4 py-3 backdrop-blur-sm">
+            <div className="sticky top-0 z-20 border-b border-[#E5E7EB] bg-white px-4 py-3">
               <button
                 type="button"
                 onClick={handleBackToMarketplace}
@@ -145,12 +163,14 @@ const SellerSidebar = ({ open, closing, onClose, seller, walletBalance, notifica
               onNavigate={handleNavigate}
             />
 
-            <div className="flex-1 px-4 py-4">
-              <div className="space-y-2.5">
+            <div className="flex flex-1 flex-col">
+              <div className="flex-1 space-y-2.5 px-4 py-4">
                 <SidebarNavigation items={menuItems} activePath={location.pathname} onNavigate={handleNavigate} />
+              </div>
 
-                <SidebarFooter footerLinks={footerLinks} onNavigate={handleNavigate} />
+              <SidebarFooter footerLinks={footerLinks} onNavigate={handleNavigate} />
 
+              <div className="px-4 pb-4">
                 <button
                   type="button"
                   ref={firstFocusableRef}
