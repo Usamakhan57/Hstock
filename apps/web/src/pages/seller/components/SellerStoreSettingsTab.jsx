@@ -163,7 +163,7 @@ const SellerStoreSettingsTab = ({ seller, canManagePayouts = true }) => {
       </div>
 
       <div className="space-y-6">
-        <TelegramConnectSection compact />
+        <TelegramConnectSection compact pollUntilConnected />
 
         <div className="bg-white rounded-3xl border border-border soft-shadow p-6 space-y-4">
           <h3 className="font-bold">Notification Settings</h3>
