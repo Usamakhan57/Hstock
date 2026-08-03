@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
-  Search, Wallet, User, Menu, X, ChevronDown, LayoutGrid, Bell,
+  Search, User, Menu, X, ChevronDown, LayoutGrid, Bell,
   Clock, TrendingUp, ArrowUpRight, Folder, Hash, LucideStore,
 } from 'lucide-react';
 import Logo from './Logo';
@@ -383,7 +383,7 @@ const Header = () => {
   }, [showSellerDrawer]);
   return (
     <header
-      className={`sticky top-0 z-50 transition-all duration-300 ${
+      className={`sticky top-0 z-50 pt-safe transition-all duration-300 ${
         scrolled ? 'bg-white/80 backdrop-blur-xl shadow-[0_8px_30px_-12px_rgba(108,59,255,0.18)] border-b border-border/60' : 'bg-white/40 backdrop-blur-md border-b border-transparent'
       }`}
     >
@@ -439,17 +439,17 @@ const Header = () => {
             )}
           </div>
 
-          {/* Actions */}
+          {/* Actions — Notifications | Buyer (Wallet remains in buyer dashboard menu) */}
           <div className="flex items-center gap-0.5 sm:gap-1 md:gap-2 ml-auto md:ml-0 shrink-0">
             {user && (
-              <div className="relative hidden sm:block" ref={notifRef}>
+              <div className="relative" ref={notifRef}>
                 <button
                   type="button"
                   onClick={() => setNotifOpen((o) => !o)}
                   aria-expanded={notifOpen}
                   aria-haspopup="menu"
                   aria-label={`Notifications${notifications.filter((n) => !n.read).length > 0 ? `, ${notifications.filter((n) => !n.read).length} unread` : ''}`}
-                  className="relative p-2.5 rounded-full hover:bg-secondary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className="relative p-2 sm:p-2.5 rounded-full hover:bg-secondary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   <Bell className="w-[18px] h-[18px] sm:w-5 sm:h-5" aria-hidden="true" />
                   {notifications.filter((n) => !n.read).length > 0 && (
@@ -460,7 +460,7 @@ const Header = () => {
                 </button>
 
                 {notifOpen && (
-                  <div role="menu" className="absolute right-0 top-[calc(100%+8px)] w-80 bg-white rounded-2xl border border-border soft-shadow-lg py-2 animate-mega-in z-50 max-h-96 overflow-y-auto">
+                  <div role="menu" className="absolute right-0 top-[calc(100%+8px)] w-[min(20rem,calc(100vw-1.5rem))] bg-white rounded-2xl border border-border soft-shadow-lg py-2 animate-mega-in z-50 max-h-96 overflow-y-auto">
                     <div className="flex items-center justify-between px-4 py-1.5">
                       <span className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Notifications</span>
                       <Link to="/notifications" onClick={() => setNotifOpen(false)} className="text-xs font-semibold text-primary hover:underline">View all</Link>
@@ -501,9 +501,13 @@ const Header = () => {
             )}
 
             {isUserLoggedIn && (
-              <Link to="/wallet" aria-label="Wallet" className="flex items-center gap-1.5 pl-2.5 pr-3 sm:pl-3 sm:pr-4 py-1.5 sm:py-2 rounded-full bg-secondary hover:bg-secondary/70 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-                <Wallet className="w-[18px] h-[18px] sm:w-5 sm:h-5 text-primary" aria-hidden="true" />
-                <span className="text-sm font-semibold hidden sm:inline">Wallet</span>
+              <Link
+                to="/dashboard"
+                aria-label="Buyer dashboard"
+                className="flex items-center gap-1.5 pl-2.5 pr-3 sm:pl-3 sm:pr-4 py-1.5 sm:py-2 rounded-full bg-secondary hover:bg-secondary/70 active:scale-[0.98] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <User className="w-[18px] h-[18px] sm:w-5 sm:h-5 text-primary" aria-hidden="true" />
+                <span className="text-sm font-semibold">Buyer</span>
               </Link>
             )}
 
@@ -661,8 +665,8 @@ const Header = () => {
 
           {isUserLoggedIn && !isSellerUser && (
             <div className="border-t border-border pt-4 flex items-center gap-3">
-              <Link to="/wallet" aria-label="Wallet" className="flex-1 flex items-center justify-center gap-2 py-3 rounded-full bg-secondary text-primary text-sm font-semibold">
-                <Wallet className="w-5 h-5" aria-hidden="true" /> Wallet
+              <Link to="/dashboard" aria-label="Buyer dashboard" className="flex-1 flex items-center justify-center gap-2 py-3 rounded-full bg-secondary text-primary text-sm font-semibold active:scale-[0.98] transition-transform">
+                <User className="w-5 h-5" aria-hidden="true" /> Buyer
               </Link>
             </div>
           )}
@@ -671,15 +675,17 @@ const Header = () => {
 
       {isSellerUser && (
         <>
-          <button
-            type="button"
-            onClick={openSellerDrawer}
-            aria-label="Open seller sidebar"
-            className="fixed right-4 top-[calc(64px+20px)] bottom-auto z-50 inline-flex items-center gap-2 rounded-full bg-primary px-4 py-3 text-white shadow-2xl shadow-primary/30 hover:bg-primary/90 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:top-auto sm:bottom-6"
-          >
-            <LucideStore className="w-5 h-5" aria-hidden="true" />
-            <span className="hidden sm:inline text-sm font-semibold">Seller workspace</span>
-          </button>
+          {!showSellerDrawer && (
+            <button
+              type="button"
+              onClick={openSellerDrawer}
+              aria-label="Open seller sidebar"
+              className="fixed z-40 inline-flex items-center gap-2 rounded-full bg-primary px-4 py-3 text-white shadow-2xl shadow-primary/30 hover:bg-primary/90 active:scale-[0.98] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring right-[max(1rem,env(safe-area-inset-right,0px))] bottom-[max(1.5rem,env(safe-area-inset-bottom,0px))]"
+            >
+              <LucideStore className="w-5 h-5" aria-hidden="true" />
+              <span className="hidden sm:inline text-sm font-semibold">Seller workspace</span>
+            </button>
+          )}
 
           <SellerSidebar
             open={showSellerDrawer}

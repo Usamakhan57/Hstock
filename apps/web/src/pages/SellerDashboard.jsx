@@ -299,7 +299,7 @@ const SellerDashboard = () => {
         </aside>
 
         <div className="flex-1 min-w-0">
-          <div className="sticky top-0 z-20 border-b border-border bg-white lg:hidden">
+          <div className="sticky top-0 z-50 border-b border-border bg-white pt-safe lg:hidden">
             <div className="flex items-center justify-between gap-2 px-4 py-4 sm:px-6">
               <button
                 type="button"
@@ -324,13 +324,13 @@ const SellerDashboard = () => {
             </div>
           </div>
 
-          <div className={`fixed inset-0 z-40 lg:hidden ${sidebarOpen ? 'pointer-events-auto' : 'pointer-events-none'}`}>
+          <div className={`fixed inset-0 z-[45] lg:hidden ${sidebarOpen ? 'pointer-events-auto' : 'pointer-events-none'}`}>
             <div
               className={`absolute inset-0 bg-slate-900/20 transition-opacity ${sidebarOpen ? 'opacity-100' : 'opacity-0'}`}
               onClick={() => setSidebarOpen(false)}
             />
             <aside
-              className={`absolute left-0 top-0 flex h-[100vh] h-[100dvh] w-[88vw] max-w-[320px] flex-col overflow-hidden bg-white p-6 shadow-2xl border-r border-border transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}
+              className={`absolute left-0 top-0 flex h-[100vh] max-h-[100dvh] w-[min(88vw,320px)] flex-col overflow-hidden bg-white p-6 pt-[max(1.5rem,env(safe-area-inset-top,0px))] pb-safe shadow-2xl border-r border-border transition-transform duration-300 ease-out ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}
             >
               <div className="mb-4 flex shrink-0 items-start justify-between gap-3">
                 <div>

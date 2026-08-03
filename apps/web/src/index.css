@@ -112,6 +112,18 @@ body {
 }
 .animate-drawer-in { animation: drawer-in 0.22s ease-out forwards; }
 
+@keyframes drawer-down-in {
+  from { transform: translateY(-100%); }
+  to { transform: translateY(0); }
+}
+.animate-drawer-down-in { animation: drawer-down-in 0.25s ease-out forwards; }
+
+/* Safe-area helpers for notched devices */
+.pt-safe { padding-top: env(safe-area-inset-top, 0px); }
+.pb-safe { padding-bottom: env(safe-area-inset-bottom, 0px); }
+.pl-safe { padding-left: env(safe-area-inset-left, 0px); }
+.pr-safe { padding-right: env(safe-area-inset-right, 0px); }
+
 @keyframes hero-blob {
   0%, 100% { transform: translate(0, 0) scale(1); }
   50% { transform: translate(20px, -20px) scale(1.05); }
