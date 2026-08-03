@@ -13,7 +13,9 @@ const AdminLoginPage = () => {
   const [showPw, setShowPw] = useState(false);
   const [error, setError] = useState('');
 
-  const from = location.state?.from?.pathname || '/admin';
+  // Admins always land in the Admin Panel — never buyer/seller dashboards.
+  const rawFrom = location.state?.from?.pathname || '/admin';
+  const from = rawFrom.startsWith('/admin') ? rawFrom : '/admin';
 
   if (isAuthenticated) {
     navigate(from, { replace: true });

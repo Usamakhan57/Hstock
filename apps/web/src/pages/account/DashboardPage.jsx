@@ -4,6 +4,7 @@ import { Package, Wallet, CheckCircle2, AlertTriangle, ArrowRight, MessageCircle
 import Seo from '../../components/Seo';
 import AccountLayout from './AccountLayout';
 import ProductCard from '../../components/ProductCard';
+import TelegramConnectSection from '../../components/telegram/TelegramConnectSection';
 import { PRODUCT_GRID_CLASS } from '../../lib/productGrid';
 import { NetworkErrorState } from '../../components/ErrorState';
 import { ProductGridSkeleton } from '../../components/Skeletons';
@@ -105,12 +106,24 @@ const DashboardPage = () => {
     <>
       <Seo title="Dashboard" description="Your ApnaStore buyer dashboard overview." noIndex />
       <AccountLayout title="Dashboard" subtitle={`Welcome back${user?.name ? `, ${user.name}` : ''} — here's what's happening with your account.`}>
+        {/* Telegram Connection — same component/API as Seller Dashboard */}
+        <div className="mb-6" data-testid="buyer-telegram-connection">
+          <TelegramConnectSection
+            compact
+            pollUntilConnected
+            title="Telegram Connection"
+            description="Connect Telegram to receive order, wallet, delivery, and dispute alerts."
+            connectLabel="Connect Telegram"
+          />
+        </div>
+
         {loading ? (
           <ProductGridSkeleton count={4} className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-8" />
         ) : error ? (
           <NetworkErrorState onRetry={retry} message={error.message} />
         ) : (
           <>
+            {/* Wallet */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-6">
               <Link
                 to="/wallet"
@@ -153,33 +166,8 @@ const DashboardPage = () => {
               </Link>
             </div>
 
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-8">
-              <StatCard label="Active Orders" value={activeOrders.length} icon={Package} tone="primary" to="/orders" />
-              <StatCard label="Completed Orders" value={completedOrders.length} icon={CheckCircle2} tone="emerald" to="/orders" />
-              <StatCard label="Wallet / Paid" value={`$${Number(wallet?.availableBalance || paidTotal || 0).toFixed(2)}`} icon={Wallet} tone="amber" to="/wallet" />
-              <StatCard label="Pending Payments" value={pendingPayments.length} icon={AlertTriangle} tone="destructive" to="/wallet" />
-            </div>
-
-            {(walletHistory?.items || []).length > 0 && (
-              <div className="mb-8">
-                <SectionHeader title="Recent wallet activity" to="/wallet" />
-                <div className="bg-white rounded-3xl border border-border soft-shadow divide-y divide-border overflow-hidden">
-                  {walletHistory.items.slice(0, 4).map((tx) => (
-                    <div key={tx.id} className="flex items-center gap-3 p-4 min-w-0">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold capitalize truncate">{tx.type}</p>
-                        <p className="text-xs text-muted-foreground truncate">{tx.reference || tx.description}</p>
-                      </div>
-                      <span className="text-sm font-bold shrink-0">
-                        {tx.direction === 'credit' ? '+' : '-'}${Number(tx.amount || 0).toFixed(2)}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <div className="grid lg:grid-cols-2 gap-6 mb-10">
+            {/* Recent Orders */}
+            <div className="grid lg:grid-cols-2 gap-6 mb-8">
               <div className="min-w-0">
                 <SectionHeader title="Recent Orders" to="/orders" />
                 {orders.length === 0 ? (
@@ -222,6 +210,36 @@ const DashboardPage = () => {
                 )}
               </div>
             </div>
+
+            {/* Analytics */}
+            <div className="mb-2">
+              <SectionHeader title="Analytics" />
+            </div>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-8">
+              <StatCard label="Active Orders" value={activeOrders.length} icon={Package} tone="primary" to="/orders" />
+              <StatCard label="Completed Orders" value={completedOrders.length} icon={CheckCircle2} tone="emerald" to="/orders" />
+              <StatCard label="Wallet / Paid" value={`$${Number(wallet?.availableBalance || paidTotal || 0).toFixed(2)}`} icon={Wallet} tone="amber" to="/wallet" />
+              <StatCard label="Pending Payments" value={pendingPayments.length} icon={AlertTriangle} tone="destructive" to="/wallet" />
+            </div>
+
+            {(walletHistory?.items || []).length > 0 && (
+              <div className="mb-8">
+                <SectionHeader title="Recent wallet activity" to="/wallet" />
+                <div className="bg-white rounded-3xl border border-border soft-shadow divide-y divide-border overflow-hidden">
+                  {walletHistory.items.slice(0, 4).map((tx) => (
+                    <div key={tx.id} className="flex items-center gap-3 p-4 min-w-0">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold capitalize truncate">{tx.type}</p>
+                        <p className="text-xs text-muted-foreground truncate">{tx.reference || tx.description}</p>
+                      </div>
+                      <span className="text-sm font-bold shrink-0">
+                        {tx.direction === 'credit' ? '+' : '-'}${Number(tx.amount || 0).toFixed(2)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div className="mb-10">
               <SectionHeader title="Recent Purchases" to="/downloads" />

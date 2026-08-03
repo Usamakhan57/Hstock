@@ -150,7 +150,7 @@ const TelegramConnectSection = ({
   };
 
   const statusLabel = status.connected
-    ? 'Connected ✅'
+    ? 'Telegram Connected ✅'
     : connecting
       ? 'Connecting...'
       : 'Not Connected';
@@ -160,7 +160,7 @@ const TelegramConnectSection = ({
       <div className="flex items-start justify-between gap-3">
         <div>
           <h3 className="font-bold text-sm flex items-center gap-2">
-            <Send className="w-4 h-4 text-primary" />
+            <Send className="w-4 h-4 text-[#229ED9]" />
             {title}
           </h3>
           <p className="text-xs text-muted-foreground mt-1">
@@ -186,6 +186,14 @@ const TelegramConnectSection = ({
 
       {status.connected ? (
         <>
+          <div className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-full border border-[#229ED9]/30 bg-[#229ED9]/10 px-5 text-sm font-semibold text-emerald-800">
+            <Send className="h-4 w-4 text-[#229ED9]" />
+            Telegram Connected ✅
+            {status.username ? (
+              <span className="font-medium text-emerald-700/80">@{status.username}</span>
+            ) : null}
+          </div>
+
           <div className="grid sm:grid-cols-2 gap-3 text-sm">
             <div className="rounded-2xl border border-border px-4 py-3">
               <p className="text-xs text-muted-foreground">Telegram Username</p>
@@ -231,10 +239,11 @@ const TelegramConnectSection = ({
           type="button"
           onClick={connect}
           disabled={busy || loading}
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full brand-gradient text-white text-sm font-semibold soft-shadow hover:opacity-95 transition-all disabled:opacity-60"
+          className="inline-flex h-11 w-full sm:w-auto items-center justify-center gap-2 px-5 py-2.5 rounded-full text-white text-sm font-semibold shadow-sm hover:opacity-95 transition-all disabled:opacity-60"
+          style={{ backgroundColor: '#229ED9' }}
         >
           {busy || connecting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-          {connecting ? 'Connecting…' : connectLabel}
+          {connecting ? 'Connecting...' : connectLabel}
         </button>
       )}
     </div>

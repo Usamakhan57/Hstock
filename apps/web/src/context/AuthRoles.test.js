@@ -26,8 +26,16 @@ describe('AuthRoles', () => {
 
   it('routes users to the correct default home', () => {
     expect(defaultHomeForUser({ roles: [ROLES.ADMIN] })).toBe('/admin');
+    expect(defaultHomeForUser({ roles: [ROLES.SUPER_ADMIN] })).toBe('/admin');
     expect(defaultHomeForUser({ roles: [ROLES.SELLER] })).toBe('/seller/dashboard');
     expect(defaultHomeForUser({ roles: [ROLES.BUYER] })).toBe('/dashboard');
     expect(defaultHomeForUser({ roles: [ROLES.BUYER, ROLES.SELLER] })).toBe('/seller/dashboard');
+  });
+
+  it('does not treat admins as buyers or sellers for marketplace homes', () => {
+    const admin = { roles: [ROLES.ADMIN] };
+    expect(isBuyer(admin)).toBe(false);
+    expect(isSeller(admin)).toBe(false);
+    expect(defaultHomeForUser(admin)).toBe('/admin');
   });
 });
