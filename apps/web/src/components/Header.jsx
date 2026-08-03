@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   Search, User, Menu, X, ChevronDown, LayoutGrid, Bell,
@@ -299,6 +300,7 @@ const Header = () => {
   const searchRef = useRef(null);
   const drawerCloseTimeoutRef = useRef(null);
   const notifRef = useRef(null);
+  const [notifPos, setNotifPos] = useState(null);
 
   useEffect(() => {
     if (!isSellerUser || !isUserLoggedIn) {
@@ -381,6 +383,36 @@ const Header = () => {
     document.body.style.overflow = showSellerDrawer ? 'hidden' : '';
     return () => { document.body.style.overflow = ''; };
   }, [showSellerDrawer]);
+
+  // Keep notification panel fully inside the viewport (mobile was clipping off-screen).
+  useEffect(() => {
+    if (!notifOpen) {
+      setNotifPos(null);
+      return undefined;
+    }
+    const update = () => {
+      const el = notifRef.current;
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      const width = Math.min(320, Math.max(240, window.innerWidth - 16));
+      const left = Math.min(
+        Math.max(8, rect.right - width),
+        window.innerWidth - width - 8,
+      );
+      const top = Math.min(rect.bottom + 8, window.innerHeight - 24);
+      setNotifPos({ top, left, width });
+    };
+    update();
+    window.addEventListener('resize', update);
+    window.addEventListener('scroll', update, true);
+    return () => {
+      window.removeEventListener('resize', update);
+      window.removeEventListener('scroll', update, true);
+    };
+  }, [notifOpen]);
+
+  const hideSellerFab = showSellerDrawer || open || notifOpen;
+
   return (
     <header
       className={`sticky top-0 z-50 pt-safe transition-all duration-300 ${
@@ -440,12 +472,12 @@ const Header = () => {
           </div>
 
           {/* Actions — Notifications | Buyer (Wallet remains in buyer dashboard menu) */}
-          <div className="flex items-center gap-0.5 sm:gap-1 md:gap-2 ml-auto md:ml-0 shrink-0">
+          <div className="flex items-center gap-1 sm:gap-1.5 md:gap-2 ml-auto md:ml-0 shrink-0">
             {user && (
               <div className="relative" ref={notifRef}>
                 <button
                   type="button"
-                  onClick={() => setNotifOpen((o) => !o)}
+                  onClick={() => { setNotifOpen((o) => !o); setOpen(false); }}
                   aria-expanded={notifOpen}
                   aria-haspopup="menu"
                   aria-label={`Notifications${notifications.filter((n) => !n.read).length > 0 ? `, ${notifications.filter((n) => !n.read).length} unread` : ''}`}
@@ -459,32 +491,45 @@ const Header = () => {
                   )}
                 </button>
 
-                {notifOpen && (
-                  <div role="menu" className="absolute right-0 top-[calc(100%+8px)] w-[min(20rem,calc(100vw-1.5rem))] bg-white rounded-2xl border border-border soft-shadow-lg py-2 animate-mega-in z-50 max-h-96 overflow-y-auto">
-                    <div className="flex items-center justify-between px-4 py-1.5">
+                {notifOpen && notifPos && createPortal(
+                  <div
+                    role="menu"
+                    data-testid="notifications-dropdown"
+                    style={{
+                      position: 'fixed',
+                      top: notifPos.top,
+                      left: notifPos.left,
+                      width: notifPos.width,
+                      maxHeight: 'min(70vh, 28rem)',
+                      zIndex: 80,
+                    }}
+                    className="bg-white rounded-2xl border border-border shadow-[0_20px_50px_-20px_rgba(15,23,42,0.35)] py-2 animate-mega-in overflow-y-auto overscroll-contain"
+                  >
+                    <div className="sticky top-0 z-10 flex items-center justify-between gap-2 bg-white px-4 py-1.5 border-b border-border/60">
                       <span className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Notifications</span>
-                      <Link to="/notifications" onClick={() => setNotifOpen(false)} className="text-xs font-semibold text-primary hover:underline">View all</Link>
+                      <Link to="/notifications" onClick={() => setNotifOpen(false)} className="text-xs font-semibold text-primary hover:underline shrink-0">View all</Link>
                     </div>
                     {notifications.length === 0 ? (
                       <p className="px-4 py-4 text-sm text-muted-foreground">You're all caught up.</p>
                     ) : (
-                      notifications.slice(0, 6).map((n) => (
+                      notifications.slice(0, 12).map((n) => (
                         <Link
                           key={n.id}
                           to={n.link || '/notifications'}
                           role="menuitem"
                           onClick={() => { markNotificationRead(n.id); setNotifOpen(false); }}
-                          className="flex items-start gap-2.5 px-4 py-2.5 hover:bg-secondary transition-colors"
+                          className="flex items-start gap-2.5 px-4 py-2.5 hover:bg-secondary active:bg-secondary/80 transition-colors"
                         >
                           <span className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${n.read ? 'bg-transparent' : 'bg-primary'}`} />
                           <span className="min-w-0">
                             <span className={`block text-sm ${n.read ? 'font-medium' : 'font-bold'} truncate`}>{n.title}</span>
-                            <span className="block text-xs text-muted-foreground truncate">{n.body}</span>
+                            <span className="block text-xs text-muted-foreground line-clamp-2">{n.body}</span>
                           </span>
                         </Link>
                       ))
                     )}
-                  </div>
+                  </div>,
+                  document.body,
                 )}
               </div>
             )}
@@ -504,10 +549,10 @@ const Header = () => {
               <Link
                 to="/dashboard"
                 aria-label="Buyer dashboard"
-                className="flex items-center gap-1.5 pl-2.5 pr-3 sm:pl-3 sm:pr-4 py-1.5 sm:py-2 rounded-full bg-secondary hover:bg-secondary/70 active:scale-[0.98] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="flex items-center gap-1.5 pl-2 pr-2.5 sm:pl-3 sm:pr-4 py-1.5 sm:py-2 rounded-full bg-secondary hover:bg-secondary/70 active:scale-[0.98] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
-                <User className="w-[18px] h-[18px] sm:w-5 sm:h-5 text-primary" aria-hidden="true" />
-                <span className="text-sm font-semibold">Buyer</span>
+                <User className="w-[18px] h-[18px] sm:w-5 sm:h-5 text-primary shrink-0" aria-hidden="true" />
+                <span className="text-xs sm:text-sm font-semibold">Buyer</span>
               </Link>
             )}
 
@@ -515,7 +560,7 @@ const Header = () => {
               aria-label={open ? 'Close mobile navigation' : 'Open mobile navigation'}
               aria-expanded={open}
               className="lg:hidden p-1.5 sm:p-2.5 rounded-full hover:bg-secondary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              onClick={() => setOpen((prev) => !prev)}
+              onClick={() => { setOpen((prev) => !prev); setNotifOpen(false); }}
             >
               {open ? <X className="w-[18px] h-[18px] sm:w-5 sm:h-5" aria-hidden="true" /> : <Menu className="w-[18px] h-[18px] sm:w-5 sm:h-5" aria-hidden="true" />}
             </button>
@@ -675,16 +720,19 @@ const Header = () => {
 
       {isSellerUser && (
         <>
-          {!showSellerDrawer && (
+          {/* Portal FAB to body — header backdrop-filter creates a fixed containing block */}
+          {!hideSellerFab && createPortal(
             <button
               type="button"
               onClick={openSellerDrawer}
               aria-label="Open seller sidebar"
+              data-testid="seller-fab"
               className="fixed z-40 inline-flex items-center gap-2 rounded-full bg-primary px-4 py-3 text-white shadow-2xl shadow-primary/30 hover:bg-primary/90 active:scale-[0.98] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring right-[max(1rem,env(safe-area-inset-right,0px))] bottom-[max(1.5rem,env(safe-area-inset-bottom,0px))]"
             >
               <LucideStore className="w-5 h-5" aria-hidden="true" />
               <span className="hidden sm:inline text-sm font-semibold">Seller workspace</span>
-            </button>
+            </button>,
+            document.body,
           )}
 
           <SellerSidebar

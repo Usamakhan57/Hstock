@@ -42,6 +42,7 @@ export async function createNotification({
   emailType = null,
   emailData = {},
   notifyAdmins = false,
+  sendTelegram = true,
 }) {
   if (!userId) throw new AppError('userId is required', 400, { code: 'VALIDATION_ERROR' });
 
@@ -79,18 +80,20 @@ export async function createNotification({
 
   // Mirror in-app notifications to Telegram when the user is connected.
   // Failures are isolated inside the Telegram queue/service.
-  try {
-    queueUserTelegramNotification({
-      userId,
-      title,
-      body,
-      link,
-      eventType: type,
-      notificationId: String(notification._id),
-      meta,
-    });
-  } catch (error) {
-    logger.warn('Telegram notification enqueue skipped', { message: error.message });
+  if (sendTelegram) {
+    try {
+      queueUserTelegramNotification({
+        userId,
+        title,
+        body,
+        link,
+        eventType: type,
+        notificationId: String(notification._id),
+        meta,
+      });
+    } catch (error) {
+      logger.warn('Telegram notification enqueue skipped', { message: error.message });
+    }
   }
 
   eventBus.emit(DOMAIN_EVENTS.NOTIFICATION_CREATED, {

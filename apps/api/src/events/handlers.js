@@ -1,6 +1,8 @@
 import { logger } from '../config/logger.js';
 import { DOMAIN_EVENTS, SOCKET_EVENTS } from '../constants/events.js';
+import { User } from '../models/index.js';
 import { createNotification, notifyUsers } from '../services/notification.service.js';
+import { buildSellerNewOrderMessage } from '../services/sellerOrderNotify.js';
 import {
   emitOrderUpdate,
   emitPaymentUpdate,
@@ -39,6 +41,7 @@ export function registerEventHandlers(eventBus) {
         });
       }
       if (order.sellerUser) {
+        // In-app only until payment + escrow succeed (Telegram fires on ESCROW_LOCKED).
         await createNotification({
           userId: order.sellerUser,
           type: 'order_created',
@@ -46,6 +49,7 @@ export function registerEventHandlers(eventBus) {
           body: `Buyer placed order ${order.orderNumber}.`,
           link: '/seller/orders',
           meta: { orderId: String(order._id), orderNumber: order.orderNumber },
+          sendTelegram: false,
         });
       }
     } catch (error) {
@@ -98,6 +102,7 @@ export function registerEventHandlers(eventBus) {
         });
       }
       if (sellerId && String(sellerId) !== String(buyerId)) {
+        // In-app only — rich Telegram "New Order Received" is sent on ESCROW_LOCKED.
         await createNotification({
           userId: sellerId,
           type: 'payment_success',
@@ -108,6 +113,7 @@ export function registerEventHandlers(eventBus) {
             paymentId: payment?._id ? String(payment._id) : null,
             orderNumber: order?.orderNumber,
           },
+          sendTelegram: false,
         });
       }
     } catch (error) {
@@ -144,16 +150,27 @@ export function registerEventHandlers(eventBus) {
       if (order) emitOrderUpdate(order);
       const sellerId = escrow?.sellerUser || order?.sellerUser;
       if (sellerId) {
+        let buyer = null;
+        if (order?.buyer) {
+          try {
+            buyer = await User.findById(order.buyer).select('name email').lean();
+          } catch (lookupError) {
+            logger.warn('Seller order notify buyer lookup failed', { message: lookupError.message });
+          }
+        }
+        const message = buildSellerNewOrderMessage(order || {}, buyer);
+        // After payment verified + escrow created + order exists — Telegram mirrors this.
         await createNotification({
           userId: sellerId,
           type: 'escrow_locked',
-          title: 'Escrow created',
-          body: `Escrow was created for order ${order?.orderNumber || ''}.`,
-          link: '/seller/escrow',
+          title: message.title,
+          body: message.body,
+          link: message.link,
           meta: {
+            ...message.meta,
             escrowId: escrow?._id ? String(escrow._id) : null,
-            orderNumber: order?.orderNumber,
           },
+          sendTelegram: true,
         });
       }
     } catch (error) {

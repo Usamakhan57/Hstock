@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ArrowLeft, Bell, LayoutDashboard, LogOut, MessageCircleQuestion, Package, Settings, ShieldCheck, ShoppingCart, Wallet } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -12,6 +12,7 @@ const SellerSidebar = ({ open, closing, onClose, seller, walletBalance, notifica
   const navigate = useNavigate();
   const panelRef = useRef(null);
   const firstFocusableRef = useRef(null);
+  const [entered, setEntered] = useState(false);
 
   const menuItems = useMemo(() => [
     { label: 'Dashboard', to: '/seller/dashboard', icon: LayoutDashboard },
@@ -38,6 +39,18 @@ const SellerSidebar = ({ open, closing, onClose, seller, walletBalance, notifica
     },
     { label: 'Promote Store', to: '/seller/analytics', primary: false },
   ], [storeSlug, isApproved]);
+
+  // Animate in from above the fold (mobile) / from the right (desktop).
+  useEffect(() => {
+    if (!open || closing) {
+      setEntered(false);
+      return undefined;
+    }
+    const frame = window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => setEntered(true));
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [open, closing]);
 
   useEffect(() => {
     if (!open) return undefined;
@@ -95,21 +108,23 @@ const SellerSidebar = ({ open, closing, onClose, seller, walletBalance, notifica
     navigate('/');
   };
 
-  const panelMotion = closing
-    ? '-translate-y-full sm:translate-y-0 sm:translate-x-full'
-    : 'translate-y-0 sm:translate-x-0';
+  const showOpen = entered && !closing;
+  const panelMotion = showOpen
+    ? 'translate-y-0 sm:translate-x-0'
+    : '-translate-y-full sm:translate-y-0 sm:translate-x-full';
 
   return createPortal(
-    <div className="fixed inset-0 z-[45] pointer-events-none">
+    <div className="fixed inset-0 z-[45] pointer-events-none" data-testid="seller-drawer-root">
       <div className="pointer-events-auto">
-        <SidebarOverlay open={open} onClose={onClose} />
+        <SidebarOverlay open={showOpen} onClose={onClose} />
       </div>
       <aside
         ref={panelRef}
         role="dialog"
         aria-label="Seller sidebar"
         aria-modal="true"
-        className={`pointer-events-auto fixed inset-x-0 top-[calc(4rem+env(safe-area-inset-top,0px))] z-[46] flex max-h-[calc(100dvh-4rem-env(safe-area-inset-top,0px)-env(safe-area-inset-bottom,0px))] w-full flex-col overflow-hidden bg-white shadow-[0_20px_80px_-24px_rgba(15,23,42,0.35)] border-b border-[#E5E7EB] transition-transform duration-250 ease-out sm:inset-y-0 sm:left-auto sm:right-0 sm:top-0 sm:max-h-[100dvh] sm:h-[100vh] sm:w-[380px] sm:border-b-0 sm:border-l lg:w-[420px] ${panelMotion}`}
+        data-testid="seller-drawer-panel"
+        className={`pointer-events-auto fixed inset-x-0 top-[calc(4rem+env(safe-area-inset-top,0px))] z-[46] flex max-h-[calc(100dvh-4rem-env(safe-area-inset-top,0px)-env(safe-area-inset-bottom,0px))] w-full flex-col overflow-hidden bg-white shadow-[0_20px_80px_-24px_rgba(15,23,42,0.35)] border-b border-[#E5E7EB] transition-transform duration-300 ease-out sm:inset-y-0 sm:left-auto sm:right-0 sm:top-0 sm:max-h-[100dvh] sm:h-[100vh] sm:w-[380px] sm:border-b-0 sm:border-l lg:w-[420px] ${panelMotion}`}
       >
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-safe" style={{ WebkitOverflowScrolling: 'touch' }}>
           <div className="flex min-h-full flex-col">
