@@ -251,6 +251,25 @@ export function buildActionRequired({
     });
   }
 
+  const refundRequests = orders.filter((o) => (
+    o.status === 'refunded'
+    || o.refundRequested
+    || o.refundStatus === 'requested'
+    || o.refundStatus === 'pending'
+  ));
+  if (refundRequests.length) {
+    actions.push({
+      id: 'refunds',
+      type: 'refund',
+      severity: 'medium',
+      title: `${refundRequests.length} refund request${refundRequests.length === 1 ? '' : 's'}`,
+      description: 'Review refunded or refund-pending orders tied to your listings.',
+      cta: 'Orders',
+      to: '/seller/orders',
+      count: refundRequests.length,
+    });
+  }
+
   const manualPending = orders.filter((o) => (
     ['escrow', 'paid', 'delivered'].includes(o.status)
     && (o.product?.deliveryType === 'manual' || o.deliveryType === 'manual')
