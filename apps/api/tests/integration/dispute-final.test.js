@@ -342,6 +342,10 @@ test('replacement versioning, reject then accept resolves dispute and read-only 
   assert.ok(v1.body.data.accounts[0].masked.password.includes('*'));
   assert.equal(v1.body.data.accounts[0].encrypted, undefined);
 
+  const waiting = await Dispute.findById(disputeId).lean();
+  assert.equal(waiting.status, 'waiting_for_buyer_confirmation');
+  assert.ok(waiting.firstReplacementAt);
+
   const reject = await request(app)
     .post(`/api/v1/disputes/${disputeId}/replacements/${v1.body.data._id}/respond`)
     .set('Authorization', `Bearer ${buyerToken}`)
@@ -431,6 +435,55 @@ test('replacement versioning, reject then accept resolves dispute and read-only 
   assert.equal(versions[0].status, 'rejected');
   assert.equal(versions[1].status, 'accepted');
   assert.ok(versions[0].accounts[0].encrypted.password);
+});
+
+test('replacement credentialBlob is stored exactly and never auto-closes dispute', async () => {
+  const adminToken = await createAdminToken('blob-admin@example.com');
+  const { token: sellerToken } = await createSeller('blob-seller@example.com');
+  const { token: buyerToken } = await createBuyer('blob-buyer@example.com');
+  const product = await createLiveProduct(adminToken, sellerToken, { stock: 5, price: 12 });
+  const paid = await buyAndPay({ buyerToken, productId: product._id, quantity: 1 });
+
+  const dispute = await request(app)
+    .post('/api/v1/disputes')
+    .set('Authorization', `Bearer ${buyerToken}`)
+    .send({
+      orderId: paid.order._id,
+      reason: 'Login failed',
+      description: 'Cannot login to the delivered account.',
+    });
+  assert.equal(dispute.status, 201, JSON.stringify(dispute.body));
+  const disputeId = dispute.body.data._id;
+
+  const exactBlob = 'acc@mail.com\nPassWord!23\nrecovery@mail.com\n2FA:\n111 222\n333 444\ncookie=abc; Path=/\ntoken=xyz';
+  const sent = await request(app)
+    .post(`/api/v1/disputes/${disputeId}/replacements`)
+    .set('Authorization', `Bearer ${sellerToken}`)
+    .send({ credentialBlob: exactBlob });
+  assert.equal(sent.status, 201, JSON.stringify(sent.body));
+  assert.equal(sent.body.data.status, 'pending');
+  assert.equal(sent.body.data.hasCredentialBlob, true);
+  assert.equal(sent.body.data.credentialBlobEncrypted, undefined);
+
+  const waiting = await Dispute.findById(disputeId).lean();
+  assert.equal(waiting.status, 'waiting_for_buyer_confirmation');
+  assert.ok(waiting.sellerResponseDeadline);
+
+  const reveal = await request(app)
+    .post(`/api/v1/disputes/${disputeId}/replacements/${sent.body.data._id}/reveal`)
+    .set('Authorization', `Bearer ${buyerToken}`);
+  assert.equal(reveal.status, 200, JSON.stringify(reveal.body));
+  assert.equal(reveal.body.data.credentialBlob, exactBlob);
+
+  // Auto-refund must NOT run once a replacement exists, even if deadline passed.
+  await Dispute.findByIdAndUpdate(disputeId, {
+    sellerResponseDeadline: new Date(Date.now() - 60_000),
+  });
+  const { processUnansweredDisputeAutoRefunds } = await import('../../src/services/dispute.service.js');
+  await processUnansweredDisputeAutoRefunds({ limit: 20 });
+  const stillWaiting = await Dispute.findById(disputeId).lean();
+  assert.equal(stillWaiting.status, 'waiting_for_buyer_confirmation');
+  assert.equal(stillWaiting.autoRefundedAt, null);
 });
 
 test('partial refund refunds only disputed amount', async () => {

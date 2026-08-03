@@ -3,10 +3,12 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import { authApi } from '../services/authApi';
 import { useStore } from '../context/StoreContext';
+import { defaultHomeForUser } from '../context/AuthRoles';
 import Seo from '../components/Seo';
 
 /**
  * Handles redirect from API Google OAuth callback with tokens in query string.
+ * Must work in desktop browsers, mobile Chrome, and installed Android PWAs.
  */
 const AuthGoogleCallbackPage = () => {
   const [params] = useSearchParams();
@@ -20,15 +22,26 @@ const AuthGoogleCallbackPage = () => {
       const status = params.get('google');
       const accessToken = params.get('accessToken');
       const refreshToken = params.get('refreshToken');
+      const requestedRedirect = params.get('redirect');
+
       if (status !== 'success' || !accessToken) {
         setError(params.get('reason') || 'Google sign-in failed');
         return;
       }
+
       try {
         authApi.completeGoogleSession({ accessToken, refreshToken, user: null }, { remember: true });
-        await refreshProfile();
+        const profile = await refreshProfile();
         await refreshNotifications();
-        if (!cancelled) navigate('/dashboard', { replace: true });
+        if (cancelled) return;
+
+        const safeRedirect = requestedRedirect
+          && requestedRedirect.startsWith('/')
+          && !requestedRedirect.startsWith('//')
+          ? requestedRedirect
+          : null;
+        const home = safeRedirect || defaultHomeForUser(profile?.user || profile || null);
+        navigate(home, { replace: true });
       } catch (err) {
         if (!cancelled) setError(err.message || 'Unable to complete Google sign-in');
       }

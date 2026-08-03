@@ -2,6 +2,7 @@ import cron from 'node-cron';
 import { env } from '../config/env.js';
 import { logger } from '../config/logger.js';
 import { registerEscrowJob } from './escrow.job.js';
+import { registerDisputeAutoRefundJob } from './disputeAutoRefund.job.js';
 import { registerNotificationJob } from './notification.job.js';
 import { registerCleanupJob } from './cleanup.job.js';
 import { registerWithdrawalJob } from './withdrawal.job.js';
@@ -18,6 +19,7 @@ const scheduled = [];
 export function initializeJobs() {
   const registry = [
     registerEscrowJob(),
+    registerDisputeAutoRefundJob(),
     registerOrdersJob(),
     ...registerPaymentsJob(),
     registerWithdrawalJob(),

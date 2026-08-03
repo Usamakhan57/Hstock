@@ -74,6 +74,7 @@ export const PaymentStatusEnum = Object.freeze({
 export const DisputeStatusEnum = Object.freeze({
   Open: 'open',
   UnderReview: 'under_review',
+  WaitingForBuyerConfirmation: 'waiting_for_buyer_confirmation',
   Resolved: 'resolved',
   Closed: 'closed',
 });

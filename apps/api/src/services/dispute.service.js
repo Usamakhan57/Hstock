@@ -170,6 +170,8 @@ export async function openDispute(payload, actor, requestMeta = {}) {
         disputedAccountIds,
         isPartial,
         credentialsExpireAt: expireAt,
+        openedAt: new Date(),
+        sellerResponseDeadline: new Date(Date.now() + 24 * 60 * 60 * 1000),
         messages: [
           {
             author: actor.id,
@@ -635,6 +637,170 @@ export async function resolveDispute(id, payload, actor) {
   });
 }
 
+/**
+ * 24h rule: auto-refund ONLY when seller never submitted any replacement.
+ * Once a replacement exists (latestReplacementVersion > 0 / firstReplacementAt set),
+ * never auto-refund or auto-close.
+ */
+export async function processUnansweredDisputeAutoRefunds({ limit = 50 } = {}) {
+  const now = new Date();
+  const candidates = await Dispute.find({
+    status: DISPUTE_STATUS.OPEN,
+    latestReplacementVersion: { $lte: 0 },
+    firstReplacementAt: null,
+    autoRefundedAt: null,
+    sellerResponseDeadline: { $lte: now },
+  })
+    .sort({ sellerResponseDeadline: 1 })
+    .limit(limit);
+
+  const results = {
+    processed: 0,
+    succeeded: 0,
+    failed: 0,
+    errors: [],
+  };
+
+  for (const dispute of candidates) {
+    results.processed += 1;
+    try {
+      // Skip if a replacement appeared between query and process.
+      if ((dispute.latestReplacementVersion || 0) > 0 || dispute.firstReplacementAt) {
+        continue;
+      }
+      await autoRefundDisputeForNoReplacement(dispute._id);
+      results.succeeded += 1;
+    } catch (error) {
+      results.failed += 1;
+      results.errors.push({
+        disputeId: String(dispute._id),
+        message: error.message,
+      });
+    }
+  }
+
+  return results;
+}
+
+async function autoRefundDisputeForNoReplacement(disputeId) {
+  const systemActor = {
+    id: null,
+    _id: null,
+    roles: [USER_ROLES.SUPER_ADMIN],
+  };
+
+  return withTransaction(async (session) => {
+    const dispute = await disputeRepository.findDisputeById(disputeId, { session });
+    if (!dispute) {
+      throw new AppError('Dispute not found', 404, { code: 'DISPUTE_NOT_FOUND' });
+    }
+    if (dispute.status !== DISPUTE_STATUS.OPEN) {
+      throw new AppError('Dispute is not open for auto-refund', 400, { code: 'DISPUTE_NOT_OPEN' });
+    }
+    if ((dispute.latestReplacementVersion || 0) > 0 || dispute.firstReplacementAt) {
+      throw new AppError('Replacement already submitted — auto-refund blocked', 400, {
+        code: 'REPLACEMENT_EXISTS',
+      });
+    }
+
+    const escrow = await escrowRepository.findEscrowById(dispute.escrow, { session });
+    if (!escrow) {
+      throw new AppError('Escrow not found', 404, { code: 'ESCROW_NOT_FOUND' });
+    }
+    const order = await orderRepository.findOrderById(dispute.order, { session });
+
+    await escrowService.releaseUndisputedEscrowPortion(escrow._id, {
+      reason: 'undisputed_on_auto_refund',
+      actor: systemActor,
+      session,
+    });
+    const heldEscrow = await escrowRepository.findEscrowById(dispute.escrow, { session });
+
+    const refundAmount = roundMoney(
+      heldEscrow.heldAmount || dispute.disputedAmount || heldEscrow.amount,
+    );
+    const refundType = refundAmount >= roundMoney(heldEscrow.amount)
+      && !(heldEscrow.releasedAmount > 0)
+      ? 'full'
+      : 'partial';
+
+    await refundService.createEscrowRefund({
+      order,
+      escrow: heldEscrow,
+      dispute,
+      amount: refundAmount,
+      type: refundType,
+      reason: 'Auto-refund: seller did not submit a replacement within 24 hours',
+      actor: systemActor,
+      session,
+    });
+
+    heldEscrow.refundedAmount = roundMoney((heldEscrow.refundedAmount || 0) + refundAmount);
+    heldEscrow.heldAmount = 0;
+    heldEscrow.disputedAmount = 0;
+    if (refundType === 'full') {
+      heldEscrow.status = ESCROW_STATUS.REFUNDED;
+      heldEscrow.refundedAt = new Date();
+      order.status = ORDER_STATUS.REFUNDED;
+    } else {
+      heldEscrow.status = ESCROW_STATUS.RELEASED;
+      heldEscrow.releasedAt = new Date();
+      order.status = ORDER_STATUS.COMPLETED;
+    }
+    if (session) {
+      await heldEscrow.save({ session });
+      await order.save({ session });
+    } else {
+      await heldEscrow.save();
+      await order.save();
+    }
+
+    dispute.refundQuantity = dispute.disputedQuantity;
+    dispute.refundAmount = refundAmount;
+    dispute.heldQuantity = 0;
+    dispute.remainingQuantity = 0;
+    dispute.resolvedQuantity = dispute.disputedQuantity;
+    dispute.status = DISPUTE_STATUS.RESOLVED;
+    dispute.resolution = DISPUTE_RESOLUTION.BUYER_WINS;
+    dispute.resolutionNote = 'Auto-refund: no seller replacement within 24 hours';
+    dispute.resolvedAt = new Date();
+    dispute.autoRefundedAt = new Date();
+    if (session) await dispute.save({ session });
+    else await dispute.save();
+
+    await disputeChatService.setChatReadOnly(dispute._id, { session, expireCredentials: true });
+
+    await disputeTimelineService.appendTimelineEvent({
+      disputeId: dispute._id,
+      orderId: dispute.order,
+      event: DISPUTE_TIMELINE_EVENTS.REFUND_ISSUED,
+      actor: systemActor,
+      role: 'system',
+      message: `Auto-refund issued: ${refundAmount}`,
+      meta: { refundAmount, reason: 'no_replacement_within_24h' },
+      session,
+    });
+    await disputeTimelineService.appendTimelineEvent({
+      disputeId: dispute._id,
+      orderId: dispute.order,
+      event: DISPUTE_TIMELINE_EVENTS.DISPUTE_CLOSED,
+      actor: systemActor,
+      role: 'system',
+      message: 'Dispute closed after automatic refund',
+      meta: { resolution: DISPUTE_RESOLUTION.BUYER_WINS },
+      session,
+    });
+
+    const disputeObj = dispute.toObject();
+    emitDomainEvent(DOMAIN_EVENTS.DISPUTE_RESOLVED, {
+      dispute: disputeObj,
+      order: order?.toObject ? order.toObject() : order,
+      resolution: DISPUTE_RESOLUTION.BUYER_WINS,
+    });
+    return disputeObj;
+  });
+}
+
 export default {
   openDispute,
   listDisputes,
@@ -643,4 +809,5 @@ export default {
   getDisputeTimeline,
   addDisputeMessage,
   resolveDispute,
+  processUnansweredDisputeAutoRefunds,
 };

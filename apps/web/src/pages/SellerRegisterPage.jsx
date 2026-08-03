@@ -180,7 +180,7 @@ const SellerRegisterPage = () => {
         setGoogleLoading(false);
         return;
       }
-      window.location.assign(authApi.getGoogleAuthUrl());
+      window.location.assign(authApi.getGoogleAuthUrl({ intent: 'seller', returnTo: '/seller/dashboard' }));
     } catch (err) {
       toast({
         title: 'Google sign-up failed',

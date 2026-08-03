@@ -133,6 +133,16 @@ router.post(
 );
 
 router.post(
+  '/:id/replacements/:replacementId/reveal',
+  requireAuth,
+  requirePermission(PERMISSIONS.DISPUTES_READ),
+  validate({
+    params: respondReplacementSchema.params.pick({ id: true, replacementId: true }),
+  }),
+  disputeReplacementController.revealReplacementBlob,
+);
+
+router.post(
   '/:id/replacements/:replacementId/accounts/:accountId/reveal',
   requireAuth,
   requirePermission(PERMISSIONS.DISPUTES_READ),

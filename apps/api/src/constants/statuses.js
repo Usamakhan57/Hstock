@@ -54,6 +54,7 @@ export const WITHDRAWAL_STATUS_VALUES = Object.freeze(Object.values(WITHDRAWAL_S
 export const DISPUTE_STATUS = Object.freeze({
   OPEN: 'open',
   UNDER_REVIEW: 'under_review',
+  WAITING_FOR_BUYER_CONFIRMATION: 'waiting_for_buyer_confirmation',
   RESOLVED: 'resolved',
   CLOSED: 'closed',
 });

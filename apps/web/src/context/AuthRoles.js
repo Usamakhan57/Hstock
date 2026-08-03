@@ -31,8 +31,8 @@ export function isSuperAdmin(user) {
 
 export function defaultHomeForUser(user) {
   if (isAdmin(user)) return '/admin';
-  if (isSeller(user) && !hasRole(user, ROLES.BUYER)) return '/seller/dashboard';
-  return '/';
+  if (isSeller(user)) return '/seller/dashboard';
+  return '/dashboard';
 }
 
 export default {

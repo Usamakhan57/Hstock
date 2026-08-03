@@ -59,6 +59,19 @@ const disputeReplacementSchema = new mongoose.Schema(
       default: REPLACEMENT_STATUS.PENDING,
       index: true,
     },
+    /**
+     * Exact seller-submitted replacement text (encrypted).
+     * Never parse/split — preserve whitespace and formatting.
+     */
+    credentialBlobEncrypted: {
+      type: String,
+      default: null,
+    },
+    hasCredentialBlob: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
     accounts: {
       type: [replacementAccountSchema],
       default: [],

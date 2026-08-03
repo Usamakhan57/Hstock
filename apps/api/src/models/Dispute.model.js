@@ -138,6 +138,20 @@ const disputeSchema = new mongoose.Schema(
       type: Date,
       default: Date.now,
     },
+    /** 24h seller response window — only enforced when no replacement has been sent. */
+    sellerResponseDeadline: {
+      type: Date,
+      default: null,
+      index: true,
+    },
+    firstReplacementAt: {
+      type: Date,
+      default: null,
+    },
+    autoRefundedAt: {
+      type: Date,
+      default: null,
+    },
     resolvedAt: {
       type: Date,
       default: null,

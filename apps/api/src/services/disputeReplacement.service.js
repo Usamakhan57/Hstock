@@ -20,6 +20,8 @@ import {
 import {
   encryptSensitiveObject,
   decryptSensitiveObject,
+  encryptCredential,
+  decryptCredential,
   redactForLogs,
 } from '../utils/credentials.crypto.js';
 import { USER_ROLES } from '../constants/roles.js';
@@ -51,16 +53,23 @@ function serializeReplacement(doc, { includeMasked = true } = {}) {
   const plain = typeof doc.toObject === 'function' ? doc.toObject() : { ...doc };
   return {
     ...plain,
+    hasCredentialBlob: Boolean(plain.hasCredentialBlob || plain.credentialBlobEncrypted),
+    // never include encrypted blobs in list responses
+    credentialBlobEncrypted: undefined,
     accounts: (plain.accounts || []).map((account) => ({
       _id: account._id,
       accountIdentifier: account.accountIdentifier,
       notes: account.notes,
       masked: includeMasked ? account.masked : undefined,
-      // never include encrypted blobs in list responses
     })),
   };
 }
 
+/**
+ * Seller submits a replacement.
+ * Prefer a single credentialBlob (exact text). Never auto-closes the dispute.
+ * Status → waiting_for_buyer_confirmation.
+ */
 export async function sendReplacement(disputeId, payload, actor, requestMeta = {}) {
   const dispute = await Dispute.findById(disputeId);
   if (!dispute) throw new AppError('Dispute not found', 404, { code: 'DISPUTE_NOT_FOUND' });
@@ -77,23 +86,50 @@ export async function sendReplacement(disputeId, payload, actor, requestMeta = {
     throw new AppError('Dispute chat is read-only', 400, { code: 'CHAT_READ_ONLY' });
   }
 
+  const blobRaw = typeof payload.credentialBlob === 'string' ? payload.credentialBlob : '';
+  // Preserve exact formatting — only reject empty/whitespace-only payloads.
+  const hasBlob = blobRaw.trim().length > 0;
+  const legacyAccounts = Array.isArray(payload.accounts) ? payload.accounts : [];
+
+  if (!hasBlob && legacyAccounts.length === 0) {
+    throw new AppError('Replacement credentials are required', 400, { code: 'REPLACEMENT_EMPTY' });
+  }
+
   const expireAt = new Date(
     Date.now() + (env.DISPUTE_CREDENTIAL_TTL_DAYS || 30) * 24 * 60 * 60 * 1000,
   );
 
-  const accounts = (payload.accounts || []).map((account) => {
-    const { encrypted, masked } = encryptSensitiveObject(account);
-    return {
-      accountIdentifier: account.accountIdentifier,
-      notes: account.notes || '',
-      encrypted,
-      masked,
-    };
-  });
+  let accounts = [];
+  let credentialBlobEncrypted = null;
+  let hasCredentialBlob = false;
+  let accountCount = 0;
+
+  if (hasBlob) {
+    // Store EXACTLY as submitted (including leading/trailing whitespace inside the paste).
+    credentialBlobEncrypted = encryptCredential(blobRaw);
+    hasCredentialBlob = true;
+    accountCount = 1;
+    accounts = [{
+      accountIdentifier: 'replacement',
+      notes: '',
+      encrypted: {},
+      masked: { preview: '•••• replacement credentials' },
+    }];
+  } else {
+    accounts = legacyAccounts.map((account) => {
+      const { encrypted, masked } = encryptSensitiveObject(account);
+      return {
+        accountIdentifier: account.accountIdentifier,
+        notes: account.notes || '',
+        encrypted,
+        masked,
+      };
+    });
+    accountCount = accounts.length;
+  }
 
   const version = (dispute.latestReplacementVersion || 0) + 1;
 
-  // Supersede previous pending replacements
   await DisputeReplacement.updateMany(
     { dispute: dispute._id, status: REPLACEMENT_STATUS.PENDING },
     { $set: { status: REPLACEMENT_STATUS.SUPERSEDED } },
@@ -106,14 +142,21 @@ export async function sendReplacement(disputeId, payload, actor, requestMeta = {
     version,
     status: REPLACEMENT_STATUS.PENDING,
     accounts,
-    accountCount: accounts.length,
+    accountCount,
     notes: payload.notes || '',
     createdBy: actorId(actor),
     credentialsExpireAt: expireAt,
+    credentialBlobEncrypted,
+    hasCredentialBlob,
   });
 
+  // NEVER auto-close. Only wait for buyer confirmation.
   dispute.latestReplacementVersion = version;
-  dispute.replacementQuantity = accounts.length;
+  dispute.replacementQuantity = accountCount;
+  dispute.status = DISPUTE_STATUS.WAITING_FOR_BUYER_CONFIRMATION;
+  if (!dispute.firstReplacementAt) {
+    dispute.firstReplacementAt = new Date();
+  }
   await dispute.save();
 
   await DisputeChatMessage.create({
@@ -122,7 +165,7 @@ export async function sendReplacement(disputeId, payload, actor, requestMeta = {
     order: dispute.order,
     author: actorId(actor),
     role: DISPUTE_CHAT_ROLES.SYSTEM,
-    body: `Seller sent Replacement v${version} (${accounts.length} account(s)). Buyer may Accept or Reject.`,
+    body: `Seller sent Replacement v${version}. Waiting for buyer confirmation.`,
     attachments: [],
   });
   chat.messageCount = (chat.messageCount || 0) + 1;
@@ -135,8 +178,13 @@ export async function sendReplacement(disputeId, payload, actor, requestMeta = {
     event: DISPUTE_TIMELINE_EVENTS.REPLACEMENT_SENT,
     actor,
     role: 'seller',
-    message: `Replacement v${version} sent (${accounts.length} account(s))`,
-    meta: { version, accountCount: accounts.length, replacementId: replacement._id },
+    message: `Replacement v${version} submitted`,
+    meta: {
+      version,
+      accountCount,
+      replacementId: replacement._id,
+      hasCredentialBlob,
+    },
   });
 
   await DisputeChatAuditLog.create({
@@ -145,7 +193,7 @@ export async function sendReplacement(disputeId, payload, actor, requestMeta = {
     order: dispute.order,
     actor: actorId(actor),
     action: DISPUTE_CHAT_AUDIT_ACTIONS.REPLACEMENT_SENT,
-    meta: redactForLogs({ version, accountCount: accounts.length, replacementId: replacement._id }),
+    meta: redactForLogs({ version, accountCount, replacementId: replacement._id, hasCredentialBlob }),
     ip: requestMeta.ip,
     userAgent: requestMeta.userAgent,
   });
@@ -157,7 +205,7 @@ export async function sendReplacement(disputeId, payload, actor, requestMeta = {
     resourceId: replacement._id,
     ip: requestMeta.ip,
     userAgent: requestMeta.userAgent,
-    meta: { disputeId, version, accountCount: accounts.length },
+    meta: { disputeId, version, accountCount, hasCredentialBlob },
   });
 
   const serialized = serializeReplacement(replacement);
@@ -216,13 +264,26 @@ export async function respondToReplacement(
     replacement.responseNote = payload.note || null;
     await replacement.save();
 
+    // Return dispute to OPEN so seller can send another replacement.
+    dispute.status = DISPUTE_STATUS.OPEN;
+    await dispute.save();
+
+    await disputeTimelineService.appendTimelineEvent({
+      disputeId: dispute._id,
+      orderId: dispute.order,
+      event: DISPUTE_TIMELINE_EVENTS.BUYER_REJECTED_REPLACEMENT,
+      actor,
+      role: 'buyer',
+      message: `Buyer rejected replacement v${replacement.version}`,
+      meta: { version: replacement.version, replacementId },
+    });
     await disputeTimelineService.appendTimelineEvent({
       disputeId: dispute._id,
       orderId: dispute.order,
       event: DISPUTE_TIMELINE_EVENTS.REPLACEMENT_REJECTED,
       actor,
       role: 'buyer',
-      message: `Replacement v${replacement.version} rejected`,
+      message: `Replacement v${replacement.version} rejected — dispute reopened`,
       meta: { version: replacement.version, replacementId },
     });
 
@@ -284,11 +345,31 @@ export async function respondToReplacement(
     await disputeTimelineService.appendTimelineEvent({
       disputeId: dispute._id,
       orderId: dispute.order,
+      event: DISPUTE_TIMELINE_EVENTS.BUYER_ACCEPTED_REPLACEMENT,
+      actor,
+      role: 'buyer',
+      message: `Buyer accepted replacement v${replacement.version}`,
+      meta: { version: replacement.version, replacementId },
+      session,
+    });
+    await disputeTimelineService.appendTimelineEvent({
+      disputeId: dispute._id,
+      orderId: dispute.order,
       event: DISPUTE_TIMELINE_EVENTS.REPLACEMENT_ACCEPTED,
       actor,
       role: 'buyer',
       message: `Replacement v${replacement.version} accepted`,
       meta: { version: replacement.version, replacementId },
+      session,
+    });
+    await disputeTimelineService.appendTimelineEvent({
+      disputeId: dispute._id,
+      orderId: dispute.order,
+      event: DISPUTE_TIMELINE_EVENTS.BUYER_CLOSED_DISPUTE,
+      actor,
+      role: 'buyer',
+      message: 'Buyer closed dispute — account works',
+      meta: { resolution: 'release' },
       session,
     });
     await disputeTimelineService.appendTimelineEvent({
@@ -314,10 +395,20 @@ export async function respondToReplacement(
     });
 
     const serialized = serializeReplacement(replacement);
+    const disputePlain = dispute.toObject ? dispute.toObject() : dispute;
+    const orderPlain = order?.toObject
+      ? order.toObject()
+      : (order || { _id: dispute.order, orderNumber: dispute.orderNumber });
+
     emitDomainEvent(DOMAIN_EVENTS.REPLACEMENT_ACCEPTED, {
-      dispute: dispute.toObject ? dispute.toObject() : dispute,
+      dispute: disputePlain,
       replacement: serialized,
-      order: order?.toObject ? order.toObject() : (order || { _id: dispute.order, orderNumber: dispute.orderNumber }),
+      order: orderPlain,
+    });
+    emitDomainEvent(DOMAIN_EVENTS.DISPUTE_RESOLVED, {
+      dispute: disputePlain,
+      order: orderPlain,
+      resolution: 'release',
     });
 
     return serialized;
@@ -347,6 +438,27 @@ export async function revealReplacementAccount(
   if (replacement.credentialsExpired
     || (replacement.credentialsExpireAt && replacement.credentialsExpireAt < new Date())) {
     throw new AppError('Credentials have expired', 410, { code: 'CREDENTIALS_EXPIRED' });
+  }
+
+  // Blob-mode replacements: reveal exact text (buyer/seller only).
+  if (replacement.hasCredentialBlob || replacement.credentialBlobEncrypted) {
+    const credentialBlob = decryptCredential(replacement.credentialBlobEncrypted);
+    await disputeTimelineService.appendTimelineEvent({
+      disputeId,
+      orderId: dispute.order,
+      event: DISPUTE_TIMELINE_EVENTS.BUYER_VIEWED_REPLACEMENT,
+      actor,
+      role: 'participant',
+      message: `Viewed replacement v${replacement.version} credentials`,
+      meta: { replacementId, version: replacement.version },
+    });
+    return {
+      replacementId,
+      version: replacement.version,
+      hasCredentialBlob: true,
+      credentialBlob,
+      credentials: { credentialBlob },
+    };
   }
 
   const account = replacement.accounts.id(accountId);
@@ -389,9 +501,72 @@ export async function revealReplacementAccount(
   };
 }
 
+/**
+ * Reveal the full replacement blob (or compose legacy accounts) for buyer/seller.
+ */
+export async function revealReplacementBlob(
+  disputeId,
+  replacementId,
+  actor,
+  requestMeta = {},
+) {
+  const dispute = await Dispute.findById(disputeId).lean();
+  if (!dispute) throw new AppError('Dispute not found', 404, { code: 'DISPUTE_NOT_FOUND' });
+  if (!canAccessDispute(dispute, actor)) {
+    throw new AppError('Forbidden', 403, { code: 'FORBIDDEN' });
+  }
+
+  const replacement = await DisputeReplacement.findOne({
+    _id: replacementId,
+    dispute: disputeId,
+  });
+  if (!replacement) {
+    throw new AppError('Replacement not found', 404, { code: 'REPLACEMENT_NOT_FOUND' });
+  }
+  if (replacement.credentialsExpired
+    || (replacement.credentialsExpireAt && replacement.credentialsExpireAt < new Date())) {
+    throw new AppError('Credentials have expired', 410, { code: 'CREDENTIALS_EXPIRED' });
+  }
+
+  let credentialBlob = '';
+  if (replacement.hasCredentialBlob || replacement.credentialBlobEncrypted) {
+    credentialBlob = decryptCredential(replacement.credentialBlobEncrypted) || '';
+  } else {
+    const lines = [];
+    for (const account of replacement.accounts || []) {
+      const fields = decryptSensitiveObject(account.encrypted || {});
+      lines.push(`Account: ${account.accountIdentifier || 'replacement'}`);
+      for (const [key, value] of Object.entries(fields)) {
+        if (value != null && value !== '') lines.push(`${key}: ${value}`);
+      }
+      if (account.notes) lines.push(`notes: ${account.notes}`);
+      lines.push('');
+    }
+    credentialBlob = lines.join('\n').trimEnd();
+  }
+
+  await disputeTimelineService.appendTimelineEvent({
+    disputeId,
+    orderId: dispute.order,
+    event: DISPUTE_TIMELINE_EVENTS.BUYER_VIEWED_REPLACEMENT,
+    actor,
+    role: 'participant',
+    message: `Buyer viewed replacement v${replacement.version}`,
+    meta: { replacementId, version: replacement.version },
+  });
+
+  return {
+    replacementId: String(replacement._id),
+    version: replacement.version,
+    hasCredentialBlob: true,
+    credentialBlob,
+  };
+}
+
 export default {
   sendReplacement,
   listReplacements,
   respondToReplacement,
   revealReplacementAccount,
+  revealReplacementBlob,
 };

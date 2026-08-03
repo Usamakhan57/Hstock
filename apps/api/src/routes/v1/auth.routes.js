@@ -1,5 +1,4 @@
 import { Router } from 'express';
-import passport from 'passport';
 import {
   validate,
   requireAuth,
@@ -13,14 +12,25 @@ import {
   resetPasswordSchema,
 } from '../../validators/auth.validator.js';
 import * as authController from '../../controllers/auth/auth.controller.js';
-import { env } from '../../config/env.js';
+import * as googleOAuthController from '../../controllers/auth/googleOAuth.controller.js';
 import { configureGooglePassport } from '../../config/googlePassport.js';
 
 configureGooglePassport();
 
 const router = Router();
 
-router.use(authRateLimiter);
+/** Browser Google OAuth navigations must never be JSON-rate-limited (PWA-safe). */
+function authRateLimitUnlessGoogleBrowser(req, res, next) {
+  if (
+    req.method === 'GET'
+    && (req.path === '/google' || req.path === '/google/callback' || req.path === '/google/status')
+  ) {
+    return next();
+  }
+  return authRateLimiter(req, res, next);
+}
+
+router.use(authRateLimitUnlessGoogleBrowser);
 
 router.post('/register', validate(registerBuyerSchema), authController.registerBuyer);
 router.post('/login', validate(loginSchema), authController.loginBuyer);
@@ -36,37 +46,7 @@ router.get('/verify-email', authController.verifyEmail);
 router.get('/me', requireAuth, authController.me);
 
 router.get('/google/status', authController.googleStatus);
-
-router.get('/google', (req, res, next) => {
-  if (!env.googleOAuthConfigured) {
-    return res.status(503).json({
-      success: false,
-      message: 'Google sign-in is not configured',
-      data: null,
-      errors: [{ code: 'GOOGLE_OAUTH_NOT_CONFIGURED' }],
-      meta: null,
-    });
-  }
-  return passport.authenticate('google', {
-    scope: ['profile', 'email'],
-    session: false,
-    prompt: 'select_account',
-  })(req, res, next);
-});
-
-router.get(
-  '/google/callback',
-  (req, res, next) => {
-    if (!env.googleOAuthConfigured) {
-      const frontend = (env.FRONTEND_URL || 'http://localhost:3000').replace(/\/$/, '');
-      return res.redirect(`${frontend}/login?google=error&reason=not_configured`);
-    }
-    return passport.authenticate('google', {
-      session: false,
-      failureRedirect: `${(env.FRONTEND_URL || 'http://localhost:3000').replace(/\/$/, '')}/login?google=error&reason=denied`,
-    })(req, res, next);
-  },
-  authController.googleCallback,
-);
+router.get('/google', googleOAuthController.startGoogleOAuth);
+router.get('/google/callback', googleOAuthController.handleGoogleOAuthCallback);
 
 export default router;

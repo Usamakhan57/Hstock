@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, ShieldCheck, Shield, Clock, Loader2 } from 'lucide-react';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
@@ -15,6 +15,7 @@ const LoginPage = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const { state } = useLocation();
+  const [searchParams] = useSearchParams();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPw, setShowPw] = useState(false);
@@ -22,6 +23,17 @@ const LoginPage = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+
+  useEffect(() => {
+    if (searchParams.get('google') !== 'error') return;
+    const reason = searchParams.get('reason') || 'Google sign-in failed';
+    setError(reason);
+    toast({
+      title: 'Google sign-in failed',
+      description: reason,
+      variant: 'destructive',
+    });
+  }, [searchParams, toast]);
 
   const validateEmail = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 
@@ -39,7 +51,8 @@ const LoginPage = () => {
         setGoogleLoading(false);
         return;
       }
-      window.location.assign(authApi.getGoogleAuthUrl());
+      const returnTo = state?.from?.pathname || '/dashboard';
+      window.location.assign(authApi.getGoogleAuthUrl({ intent: 'buyer', returnTo }));
     } catch (err) {
       toast({
         title: 'Google sign-in failed',
