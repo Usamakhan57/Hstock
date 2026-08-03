@@ -95,17 +95,23 @@ const SellerSidebar = ({ open, closing, onClose, seller, walletBalance, notifica
     navigate('/');
   };
 
+  const panelMotion = closing
+    ? '-translate-y-full sm:translate-y-0 sm:translate-x-full'
+    : 'translate-y-0 sm:translate-x-0';
+
   return createPortal(
-    <div className="fixed inset-0 z-[70]">
-      <SidebarOverlay open={open} onClose={onClose} />
+    <div className="fixed inset-0 z-[45] pointer-events-none">
+      <div className="pointer-events-auto">
+        <SidebarOverlay open={open} onClose={onClose} />
+      </div>
       <aside
         ref={panelRef}
         role="dialog"
         aria-label="Seller sidebar"
         aria-modal="true"
-        className={`fixed right-0 top-0 z-[71] flex h-[100vh] max-h-[100dvh] w-full flex-col overflow-hidden bg-white shadow-[0_20px_80px_-24px_rgba(15,23,42,0.35)] border-l border-[#E5E7EB] transition-transform duration-250 ease-out sm:w-[380px] lg:w-[420px] ${closing ? 'translate-x-full' : 'translate-x-0'}`}
+        className={`pointer-events-auto fixed inset-x-0 top-[calc(4rem+env(safe-area-inset-top,0px))] z-[46] flex max-h-[calc(100dvh-4rem-env(safe-area-inset-top,0px)-env(safe-area-inset-bottom,0px))] w-full flex-col overflow-hidden bg-white shadow-[0_20px_80px_-24px_rgba(15,23,42,0.35)] border-b border-[#E5E7EB] transition-transform duration-250 ease-out sm:inset-y-0 sm:left-auto sm:right-0 sm:top-0 sm:max-h-[100dvh] sm:h-[100vh] sm:w-[380px] sm:border-b-0 sm:border-l lg:w-[420px] ${panelMotion}`}
       >
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain" style={{ WebkitOverflowScrolling: 'touch' }}>
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-safe" style={{ WebkitOverflowScrolling: 'touch' }}>
           <div className="flex min-h-full flex-col">
             <div className="sticky top-0 z-20 border-b border-[#E5E7EB] bg-white px-4 py-3 backdrop-blur-sm">
               <button
@@ -117,7 +123,12 @@ const SellerSidebar = ({ open, closing, onClose, seller, walletBalance, notifica
                 Back to Marketplace
               </button>
             </div>
-            <SidebarHeader seller={seller} walletBalance={walletBalance} notificationsCount={notificationsCount} />
+            <SidebarHeader
+              seller={seller}
+              walletBalance={walletBalance}
+              notificationsCount={notificationsCount}
+              onNavigate={handleNavigate}
+            />
 
             <div className="flex-1 px-4 py-4">
               <div className="space-y-2.5">
