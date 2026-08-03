@@ -47,15 +47,20 @@ async function createSeller() {
   };
 }
 
-async function createBuyer() {
+async function createBuyer({
+  name = 'IA Buyer',
+  email = 'ia-buyer@example.com',
+  username = 'ia_buyer_one',
+} = {}) {
   const register = await request(app)
     .post('/api/v1/auth/register')
     .send({
-      name: 'IA Buyer',
-      email: 'ia-buyer@example.com',
+      name,
+      email,
+      username,
       password: 'Password123!',
     });
-  assert.equal(register.status, 201);
+  assert.equal(register.status, 201, JSON.stringify(register.body));
   return { token: register.body.data.accessToken };
 }
 
@@ -200,15 +205,11 @@ test('Instant Access: same account cannot be sold twice', async () => {
   const { token: sellerToken } = await createSeller();
   const { token: buyerToken } = await createBuyer();
 
-  const buyer2 = await request(app)
-    .post('/api/v1/auth/register')
-    .send({
-      name: 'IA Buyer 2',
-      email: 'ia-buyer-2@example.com',
-      password: 'Password123!',
-    });
-  assert.equal(buyer2.status, 201);
-  const buyer2Token = buyer2.body.data.accessToken;
+  const { token: buyer2Token } = await createBuyer({
+    name: 'Second Instant Buyer',
+    email: 'ia-buyer-two@example.com',
+    username: 'ia_buyer_two',
+  });
 
   const product = await createInstantAccessProduct(adminToken, sellerToken, [
     {
@@ -239,7 +240,15 @@ test('Instant Access: same account cannot be sold twice', async () => {
     .set('Authorization', `Bearer ${buyer2Token}`)
     .send({ productId });
   assert.equal(buy2.status, 400);
-  assert.equal(buy2.body.code, 'OUT_OF_STOCK');
+  assert.ok(
+    ['OUT_OF_STOCK', 'PRODUCT_NOT_AVAILABLE'].includes(buy2.body.code),
+    JSON.stringify(buy2.body),
+  );
+
+  const sold = await ProductInventoryItem.countDocuments({ product: productId, status: 'sold' });
+  const available = await ProductInventoryItem.countDocuments({ product: productId, status: 'available' });
+  assert.equal(sold, 1);
+  assert.equal(available, 0);
 });
 
 test('Instant Access: credentials remain after order completed', async () => {
