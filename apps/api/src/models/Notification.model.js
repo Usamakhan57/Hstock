@@ -35,6 +35,9 @@ export const NOTIFICATION_TYPES = Object.freeze([
   'wallet_adjustment',
   'wallet_frozen',
   'wallet_unfrozen',
+  'store_promotion',
+  'inventory_low',
+  'review',
 ]);
 
 const notificationSchema = new mongoose.Schema(

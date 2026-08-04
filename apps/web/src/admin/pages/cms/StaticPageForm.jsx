@@ -31,9 +31,14 @@ const StaticPageForm = () => {
 
   const handleSave = async () => {
     setSaving(true);
-    await updateStaticPage(id, form);
-    toast({ title: 'Page saved', description: form.title });
-    setSaving(false);
+    try {
+      await updateStaticPage(id, form);
+      toast({ title: 'Page saved', description: form.title });
+    } catch (err) {
+      toast({ title: 'Could not save page', description: err.message || 'Please try again.', variant: 'destructive' });
+    } finally {
+      setSaving(false);
+    }
   };
 
   if (!form) return <p className="text-sm text-muted-foreground">Loading…</p>;

@@ -102,6 +102,15 @@ export const adminUpdateUserSchema = {
     verificationStatus: z.enum(Object.values(VerificationStatusEnum)).optional(),
     roles: z.array(z.enum(USER_ROLE_VALUES)).min(1).optional(),
     emailVerified: z.boolean().optional(),
+    name: z.string().trim().min(2).max(120).optional(),
+  }),
+};
+
+export const adminInviteUserSchema = {
+  body: z.object({
+    name: z.string().trim().min(2).max(120),
+    email: z.string().trim().email().max(200),
+    role: z.enum(['admin', 'editor', 'support']).default('editor'),
   }),
 };
 
@@ -132,6 +141,7 @@ export default {
   changePasswordSchema,
   listUsersSchema,
   adminUpdateUserSchema,
+  adminInviteUserSchema,
   adminUpdateSellerSchema,
   adminSellerIdSchema,
 };

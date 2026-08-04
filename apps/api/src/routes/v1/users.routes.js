@@ -14,6 +14,7 @@ import {
   changePasswordSchema,
   listUsersSchema,
   adminUpdateUserSchema,
+  adminInviteUserSchema,
   adminUpdateSellerSchema,
   adminSellerIdSchema,
 } from '../../validators/user.validator.js';
@@ -51,6 +52,13 @@ router.get(
   requirePermission(PERMISSIONS.USERS_MANAGE),
   validate(listUsersSchema),
   usersController.listUsers,
+);
+
+router.post(
+  '/invite',
+  requirePermission(PERMISSIONS.USERS_MANAGE),
+  validate(adminInviteUserSchema),
+  usersController.adminInviteUser,
 );
 
 const adminSellerGuards = [

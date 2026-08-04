@@ -77,9 +77,14 @@ const NavMenuEditor = () => {
 
   const handleSave = async () => {
     setSaving(true);
-    await updateNavMenu(id, { items });
-    toast({ title: 'Menu saved', description: menu?.name });
-    setSaving(false);
+    try {
+      await updateNavMenu(id, { items });
+      toast({ title: 'Menu saved', description: menu?.name });
+    } catch (err) {
+      toast({ title: 'Could not save menu', description: err.message || 'Please try again.', variant: 'destructive' });
+    } finally {
+      setSaving(false);
+    }
   };
 
   if (!menu) return <p className="text-sm text-muted-foreground">Loading…</p>;

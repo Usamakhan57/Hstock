@@ -578,6 +578,14 @@ export async function resetPassword({ token, password }) {
   }
 
   user.passwordHash = await hashPassword(password);
+  // Invited staff become active once they set their first password.
+  if (user.status === UserStatusEnum.Invited || user.status === UserStatusEnum.Pending) {
+    user.status = UserStatusEnum.Active;
+  }
+  if (!user.emailVerified) {
+    user.emailVerified = true;
+    user.emailVerifiedAt = new Date();
+  }
   await user.save();
 
   // Mark this token used and burn any other outstanding tokens for the user.

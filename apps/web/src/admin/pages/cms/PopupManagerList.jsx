@@ -97,9 +97,14 @@ const PopupManagerList = () => {
 
   const handleSave = async () => {
     setSaving(true);
-    await Promise.all(popups.map((p) => updatePopup(p.id, p)));
-    toast({ title: 'Popups saved' });
-    setSaving(false);
+    try {
+      await Promise.all(popups.map((p) => updatePopup(p.id, p)));
+      toast({ title: 'Popups saved' });
+    } catch (err) {
+      toast({ title: 'Could not save popups', description: err.message || 'Please try again.', variant: 'destructive' });
+    } finally {
+      setSaving(false);
+    }
   };
 
   if (!popups) return <p className="text-sm text-muted-foreground">Loading…</p>;

@@ -24,9 +24,14 @@ const SocialSettingsCms = () => {
 
   const handleSave = async () => {
     setSaving(true);
-    await updateSocialSettings(form);
-    toast({ title: 'Social settings saved' });
-    setSaving(false);
+    try {
+      await updateSocialSettings(form);
+      toast({ title: 'Social settings saved' });
+    } catch (err) {
+      toast({ title: 'Could not save social settings', description: err.message || 'Please try again.', variant: 'destructive' });
+    } finally {
+      setSaving(false);
+    }
   };
 
   if (!form) return <p className="text-sm text-muted-foreground">Loading…</p>;

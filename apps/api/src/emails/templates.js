@@ -57,6 +57,19 @@ export function buildEmailTemplate(type, data = {}) {
       }),
       text: `Reset your ApnaStore password (valid ${data.expiresInMinutes || 60} minutes, one-time use):\n${data.resetUrl || frontend}`,
     },
+    admin_invite: {
+      subject: 'You are invited to the ApnaStore Admin Panel',
+      html: layout({
+        title: 'Admin invitation',
+        bodyHtml: `<p>Hi ${data.name || 'there'},</p>
+          <p>You have been invited to the ApnaStore Admin Panel as <strong>${data.roleLabel || 'staff'}</strong>.</p>
+          <p>Set your password to activate your account, then sign in at the admin login page.</p>
+          <p><a href="${data.resetUrl || frontend}" style="display:inline-block;padding:10px 18px;background:#6C3BFF;color:#fff;border-radius:999px;text-decoration:none;">Set password</a></p>
+          <p style="color:#6b7280;font-size:12px;word-break:break-all;">Or paste this link into your browser:<br/>${data.resetUrl || frontend}</p>
+          <p style="color:#6b7280;font-size:12px;">This link expires in ${data.expiresInMinutes || 72 * 60} minutes and can be used once.</p>`,
+      }),
+      text: `You are invited to the ApnaStore Admin Panel as ${data.roleLabel || 'staff'}. Set your password:\n${data.resetUrl || frontend}`,
+    },
     order_created: {
       subject: `Order ${data.orderNumber || ''} created`,
       html: layout({

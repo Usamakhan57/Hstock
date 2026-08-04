@@ -68,9 +68,14 @@ const Settings = () => {
 
   const handleSave = async () => {
     setSaving(true);
-    await updateSettings(form);
-    toast({ title: 'Settings saved' });
-    setSaving(false);
+    try {
+      await updateSettings(form);
+      toast({ title: 'Settings saved' });
+    } catch (err) {
+      toast({ title: 'Could not save settings', description: err.message || 'Please try again.', variant: 'destructive' });
+    } finally {
+      setSaving(false);
+    }
   };
 
   if (!form) return <p className="text-sm text-muted-foreground">Loading…</p>;

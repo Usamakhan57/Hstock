@@ -3,7 +3,7 @@ import RequireRole from '../components/RequireRole';
 import { ROLES } from '../context/AuthRoles';
 
 const RequireAdminAuth = ({ children }) => (
-  <RequireRole roles={[ROLES.ADMIN, ROLES.SUPER_ADMIN]} redirectTo="/admin/login">
+  <RequireRole roles={[ROLES.ADMIN, ROLES.SUPER_ADMIN, ROLES.EDITOR, ROLES.SUPPORT]} redirectTo="/admin/login">
     {children}
   </RequireRole>
 );

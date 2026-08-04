@@ -52,18 +52,22 @@ export async function authenticate(req, _res, next) {
       return;
     }
 
-    if (user.status === UserStatusEnum.Suspended || user.status === UserStatusEnum.Inactive) {
-      next(
-        new AppError(
-          user.status === UserStatusEnum.Inactive ? 'Account inactive' : 'Account suspended',
-          403,
-          {
-            code: user.status === UserStatusEnum.Inactive
-              ? 'ACCOUNT_INACTIVE'
-              : 'ACCOUNT_SUSPENDED',
-          },
-        ),
-      );
+    if (
+      user.status === UserStatusEnum.Suspended
+      || user.status === UserStatusEnum.Inactive
+      || user.status === UserStatusEnum.Invited
+    ) {
+      const message = user.status === UserStatusEnum.Inactive
+        ? 'Account inactive'
+        : user.status === UserStatusEnum.Invited
+          ? 'Complete your invite by setting a password'
+          : 'Account suspended';
+      const code = user.status === UserStatusEnum.Inactive
+        ? 'ACCOUNT_INACTIVE'
+        : user.status === UserStatusEnum.Invited
+          ? 'ACCOUNT_INVITED'
+          : 'ACCOUNT_SUSPENDED';
+      next(new AppError(message, 403, { code }));
       return;
     }
 

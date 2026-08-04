@@ -50,6 +50,11 @@ export const adminUpdateUser = asyncHandler(async (req, res) => {
   return sendSuccess(res, { message: 'User updated', data: { user } });
 });
 
+export const adminInviteUser = asyncHandler(async (req, res) => {
+  const data = await userService.adminInviteUser(req.body, req.user.id);
+  return sendSuccess(res, { message: 'User invited', data });
+});
+
 export const adminListSellers = asyncHandler(async (req, res) => {
   const result = await userService.adminListSellers(req.query);
   return sendSuccess(res, {
@@ -82,6 +87,7 @@ export default {
   myActivity,
   listUsers,
   adminUpdateUser,
+  adminInviteUser,
   adminListSellers,
   adminGetSeller,
   adminUpdateSeller,

@@ -40,9 +40,14 @@ const FooterCms = () => {
 
   const handleSave = async () => {
     setSaving(true);
-    await updateFooterCms(form);
-    toast({ title: 'Footer saved' });
-    setSaving(false);
+    try {
+      await updateFooterCms(form);
+      toast({ title: 'Footer saved' });
+    } catch (err) {
+      toast({ title: 'Could not save footer', description: err.message || 'Please try again.', variant: 'destructive' });
+    } finally {
+      setSaving(false);
+    }
   };
 
   if (!form) return <p className="text-sm text-muted-foreground">Loading…</p>;

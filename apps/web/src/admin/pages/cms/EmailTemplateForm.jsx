@@ -27,9 +27,14 @@ const EmailTemplateForm = () => {
 
   const handleSave = async () => {
     setSaving(true);
-    await updateEmailTemplate(id, form);
-    toast({ title: 'Template saved', description: form.name });
-    setSaving(false);
+    try {
+      await updateEmailTemplate(id, form);
+      toast({ title: 'Template saved', description: form.name });
+    } catch (err) {
+      toast({ title: 'Could not save template', description: err.message || 'Please try again.', variant: 'destructive' });
+    } finally {
+      setSaving(false);
+    }
   };
 
   if (!form) return <p className="text-sm text-muted-foreground">Loading…</p>;

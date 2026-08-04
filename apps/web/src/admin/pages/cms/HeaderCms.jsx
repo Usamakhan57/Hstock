@@ -42,9 +42,14 @@ const HeaderCms = () => {
 
   const handleSave = async () => {
     setSaving(true);
-    await updateHeaderCms(form);
-    toast({ title: 'Header saved' });
-    setSaving(false);
+    try {
+      await updateHeaderCms(form);
+      toast({ title: 'Header saved' });
+    } catch (err) {
+      toast({ title: 'Could not save header', description: err.message || 'Please try again.', variant: 'destructive' });
+    } finally {
+      setSaving(false);
+    }
   };
 
   const addButton = () => setForm((f) => ({

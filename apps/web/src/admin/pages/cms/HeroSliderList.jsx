@@ -35,12 +35,17 @@ const HeroSliderList = () => {
   const handleSubmit = async () => {
     if (!form.title.trim()) { toast({ title: 'Title is required', variant: 'destructive' }); return; }
     setSaving(true);
-    if (editing) await updateHeroSlide(editing.id, form);
-    else await createHeroSlide({ ...form, sortOrder: slides.length ? Math.max(...slides.map((s) => s.sortOrder)) + 1 : 1 });
-    toast({ title: editing ? 'Slide updated' : 'Slide added', description: form.title });
-    setSaving(false);
-    setSheetOpen(false);
-    load();
+    try {
+      if (editing) await updateHeroSlide(editing.id, form);
+      else await createHeroSlide({ ...form, sortOrder: slides.length ? Math.max(...slides.map((s) => s.sortOrder)) + 1 : 1 });
+      toast({ title: editing ? 'Slide updated' : 'Slide added', description: form.title });
+      setSheetOpen(false);
+      load();
+    } catch (err) {
+      toast({ title: 'Could not save slide', description: err.message || 'Please try again.', variant: 'destructive' });
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleDelete = async () => {

@@ -115,9 +115,14 @@ const SeoManagerList = () => {
 
   const handleSave = async () => {
     setSaving(true);
-    await Promise.all(entries.map((e) => updateSeoEntry(e.id, e)));
-    toast({ title: 'SEO settings saved' });
-    setSaving(false);
+    try {
+      await Promise.all(entries.map((e) => updateSeoEntry(e.id, e)));
+      toast({ title: 'SEO settings saved' });
+    } catch (err) {
+      toast({ title: 'Could not save SEO', description: err.message || 'Please try again.', variant: 'destructive' });
+    } finally {
+      setSaving(false);
+    }
   };
 
   if (!entries) return <p className="text-sm text-muted-foreground">Loading…</p>;

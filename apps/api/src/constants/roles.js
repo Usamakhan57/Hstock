@@ -19,6 +19,8 @@ export const STAFF_ROLES = Object.freeze([
 export const ADMIN_LOGIN_ROLES = Object.freeze([
   USER_ROLES.SUPER_ADMIN,
   USER_ROLES.ADMIN,
+  USER_ROLES.EDITOR,
+  USER_ROLES.SUPPORT,
 ]);
 
 export default USER_ROLES;
