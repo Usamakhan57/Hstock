@@ -20,18 +20,18 @@ import * as buyerWalletController from '../../controllers/wallet/buyerWallet.con
 
 const router = Router();
 
-/** Buyer wallet (GET /wallet, /wallet/history, deposit, topup) */
+/** Buyer wallet (GET /wallet, /wallet/history, deposit, topup) — sellers may also fund via Cryptomus */
 router.get(
   '/',
   requireAuth,
-  requireRole(USER_ROLES.BUYER, USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
+  requireRole(USER_ROLES.BUYER, USER_ROLES.SELLER, USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
   buyerWalletController.getWallet,
 );
 
 router.get(
   '/history',
   requireAuth,
-  requireRole(USER_ROLES.BUYER, USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
+  requireRole(USER_ROLES.BUYER, USER_ROLES.SELLER, USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
   validate({ query: paginationSchema.extend({
     type: z.string().optional(),
     status: z.string().optional(),
@@ -40,10 +40,29 @@ router.get(
   buyerWalletController.getHistory,
 );
 
+router.get(
+  '/deposits',
+  requireAuth,
+  requireRole(USER_ROLES.BUYER, USER_ROLES.SELLER, USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
+  validate({ query: paginationSchema.extend({
+    status: z.string().optional(),
+    creditToSellerWallet: z.enum(['true', 'false']).optional(),
+  }) }),
+  buyerWalletController.listDeposits,
+);
+
+router.post(
+  '/deposits/:depositId/refresh',
+  requireAuth,
+  requireRole(USER_ROLES.BUYER, USER_ROLES.SELLER, USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
+  validate({ params: z.object({ depositId: objectIdSchema }) }),
+  buyerWalletController.refreshDeposit,
+);
+
 router.post(
   '/deposit',
   requireAuth,
-  requireRole(USER_ROLES.BUYER, USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
+  requireRole(USER_ROLES.BUYER, USER_ROLES.SELLER, USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
   validate(buyerDepositSchema),
   buyerWalletController.deposit,
 );
@@ -51,7 +70,7 @@ router.post(
 router.post(
   '/topup',
   requireAuth,
-  requireRole(USER_ROLES.BUYER, USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
+  requireRole(USER_ROLES.BUYER, USER_ROLES.SELLER, USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
   validate(buyerDepositSchema),
   buyerWalletController.topup,
 );

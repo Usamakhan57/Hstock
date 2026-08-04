@@ -80,6 +80,19 @@ function ProductMiniRow({ item, meta, value }) {
   );
 }
 
+function formatPromotionCountdown(expiresAt) {
+  if (!expiresAt) return null;
+  const ms = new Date(expiresAt).getTime() - Date.now();
+  if (ms <= 0) return 'Expired';
+  const totalHours = Math.floor(ms / (1000 * 60 * 60));
+  const days = Math.floor(totalHours / 24);
+  const hours = totalHours % 24;
+  const minutes = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60));
+  if (days > 0) return `${days}d ${hours}h ${minutes}m left`;
+  if (hours > 0) return `${hours}h ${minutes}m left`;
+  return `${Math.max(1, minutes)}m left`;
+}
+
 const SellerOverviewTab = ({
   seller,
   products = [],
@@ -95,6 +108,8 @@ const SellerOverviewTab = ({
   onPromote,
 }) => {
   const [chartRange, setChartRange] = React.useState('7');
+  const [promoStatus, setPromoStatus] = React.useState(null);
+  const [nowTick, setNowTick] = React.useState(Date.now());
   const chartData = chartRange === '7' ? salesChart7 : salesChart30;
   const storeSlug = seller?.slug
     || (seller?.storeName || 'your-store').toLowerCase().replace(/\s+/g, '-');
@@ -102,6 +117,31 @@ const SellerOverviewTab = ({
   const approved = String(seller?.status || '').toLowerCase() === 'approved';
   const recentOrders = orders.slice(0, 6);
   const noDisputes = (stats?.openDisputes || 0) === 0;
+
+  React.useEffect(() => {
+    let cancelled = false;
+    import('../../../services/storePromotionApi')
+      .then(({ storePromotionApi }) => storePromotionApi.getStatus())
+      .then((data) => { if (!cancelled) setPromoStatus(data); })
+      .catch(() => { if (!cancelled) setPromoStatus(null); });
+    return () => { cancelled = true; };
+  }, [seller?.id, seller?.storePromotedUntil]);
+
+  React.useEffect(() => {
+    if (!promoStatus?.activePromotion?.expiresAt) return undefined;
+    const timer = setInterval(() => setNowTick(Date.now()), 30_000);
+    return () => clearInterval(timer);
+  }, [promoStatus?.activePromotion?.expiresAt]);
+
+  const activePromo = promoStatus?.activePromotion;
+  const promoActive = Boolean(
+    activePromo
+    && activePromo.expiresAt
+    && new Date(activePromo.expiresAt).getTime() > nowTick,
+  );
+  const promoCountdown = promoActive
+    ? formatPromotionCountdown(activePromo.expiresAt)
+    : null;
 
   return (
     <div className="space-y-6">
@@ -129,10 +169,26 @@ const SellerOverviewTab = ({
                     <Calendar className="h-3.5 w-3.5" />
                     Joined {joinedDate || 'Recently'}
                   </span>
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-orange-50 px-3 py-1 text-xs font-semibold text-orange-700">
-                    Get badge
-                  </span>
+                  {promoActive ? (
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-orange-500 px-3 py-1 text-xs font-semibold text-white">
+                      <Megaphone className="h-3.5 w-3.5" />
+                      Promoted · {promoCountdown}
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => (typeof onPromote === 'function' ? onPromote() : null)}
+                      className="inline-flex items-center gap-1.5 rounded-full bg-orange-50 px-3 py-1 text-xs font-semibold text-orange-700 hover:bg-orange-100"
+                    >
+                      Get badge
+                    </button>
+                  )}
                 </div>
+                {promoActive ? (
+                  <p className="mt-3 text-sm font-medium text-orange-700">
+                    Featured Seller promotion active — expires {new Date(activePromo.expiresAt).toLocaleString()}.
+                  </p>
+                ) : null}
               </div>
             </div>
 

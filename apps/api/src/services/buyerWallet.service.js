@@ -21,6 +21,8 @@ import {
   BuyerWalletTransaction,
   WalletDeposit,
   User,
+  SellerProfile,
+  LedgerEntry,
 } from '../models/index.js';
 import {
   BUYER_WALLET_TX_TYPE,
@@ -30,6 +32,7 @@ import * as ledgerService from './ledger.service.js';
 import * as cryptomusService from './cryptomus.service.js';
 import { parsePagination, buildPaginationMeta } from '../utils/pagination.js';
 import { logActivity } from './activity.service.js';
+import { logger } from '../config/logger.js';
 
 function depositLimits() {
   return {
@@ -231,6 +234,9 @@ export async function createDepositOrTopup(payload, actor, purpose = 'deposit') 
     lifetimeSeconds,
     expiresAt,
     providerStatus: 'created',
+    metadata: {
+      creditToSellerWallet: Boolean(payload.creditToSellerWallet),
+    },
   });
 
   // Pending tracking on wallet
@@ -252,7 +258,13 @@ export async function createDepositOrTopup(payload, actor, purpose = 'deposit') 
   });
 
   const callbackUrl = cryptomusService.buildCallbackUrl();
-  const successBase = payload.urlSuccess || `${env.FRONTEND_URL}/wallet`;
+  const defaultSuccess = payload.creditToSellerWallet
+    ? `${env.FRONTEND_URL}/seller/earnings`
+    : `${env.FRONTEND_URL}/wallet`;
+  const defaultReturn = payload.creditToSellerWallet
+    ? `${env.FRONTEND_URL}/seller/earnings`
+    : `${env.FRONTEND_URL}/wallet`;
+  const successBase = payload.urlSuccess || defaultSuccess;
   const urlSuccess = `${successBase}${successBase.includes('?') ? '&' : '?'}deposit=${encodeURIComponent(depositNumber)}`;
 
   let invoice;
@@ -266,7 +278,7 @@ export async function createDepositOrTopup(payload, actor, purpose = 'deposit') 
       toCurrency: payload.toCurrency || null,
       lifetime: lifetimeSeconds,
       urlCallback: callbackUrl,
-      urlReturn: payload.urlReturn || `${env.FRONTEND_URL}/wallet`,
+      urlReturn: payload.urlReturn || defaultReturn,
       urlSuccess,
       additionalData: `wallet_deposit:${deposit._id}`,
     });
@@ -299,7 +311,11 @@ export async function createDepositOrTopup(payload, actor, purpose = 'deposit') 
   deposit.address = invoice.address || null;
   deposit.providerStatus = invoice.payment_status || 'check';
   deposit.rawInvoice = invoice;
-  deposit.metadata = { ...(deposit.metadata || {}), simulated };
+  deposit.metadata = {
+    ...(deposit.metadata || {}),
+    simulated,
+    creditToSellerWallet: Boolean(payload.creditToSellerWallet),
+  };
   await deposit.save();
 
   emitDomainEvent(DOMAIN_EVENTS.BUYER_WALLET_DEPOSIT_PENDING, {
@@ -339,6 +355,14 @@ export async function applyDepositPaid(deposit, { providerStatus, raw = null, tx
   if (raw?.address) fresh.address = raw.address;
 
   if (fresh.status === PAYMENT_STATUS.PAID && fresh.creditedAt) {
+    if (fresh.metadata?.creditToSellerWallet && !fresh.metadata?.sellerWalletCreditedAt) {
+      const wallet = session
+        ? await BuyerWallet.findById(fresh.buyerWallet).session(session)
+        : await BuyerWallet.findById(fresh.buyerWallet);
+      if (wallet) {
+        await transferDepositToSellerWallet(fresh, wallet, session);
+      }
+    }
     if (session) await fresh.save({ session });
     else await fresh.save();
     return { deposit: fresh, alreadyCredited: true };
@@ -464,7 +488,226 @@ export async function applyDepositPaid(deposit, { providerStatus, raw = null, tx
     wallet: serializeBuyerWallet(wallet),
   });
 
+  // Seller dashboard top-up: move Cryptomus-funded prepaid balance into seller earnings Wallet
+  // (same Wallet used for store promotion + withdrawals). Idempotent via metadata flag.
+  if (fresh.metadata?.creditToSellerWallet && !fresh.metadata?.sellerWalletCreditedAt) {
+    await transferDepositToSellerWallet(fresh, wallet, session);
+  }
+
   return { deposit: fresh, alreadyCredited: false, transaction: tx };
+}
+
+/**
+ * After a buyer-wallet Cryptomus credit, move funds into the seller earnings Wallet.
+ * Reuses existing ledger accounts — no parallel Cryptomus pipeline.
+ */
+async function transferDepositToSellerWallet(deposit, buyerWalletDoc, session = null) {
+  const seller = await SellerProfile.findOne({ user: deposit.buyer });
+  if (!seller) {
+    logger.warn('Seller wallet top-up skipped — no seller profile', {
+      buyerId: String(deposit.buyer),
+      depositId: String(deposit._id),
+    });
+    return null;
+  }
+
+  const amount = roundMoney(deposit.amount);
+  const transferId = `seller_topup_${deposit._id}`;
+
+  const prior = session
+    ? await LedgerEntry.findOne({ transferId }).session(session)
+    : await LedgerEntry.findOne({ transferId });
+  if (prior) {
+    deposit.metadata = {
+      ...(deposit.metadata || {}),
+      sellerWalletCreditedAt: deposit.metadata?.sellerWalletCreditedAt || new Date(),
+      sellerWalletTransferId: transferId,
+    };
+    if (session) await deposit.save({ session });
+    else await deposit.save();
+    return null;
+  }
+
+  try {
+    debitAvailable(buyerWalletDoc, amount);
+  } catch (error) {
+    throw new AppError(error.message || 'Could not move deposit to seller wallet', 400, {
+      code: 'SELLER_TOPUP_TRANSFER_FAILED',
+    });
+  }
+  buyerWalletDoc.totalDeposited = roundMoney(Math.max(0, (buyerWalletDoc.totalDeposited || 0) - amount));
+  await saveWalletOptimistic(buyerWalletDoc, session);
+
+  await recordTx({
+    buyer: deposit.buyer,
+    buyerWallet: buyerWalletDoc._id,
+    type: BUYER_WALLET_TX_TYPE.ADJUSTMENT,
+    direction: 'debit',
+    amount,
+    status: BUYER_WALLET_TX_STATUS.COMPLETED,
+    balanceAfter: buyerWalletDoc.availableBalance,
+    pendingAfter: buyerWalletDoc.pendingBalance,
+    reference: deposit.depositNumber,
+    description: 'Transferred to seller wallet (Cryptomus top-up)',
+    deposit: deposit._id,
+  }, session);
+
+  const walletService = await import('./wallet.service.js');
+  const { applyWalletCredit, computeWithdrawable } = await import('../helpers/wallet.helper.js');
+  const walletRepository = await import('../repositories/wallet.repository.js');
+  const sellerWallet = await walletService.getOrCreateSellerWallet(seller._id, seller.user, session);
+  applyWalletCredit(sellerWallet, amount);
+  sellerWallet.withdrawableBalance = computeWithdrawable(
+    sellerWallet.availableBalance,
+    sellerWallet.reservedBalance,
+  );
+  await walletRepository.saveWallet(sellerWallet, session);
+
+  await ledgerService.recordTransfer({
+    session,
+    transferId,
+    createdBy: deposit.buyer,
+    context: {
+      buyer: deposit.buyer,
+      buyerWallet: buyerWalletDoc._id,
+      seller: seller._id,
+      sellerUser: seller.user,
+      wallet: sellerWallet._id,
+      deposit: deposit._id,
+      currency: deposit.currency,
+    },
+    lines: [
+      {
+        direction: LEDGER_DIRECTION.DEBIT,
+        account: LEDGER_ACCOUNT.BUYER_AVAILABLE,
+        amount,
+        entryType: LEDGER_ENTRY_TYPE.BUYER_ADJUSTMENT,
+        balanceAfter: buyerWalletDoc.availableBalance,
+        description: 'Seller wallet top-up from Cryptomus deposit',
+        meta: { depositId: String(deposit._id), creditToSellerWallet: true },
+      },
+      {
+        direction: LEDGER_DIRECTION.CREDIT,
+        account: LEDGER_ACCOUNT.SELLER_AVAILABLE,
+        amount,
+        entryType: LEDGER_ENTRY_TYPE.SELLER_WALLET_CREDIT,
+        balanceAfter: sellerWallet.availableBalance,
+        description: 'Seller wallet credited from Cryptomus deposit',
+        meta: { depositId: String(deposit._id), creditToSellerWallet: true },
+      },
+    ],
+  });
+
+  deposit.metadata = {
+    ...(deposit.metadata || {}),
+    sellerWalletCreditedAt: new Date(),
+    sellerWalletTransferId: transferId,
+    sellerId: String(seller._id),
+  };
+  if (session) await deposit.save({ session });
+  else await deposit.save();
+
+  logger.info('Seller wallet credited from Cryptomus deposit', {
+    sellerId: String(seller._id),
+    depositId: String(deposit._id),
+    amount,
+  });
+
+  return sellerWallet;
+}
+
+/**
+ * List Cryptomus wallet deposits for the current user (pending + completed).
+ */
+export async function listMyDeposits(actor, query = {}) {
+  const pagination = parsePagination(query, { page: 1, limit: 20, maxLimit: 50 });
+  const filter = { buyer: actor.id };
+  if (query.status) filter.status = query.status;
+  if (query.creditToSellerWallet === 'true') {
+    filter['metadata.creditToSellerWallet'] = true;
+  }
+
+  const [items, total] = await Promise.all([
+    WalletDeposit.find(filter)
+      .sort({ createdAt: -1 })
+      .skip(pagination.skip)
+      .limit(pagination.limit)
+      .lean(),
+    WalletDeposit.countDocuments(filter),
+  ]);
+
+  return {
+    items: items.map((d) => ({
+      ...d,
+      id: d._id,
+      paymentUrl: d.invoiceUrl,
+      creditToSellerWallet: Boolean(d.metadata?.creditToSellerWallet),
+      sellerWalletCredited: Boolean(d.metadata?.sellerWalletCreditedAt),
+    })),
+    meta: buildPaginationMeta({ ...pagination, total }),
+  };
+}
+
+/**
+ * Refresh a pending deposit against Cryptomus payment info (idempotent credit).
+ */
+export async function refreshMyDeposit(actor, depositId) {
+  const deposit = await WalletDeposit.findOne({ _id: depositId, buyer: actor.id });
+  if (!deposit) {
+    throw new AppError('Deposit not found', 404, { code: 'DEPOSIT_NOT_FOUND' });
+  }
+
+  if (deposit.status === PAYMENT_STATUS.PAID && deposit.creditedAt) {
+    // Retry seller-wallet bridge if Cryptomus credit succeeded but transfer did not.
+    if (deposit.metadata?.creditToSellerWallet && !deposit.metadata?.sellerWalletCreditedAt) {
+      const wallet = await BuyerWallet.findById(deposit.buyerWallet);
+      if (wallet) {
+        await transferDepositToSellerWallet(deposit, wallet, null);
+        await deposit.save();
+      }
+    }
+    return {
+      deposit: deposit.toObject(),
+      alreadyCredited: true,
+      wallet: await getMyWallet(actor),
+    };
+  }
+
+  if (!deposit.cryptomusUuid && !deposit.cryptomusOrderId) {
+    throw new AppError('Deposit has no Cryptomus reference yet', 400, { code: 'DEPOSIT_NO_PROVIDER_REF' });
+  }
+
+  if (!cryptomusService.isCryptomusConfigured()) {
+    // Simulated mode: allow sandbox-style confirm via provider status check on raw invoice
+    if (deposit.metadata?.simulated && deposit.cryptomusUuid) {
+      const result = await applyDepositPaid(deposit, {
+        providerStatus: 'paid',
+        raw: { uuid: deposit.cryptomusUuid, status: 'paid' },
+      });
+      return {
+        deposit: result.deposit?.toObject ? result.deposit.toObject() : result.deposit,
+        alreadyCredited: result.alreadyCredited,
+        wallet: await getMyWallet(actor),
+      };
+    }
+  }
+
+  const info = await cryptomusService.getPaymentInfo({
+    uuid: deposit.cryptomusUuid || undefined,
+    orderId: deposit.cryptomusOrderId || undefined,
+  });
+
+  const result = await applyDepositPaid(deposit, {
+    providerStatus: info.payment_status || info.status || deposit.providerStatus,
+    raw: info,
+    txid: info.txid || null,
+  });
+
+  return {
+    deposit: result.deposit?.toObject ? result.deposit.toObject() : result.deposit,
+    alreadyCredited: result.alreadyCredited,
+    wallet: await getMyWallet(actor),
+  };
 }
 
 /**
@@ -793,6 +1036,8 @@ export default {
   getOrCreateBuyerWallet,
   getMyWallet,
   listHistory,
+  listMyDeposits,
+  refreshMyDeposit,
   createDepositOrTopup,
   applyDepositPaid,
   spendForOrder,
