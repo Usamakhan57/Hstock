@@ -25,7 +25,7 @@ const SellerMobileNav = ({ current, onNavigate }) => (
     className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-white/95 pb-safe backdrop-blur lg:hidden"
     aria-label="Seller mobile navigation"
   >
-    <div className="mx-auto grid max-w-lg grid-cols-5 gap-1 px-2 py-2">
+    <div className="mx-auto grid max-w-lg grid-cols-5 gap-1 px-1 py-2 sm:px-2">
       {ITEMS.map((item) => {
         const active = item.key === 'new' ? false : current === item.key;
         const Icon = item.icon;

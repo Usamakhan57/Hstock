@@ -50,14 +50,14 @@ function MetricTile({
   bg = 'bg-primary/10',
 }) {
   return (
-    <div className="rounded-[1.35rem] border border-border bg-white p-4 shadow-sm">
+    <div className="relative z-0 min-w-0 rounded-[1.35rem] border border-border bg-white p-4 shadow-sm">
       <div className="mb-3 flex items-start justify-between gap-2">
         <span className={`inline-flex h-10 w-10 items-center justify-center rounded-2xl ${bg} ${tone}`}>
-          {Icon ? <Icon className="h-4.5 w-4.5" /> : null}
+          {Icon ? <Icon className="h-4 w-4" /> : null}
         </span>
       </div>
       <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{label}</p>
-      <p className="mt-2 text-2xl font-black tracking-tight text-foreground">{value}</p>
+      <p className="mt-2 break-words text-2xl font-black tracking-tight text-foreground">{value}</p>
       {hint ? <p className={`mt-1 text-xs font-medium ${hintTone}`}>{hint}</p> : null}
     </div>
   );
@@ -144,16 +144,16 @@ const SellerOverviewTab = ({
     : null;
 
   return (
-    <div className="space-y-6">
+    <div className="flex w-full min-w-0 flex-col gap-5 sm:gap-6" data-testid="seller-overview-stack">
       {/* Profile + quick actions */}
-      <section className="overflow-hidden rounded-[1.75rem] border border-border bg-white shadow-sm">
+      <section className="relative z-0 w-full min-w-0 overflow-hidden rounded-[1.75rem] border border-border bg-white shadow-sm">
         <div className="border-b border-border bg-gradient-to-br from-primary/[0.08] via-white to-accent/[0.06] p-5 sm:p-6">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex items-start gap-4">
+            <div className="flex min-w-0 items-start gap-4">
               <div className="inline-flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl brand-gradient text-white shadow-sm">
                 <Store className="h-6 w-6" />
               </div>
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-primary">Seller Dashboard</p>
                 <h2 className="mt-1 truncate text-2xl font-black tracking-tight text-foreground sm:text-3xl">
                   {seller?.storeName || 'Your Store'}
@@ -192,10 +192,10 @@ const SellerOverviewTab = ({
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-2 sm:min-w-[280px]">
+            <div className="grid w-full min-w-0 grid-cols-3 gap-2 sm:max-w-[280px] sm:w-auto">
               <Link
                 to="/seller/products/new"
-                className="inline-flex flex-col items-center justify-center gap-1 rounded-2xl bg-emerald-500 px-3 py-3 text-center text-xs font-bold text-white shadow-sm hover:bg-emerald-600"
+                className="inline-flex min-w-0 flex-col items-center justify-center gap-1 rounded-2xl bg-emerald-500 px-2 py-3 text-center text-[11px] font-bold text-white shadow-sm hover:bg-emerald-600 sm:px-3 sm:text-xs"
               >
                 <span className="text-lg leading-none">+</span>
                 Add Product
@@ -203,14 +203,14 @@ const SellerOverviewTab = ({
               <button
                 type="button"
                 onClick={() => (typeof onPromote === 'function' ? onPromote() : null)}
-                className="inline-flex flex-col items-center justify-center gap-1 rounded-2xl bg-orange-500 px-3 py-3 text-center text-xs font-bold text-white shadow-sm hover:bg-orange-600"
+                className="inline-flex min-w-0 flex-col items-center justify-center gap-1 rounded-2xl bg-orange-500 px-2 py-3 text-center text-[11px] font-bold text-white shadow-sm hover:bg-orange-600 sm:px-3 sm:text-xs"
               >
                 <Megaphone className="h-4 w-4" />
                 Promote
               </button>
               <Link
                 to="/seller/analytics"
-                className="inline-flex flex-col items-center justify-center gap-1 rounded-2xl border border-border bg-white px-3 py-3 text-center text-xs font-bold text-foreground shadow-sm hover:bg-secondary"
+                className="inline-flex min-w-0 flex-col items-center justify-center gap-1 rounded-2xl border border-border bg-white px-2 py-3 text-center text-[11px] font-bold text-foreground shadow-sm hover:bg-secondary sm:px-3 sm:text-xs"
               >
                 <TrendingUp className="h-4 w-4 text-primary" />
                 Rank
@@ -219,28 +219,28 @@ const SellerOverviewTab = ({
           </div>
         </div>
 
-        <div className="grid gap-3 p-5 sm:grid-cols-3 sm:p-6">
-          <div className="rounded-2xl border border-border bg-secondary/40 px-4 py-3">
+        <div className="grid grid-cols-1 gap-3 p-5 sm:grid-cols-3 sm:p-6">
+          <div className="min-w-0 rounded-2xl border border-border bg-secondary/40 px-4 py-3">
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Insurance</p>
             <p className="mt-1 text-sm font-bold text-foreground">$0.00 <span className="font-medium text-emerald-600">covered</span></p>
           </div>
-          <div className="rounded-2xl border border-border bg-secondary/40 px-4 py-3">
+          <div className="min-w-0 rounded-2xl border border-border bg-secondary/40 px-4 py-3">
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Referral</p>
             <p className="mt-1 text-sm font-bold text-foreground">Invite sellers & buyers</p>
           </div>
           {approved ? (
             <a
               href={storeUrl}
-              className="inline-flex items-center justify-between rounded-2xl border border-border bg-secondary/40 px-4 py-3 hover:bg-secondary"
+              className="inline-flex min-w-0 items-center justify-between rounded-2xl border border-border bg-secondary/40 px-4 py-3 hover:bg-secondary"
             >
-              <div>
+              <div className="min-w-0">
                 <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">View store</p>
                 <p className="mt-1 truncate text-sm font-bold text-foreground">/{storeSlug}</p>
               </div>
-              <ExternalLink className="h-4 w-4 text-primary" />
+              <ExternalLink className="h-4 w-4 shrink-0 text-primary" />
             </a>
           ) : (
-            <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            <div className="min-w-0 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
               Public store unlocks after approval.
             </div>
           )}
@@ -248,13 +248,13 @@ const SellerOverviewTab = ({
       </section>
 
       {/* Withdrawable balance hero */}
-      <section className="overflow-hidden rounded-[1.75rem] brand-gradient p-5 text-white shadow-sm sm:p-6">
+      <section className="relative z-0 w-full min-w-0 overflow-hidden rounded-[1.75rem] brand-gradient p-5 text-white shadow-sm sm:p-6">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-          <div>
+          <div className="min-w-0">
             <p className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.24em] text-white/80">
               <Wallet className="h-4 w-4" /> Withdrawable Balance
             </p>
-            <p className="mt-3 text-4xl font-black tracking-tight sm:text-5xl">
+            <p className="mt-3 break-words text-4xl font-black tracking-tight sm:text-5xl">
               {money(stats.withdrawableBalance)}
             </p>
             <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-sm text-white/85">
@@ -265,15 +265,15 @@ const SellerOverviewTab = ({
           </div>
           <Link
             to="/seller/earnings"
-            className="inline-flex items-center justify-center gap-2 rounded-full bg-white px-6 py-3 text-sm font-bold text-primary shadow-sm hover:bg-white/95"
+            className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-white px-6 py-3 text-sm font-bold text-primary shadow-sm hover:bg-white/95 sm:w-auto"
           >
             <ArrowUpRight className="h-4 w-4" /> Withdraw
           </Link>
         </div>
       </section>
 
-      {/* KPI grid */}
-      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+      {/* KPI grid — single column on mobile, 2 cols from sm, 3 from xl */}
+      <section className="relative z-0 grid w-full min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
         <MetricTile label="Total Sales" value={money(stats.grossSales)} hint={`+${money(stats.todaySales)} today`} icon={TrendingUp} hintTone="text-emerald-600" bg="bg-sky-50" tone="text-sky-600" />
         <MetricTile label="Net Profit" value={money(stats.netProfit)} hint="after fees & refunds" icon={CircleDollarSign} hintTone="text-emerald-600" bg="bg-emerald-50" tone="text-emerald-600" />
         <MetricTile label="Total Orders" value={stats.ordersCount} hint={`${stats.pendingOrders} in progress`} icon={ShoppingCart} hintTone="text-orange-600" bg="bg-orange-50" tone="text-orange-600" />
@@ -293,13 +293,13 @@ const SellerOverviewTab = ({
       </section>
 
       {/* Period sales + chart */}
-      <section className="rounded-[1.75rem] border border-border bg-white p-5 shadow-sm sm:p-6">
+      <section className="relative z-0 w-full min-w-0 rounded-[1.75rem] border border-border bg-white p-5 shadow-sm sm:p-6">
         <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
+          <div className="min-w-0">
             <h3 className="text-lg font-black text-foreground">Sales — last {chartRange} days</h3>
             <p className="mt-1 text-sm text-muted-foreground">Revenue and order volume from your live commerce data.</p>
           </div>
-          <div className="inline-flex rounded-full border border-border bg-secondary/70 p-1">
+          <div className="inline-flex shrink-0 rounded-full border border-border bg-secondary/70 p-1">
             {['7', '30'].map((range) => (
               <button
                 key={range}
@@ -315,24 +315,25 @@ const SellerOverviewTab = ({
           </div>
         </div>
 
-        <div className="mb-5 grid grid-cols-3 gap-3">
-          <div className="rounded-2xl bg-secondary/50 px-3 py-3 text-center">
+        <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <div className="min-w-0 rounded-2xl bg-secondary/50 px-3 py-3 text-center sm:text-center">
             <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Today</p>
-            <p className="mt-1 text-base font-black sm:text-lg">{money(stats.todaySales)}</p>
+            <p className="mt-1 break-words text-base font-black sm:text-lg">{money(stats.todaySales)}</p>
           </div>
-          <div className="rounded-2xl bg-secondary/50 px-3 py-3 text-center">
+          <div className="min-w-0 rounded-2xl bg-secondary/50 px-3 py-3 text-center">
             <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">This week</p>
-            <p className="mt-1 text-base font-black sm:text-lg">{money(stats.weekSales)}</p>
+            <p className="mt-1 break-words text-base font-black sm:text-lg">{money(stats.weekSales)}</p>
           </div>
-          <div className="rounded-2xl bg-secondary/50 px-3 py-3 text-center">
+          <div className="min-w-0 rounded-2xl bg-secondary/50 px-3 py-3 text-center">
             <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">This month</p>
-            <p className="mt-1 text-base font-black sm:text-lg">{money(stats.monthSales)}</p>
+            <p className="mt-1 break-words text-base font-black sm:text-lg">{money(stats.monthSales)}</p>
           </div>
         </div>
 
-        <div className="h-64">
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={chartData} margin={{ left: -20 }}>
+        {/* Fixed chart box — prevents Recharts % height from collapsing/overflowing into following sections */}
+        <div className="relative h-64 w-full min-w-0 overflow-hidden">
+          <ResponsiveContainer width="100%" height="100%" minWidth={0} debounce={50}>
+            <AreaChart data={chartData} margin={{ left: -20, right: 8 }}>
               <defs>
                 <linearGradient id="sellerDashSalesFill" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor="#7C3AED" stopOpacity={0.35} />
@@ -341,7 +342,7 @@ const SellerOverviewTab = ({
               </defs>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#EEE" />
               <XAxis dataKey="day" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
-              <YAxis tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
+              <YAxis tick={{ fontSize: 11 }} tickLine={false} axisLine={false} width={40} />
               <Tooltip
                 formatter={(value, name) => (
                   name === 'sales' ? [money(value), 'Sales'] : [value, 'Orders']
@@ -354,7 +355,7 @@ const SellerOverviewTab = ({
       </section>
 
       {/* Action required */}
-      <section className="rounded-[1.75rem] border border-border bg-white p-5 shadow-sm sm:p-6">
+      <section className="relative z-0 w-full min-w-0 rounded-[1.75rem] border border-border bg-white p-5 shadow-sm sm:p-6">
         <div className="mb-4 flex items-center gap-2">
           <AlertTriangle className="h-5 w-5 text-red-500" />
           <h3 className="text-lg font-black text-foreground">Action Required</h3>
@@ -402,14 +403,14 @@ const SellerOverviewTab = ({
         )}
       </section>
 
-      {/* Top products + disputes */}
-      <section className="grid gap-5 lg:grid-cols-2">
-        <div className="rounded-[1.75rem] border border-border bg-white p-5 shadow-sm sm:p-6">
+      {/* Top products + disputes — stack on mobile, 2 cols from lg */}
+      <section className="relative z-0 grid w-full min-w-0 grid-cols-1 gap-5 lg:grid-cols-2">
+        <div className="min-w-0 rounded-[1.75rem] border border-border bg-white p-5 shadow-sm sm:p-6">
           <div className="mb-2 flex items-center justify-between gap-3">
-            <h3 className="inline-flex items-center gap-2 text-lg font-black">
-              <Flame className="h-5 w-5 text-red-500" /> Top Selling Products
+            <h3 className="inline-flex min-w-0 items-center gap-2 text-lg font-black">
+              <Flame className="h-5 w-5 shrink-0 text-red-500" /> Top Selling Products
             </h3>
-            <Link to="/seller/products" className="text-xs font-semibold text-primary hover:underline">Manage →</Link>
+            <Link to="/seller/products" className="shrink-0 text-xs font-semibold text-primary hover:underline">Manage →</Link>
           </div>
           {bestSelling.length === 0 ? (
             <p className="py-8 text-sm text-muted-foreground">No sales yet. Publish a listing to start ranking products.</p>
@@ -427,8 +428,8 @@ const SellerOverviewTab = ({
           )}
         </div>
 
-        <div className="space-y-5">
-          <div className="rounded-[1.75rem] border border-border bg-white p-5 shadow-sm sm:p-6">
+        <div className="flex min-w-0 flex-col gap-5">
+          <div className="min-w-0 rounded-[1.75rem] border border-border bg-white p-5 shadow-sm sm:p-6">
             <div className="flex flex-col items-center justify-center py-6 text-center">
               {noDisputes ? (
                 <>
@@ -449,8 +450,8 @@ const SellerOverviewTab = ({
             </div>
           </div>
 
-          <div className="rounded-[1.75rem] border border-border bg-white p-5 shadow-sm sm:p-6">
-            <div className="mb-2 flex items-center justify-between">
+          <div className="min-w-0 rounded-[1.75rem] border border-border bg-white p-5 shadow-sm sm:p-6">
+            <div className="mb-2 flex items-center justify-between gap-3">
               <h3 className="text-base font-black">Lowest Stock</h3>
               <Link to="/seller/products" className="text-xs font-semibold text-primary">View</Link>
             </div>
@@ -473,11 +474,11 @@ const SellerOverviewTab = ({
       </section>
 
       {/* Most viewed + recent orders */}
-      <section className="grid gap-5 lg:grid-cols-2">
-        <div className="rounded-[1.75rem] border border-border bg-white p-5 shadow-sm sm:p-6">
-          <div className="mb-2 flex items-center justify-between">
+      <section className="relative z-0 grid w-full min-w-0 grid-cols-1 gap-5 lg:grid-cols-2">
+        <div className="min-w-0 rounded-[1.75rem] border border-border bg-white p-5 shadow-sm sm:p-6">
+          <div className="mb-2 flex items-center justify-between gap-3">
             <h3 className="text-lg font-black">Most Viewed</h3>
-            <Link to="/seller/analytics" className="text-xs font-semibold text-primary">Analytics →</Link>
+            <Link to="/seller/analytics" className="shrink-0 text-xs font-semibold text-primary">Analytics →</Link>
           </div>
           {mostViewed.length === 0 ? (
             <p className="py-6 text-sm text-muted-foreground">Views will appear as buyers browse your listings.</p>
@@ -495,18 +496,18 @@ const SellerOverviewTab = ({
           )}
         </div>
 
-        <div className="overflow-hidden rounded-[1.75rem] border border-border bg-white shadow-sm">
-          <div className="flex items-center justify-between border-b border-border px-5 py-4">
-            <h3 className="inline-flex items-center gap-2 text-lg font-black">
-              <ShoppingCart className="h-5 w-5 text-emerald-600" /> Recent Orders
+        <div className="min-w-0 overflow-hidden rounded-[1.75rem] border border-border bg-white shadow-sm">
+          <div className="flex items-center justify-between gap-3 border-b border-border px-5 py-4">
+            <h3 className="inline-flex min-w-0 items-center gap-2 text-lg font-black">
+              <ShoppingCart className="h-5 w-5 shrink-0 text-emerald-600" /> Recent Orders
             </h3>
-            <Link to="/seller/orders" className="text-xs font-semibold text-primary">View all</Link>
+            <Link to="/seller/orders" className="shrink-0 text-xs font-semibold text-primary">View all</Link>
           </div>
           {recentOrders.length === 0 ? (
             <p className="px-5 py-10 text-sm text-muted-foreground">No orders yet.</p>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+            <div className="w-full overflow-x-auto">
+              <table className="w-full min-w-[280px] text-sm">
                 <thead>
                   <tr className="text-left text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
                     <th className="px-5 py-3 font-semibold">Amount</th>
@@ -533,7 +534,7 @@ const SellerOverviewTab = ({
       </section>
 
       {/* Quick links */}
-      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <section className="relative z-0 grid w-full min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {[
           { to: '/seller/products', label: 'Products', icon: Package, hint: `${stats.liveProducts} live` },
           { to: '/seller/orders', label: 'Orders', icon: ShoppingCart, hint: `${stats.pendingOrders} pending` },
@@ -543,7 +544,7 @@ const SellerOverviewTab = ({
           <Link
             key={item.to}
             to={item.to}
-            className="rounded-[1.35rem] border border-border bg-white p-4 shadow-sm transition hover:border-primary/30 hover:shadow-md"
+            className="min-w-0 rounded-[1.35rem] border border-border bg-white p-4 shadow-sm transition hover:border-primary/30 hover:shadow-md"
           >
             <item.icon className="h-5 w-5 text-primary" />
             <p className="mt-3 text-sm font-bold text-foreground">{item.label}</p>
