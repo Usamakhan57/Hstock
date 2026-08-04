@@ -20,6 +20,13 @@ import SidebarHeader from './SidebarHeader';
 import SidebarNavigation from './SidebarNavigation';
 import SidebarFooter from './SidebarFooter';
 
+/**
+ * Seller Workspace — header dropdown panel (never a bottom sheet).
+ *
+ * Mobile: full-width panel starting below the sticky header, slides down.
+ * Desktop (≥1024px / lg): right-side panel starting below the header, drops down.
+ * Animation: opacity + translateY(-20px → 0), 180ms ease-out. No bottom-up motion.
+ */
 const SellerSidebar = ({ open, closing, onClose, seller, walletBalance, notificationsCount, onLogout }) => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -60,7 +67,7 @@ const SellerSidebar = ({ open, closing, onClose, seller, walletBalance, notifica
     },
   ], [storeSlug, isApproved]);
 
-  // Animate in from above the fold (mobile) / from the right (desktop).
+  // Drop in from above the header edge (both mobile + desktop).
   useEffect(() => {
     if (!open || closing) {
       setEntered(false);
@@ -129,13 +136,15 @@ const SellerSidebar = ({ open, closing, onClose, seller, walletBalance, notifica
   };
 
   const showOpen = entered && !closing;
+  // Top-down dropdown only — never translate from the bottom, never slide from the side.
   const panelMotion = showOpen
-    ? 'translate-y-0 sm:translate-x-0'
-    : '-translate-y-full sm:translate-y-0 sm:translate-x-full';
+    ? 'translate-y-0 opacity-100'
+    : '-translate-y-5 opacity-0 pointer-events-none';
+
+  const headerOffset = 'top-[calc(4rem+env(safe-area-inset-top,0px))]';
+  const panelMaxHeight = 'max-h-[calc(100dvh-4rem-env(safe-area-inset-top,0px)-env(safe-area-inset-bottom,0px))]';
 
   return createPortal(
-    // z-[100]+ sits above marketplace header (z-50) on desktop.
-    // Mobile panel is still offset under the header so the header stays visible.
     <div className="fixed inset-0 z-[100] pointer-events-none" data-testid="seller-drawer-root">
       <div className="pointer-events-auto">
         <SidebarOverlay open={showOpen} onClose={onClose} />
@@ -146,7 +155,18 @@ const SellerSidebar = ({ open, closing, onClose, seller, walletBalance, notifica
         aria-label="Seller sidebar"
         aria-modal="true"
         data-testid="seller-drawer-panel"
-        className={`pointer-events-auto fixed inset-x-0 top-[calc(4rem+env(safe-area-inset-top,0px))] z-[101] flex max-h-[calc(100dvh-4rem-env(safe-area-inset-top,0px)-env(safe-area-inset-bottom,0px))] w-full flex-col overflow-hidden bg-white shadow-[0_20px_80px_-24px_rgba(15,23,42,0.35)] border-b border-[#E5E7EB] transition-transform duration-300 ease-out sm:inset-y-0 sm:left-auto sm:right-0 sm:top-0 sm:max-h-[100dvh] sm:h-[100vh] sm:w-[380px] sm:border-b-0 sm:border-l lg:w-[420px] ${panelMotion}`}
+        data-open={showOpen ? 'true' : 'false'}
+        className={[
+          'pointer-events-auto fixed inset-x-0 z-[101] flex w-full flex-col overflow-hidden',
+          'bg-white border-b border-[#E5E7EB]',
+          'shadow-[0_20px_80px_-24px_rgba(15,23,42,0.35)]',
+          'transition-[transform,opacity] duration-[180ms] ease-out',
+          headerOffset,
+          panelMaxHeight,
+          // Desktop: right-side header dropdown (not full-bleed sheet, not bottom sheet)
+          'lg:inset-x-auto lg:right-0 lg:w-[420px] lg:border-b-0 lg:border-l lg:rounded-bl-2xl',
+          panelMotion,
+        ].join(' ')}
       >
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-safe" style={{ WebkitOverflowScrolling: 'touch' }}>
           <div className="flex min-h-full flex-col">

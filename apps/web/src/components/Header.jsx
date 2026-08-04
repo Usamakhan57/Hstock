@@ -369,7 +369,7 @@ const Header = () => {
     drawerCloseTimeoutRef.current = window.setTimeout(() => {
       setSellerDrawerClosing(false);
       drawerCloseTimeoutRef.current = null;
-    }, 250);
+    }, 200);
   };
 
   const headerCategories = useMemo(() => {
