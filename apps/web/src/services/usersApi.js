@@ -45,6 +45,10 @@ export const usersApi = {
   adminUpdate(id, payload) {
     return patch(`/users/${id}`, payload).then(({ data }) => data);
   },
+
+  adminInvite(payload) {
+    return post('/users/invite', payload).then(({ data }) => data);
+  },
 };
 
 export default usersApi;

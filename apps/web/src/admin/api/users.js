@@ -1,6 +1,17 @@
-import { get, patch } from '../../lib/apiClient';
 import { usersApi } from '../../services/usersApi';
 import { mapAdminUser } from './adminMappers';
+
+const ROLE_MAP = {
+  Admin: 'admin',
+  Editor: 'editor',
+  Support: 'support',
+  'Super Admin': 'super_admin',
+};
+
+function toApiRole(role) {
+  if (!role) return 'editor';
+  return ROLE_MAP[role] || String(role).toLowerCase();
+}
 
 export const getUsers = async (params = {}) => {
   const { items } = await usersApi.adminList({ ...params, limit: params.limit || 100 });
@@ -16,7 +27,12 @@ export const getUser = async (id) => {
 };
 
 export const createUser = async (payload) => {
-  throw new Error('Inviting admin users via API is not supported yet.');
+  const { user } = await usersApi.adminInvite({
+    name: payload.name,
+    email: payload.email,
+    role: toApiRole(payload.role),
+  });
+  return mapAdminUser(user);
 };
 
 export const updateUser = async (id, payload) => {
@@ -24,13 +40,7 @@ export const updateUser = async (id, payload) => {
   if (payload.status) body.status = payload.status;
   if (payload.name) body.name = payload.name;
   if (payload.role) {
-    const roleMap = {
-      Admin: 'admin',
-      Editor: 'editor',
-      Support: 'support',
-      'Super Admin': 'super_admin',
-    };
-    body.roles = [roleMap[payload.role] || payload.role.toLowerCase()];
+    body.roles = [toApiRole(payload.role)];
   }
   const { user } = await usersApi.adminUpdate(id, body);
   return mapAdminUser(user);

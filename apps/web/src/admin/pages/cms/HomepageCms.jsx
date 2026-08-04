@@ -159,9 +159,14 @@ const HomepageCms = () => {
 
   const handleSave = async () => {
     setSaving(true);
-    await updateHomepageCms({ sections });
-    toast({ title: 'Homepage saved', description: 'Storefront updates immediately — no rebuild required.' });
-    setSaving(false);
+    try {
+      await updateHomepageCms({ sections });
+      toast({ title: 'Homepage saved', description: 'Storefront updates immediately — no rebuild required.' });
+    } catch (err) {
+      toast({ title: 'Could not save homepage', description: err.message || 'Please try again.', variant: 'destructive' });
+    } finally {
+      setSaving(false);
+    }
   };
 
   if (!sections) return <p className="text-sm text-muted-foreground">Loading…</p>;

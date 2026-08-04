@@ -32,11 +32,16 @@ const NavMenusList = () => {
   const handleSubmit = async () => {
     if (!form.name.trim()) { toast({ title: 'Menu name is required', variant: 'destructive' }); return; }
     setSaving(true);
-    await createNavMenu({ name: form.name, key: form.key || slugify(form.name), location: form.location, items: [] });
-    toast({ title: 'Menu created', description: form.name });
-    setSaving(false);
-    setSheetOpen(false);
-    load();
+    try {
+      await createNavMenu({ name: form.name, key: form.key || slugify(form.name), location: form.location, items: [] });
+      toast({ title: 'Menu created', description: form.name });
+      setSheetOpen(false);
+      load();
+    } catch (err) {
+      toast({ title: 'Could not save menu', description: err.message || 'Please try again.', variant: 'destructive' });
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleDelete = async () => {

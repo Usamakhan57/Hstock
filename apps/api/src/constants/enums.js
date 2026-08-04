@@ -28,6 +28,8 @@ export const UserStatusEnum = Object.freeze({
   Suspended: 'suspended',
   Deleted: 'deleted',
   Pending: 'pending',
+  /** Staff invite created — must set password before login. */
+  Invited: 'invited',
 });
 
 export const VerificationStatusEnum = Object.freeze({

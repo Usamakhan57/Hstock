@@ -26,9 +26,14 @@ const NewsletterCms = () => {
 
   const handleSave = async () => {
     setSaving(true);
-    await updateNewsletterCms(form);
-    toast({ title: 'Newsletter settings saved' });
-    setSaving(false);
+    try {
+      await updateNewsletterCms(form);
+      toast({ title: 'Newsletter settings saved' });
+    } catch (err) {
+      toast({ title: 'Could not save newsletter', description: err.message || 'Please try again.', variant: 'destructive' });
+    } finally {
+      setSaving(false);
+    }
   };
 
   if (!form) return <p className="text-sm text-muted-foreground">Loading…</p>;

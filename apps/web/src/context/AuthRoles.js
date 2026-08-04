@@ -22,7 +22,7 @@ export function isSeller(user) {
 }
 
 export function isAdmin(user) {
-  return hasRole(user, [ROLES.ADMIN, ROLES.SUPER_ADMIN]);
+  return hasRole(user, [ROLES.ADMIN, ROLES.SUPER_ADMIN, ROLES.EDITOR, ROLES.SUPPORT]);
 }
 
 export function isSuperAdmin(user) {

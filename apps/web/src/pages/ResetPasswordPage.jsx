@@ -38,7 +38,8 @@ const ResetPasswordPage = () => {
     try {
       await authApi.resetPassword({ token, password });
       toast({ title: 'Password updated', description: 'You can now sign in with your new password.' });
-      navigate('/login');
+      const next = params.get('next');
+      navigate(next && next.startsWith('/') ? next : '/login');
     } catch (err) {
       setError(err.message || 'Unable to reset password.');
     } finally {

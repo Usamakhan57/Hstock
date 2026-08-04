@@ -58,16 +58,21 @@ const FaqList = () => {
   const handleSubmit = async () => {
     if (!form.question.trim() || !form.categoryId) { toast({ title: 'Category and question are required', variant: 'destructive' }); return; }
     setSaving(true);
-    if (editing) {
-      await updateFaq(editing.id, form);
-    } else {
-      const siblingCount = faqs.filter((f) => f.categoryId === form.categoryId).length;
-      await createFaq({ ...form, sortOrder: siblingCount + 1 });
+    try {
+      if (editing) {
+        await updateFaq(editing.id, form);
+      } else {
+        const siblingCount = faqs.filter((f) => f.categoryId === form.categoryId).length;
+        await createFaq({ ...form, sortOrder: siblingCount + 1 });
+      }
+      toast({ title: editing ? 'FAQ updated' : 'FAQ added' });
+      setSheetOpen(false);
+      load();
+    } catch (err) {
+      toast({ title: 'Could not save FAQ', description: err.message || 'Please try again.', variant: 'destructive' });
+    } finally {
+      setSaving(false);
     }
-    toast({ title: editing ? 'FAQ updated' : 'FAQ added' });
-    setSaving(false);
-    setSheetOpen(false);
-    load();
   };
 
   const handleDelete = async () => {

@@ -30,30 +30,56 @@ const UsersList = () => {
   const openEdit = (row) => { setEditing(row); setForm(row); setSheetOpen(true); };
 
   const handleSubmit = async () => {
-    if (!form.name.trim() || !form.email.trim()) { toast({ title: 'Name and email are required', variant: 'destructive' }); return; }
+    if (!form.name.trim() || !form.email.trim()) {
+      toast({ title: 'Name and email are required', variant: 'destructive' });
+      return;
+    }
     setSaving(true);
-    if (editing) await updateUser(editing.id, form);
-    else await createUser({ ...form, lastLoginAt: null });
-    toast({ title: editing ? 'User updated' : 'User invited', description: form.name });
-    setSaving(false);
-    setSheetOpen(false);
-    load();
+    try {
+      if (editing) await updateUser(editing.id, form);
+      else await createUser({ ...form, lastLoginAt: null });
+      toast({
+        title: editing ? 'User updated' : 'User invited',
+        description: editing
+          ? form.name
+          : `${form.name} — invite email sent to ${form.email}`,
+      });
+      setSheetOpen(false);
+      load();
+    } catch (err) {
+      toast({
+        title: editing ? 'Could not update user' : 'Could not invite user',
+        description: err.message || 'Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setSaving(false);
+    }
   };
 
   const toggleSuspend = async (row) => {
-    const next = row.status === 'suspended' ? 'active' : 'suspended';
-    await updateUser(row.id, { status: next });
-    toast({ title: next === 'suspended' ? 'User suspended' : 'User reactivated', description: row.name });
-    load();
+    try {
+      const next = row.status === 'suspended' ? 'active' : 'suspended';
+      await updateUser(row.id, { status: next });
+      toast({ title: next === 'suspended' ? 'User suspended' : 'User reactivated', description: row.name });
+      load();
+    } catch (err) {
+      toast({ title: 'Could not update user', description: err.message || 'Please try again.', variant: 'destructive' });
+    }
   };
 
   const handleDelete = async () => {
     setBusy(true);
-    await deleteUser(deleteTarget.id);
-    toast({ title: 'User removed', description: deleteTarget.name });
-    setBusy(false);
-    setDeleteTarget(null);
-    load();
+    try {
+      await deleteUser(deleteTarget.id);
+      toast({ title: 'User removed', description: deleteTarget.name });
+      setDeleteTarget(null);
+      load();
+    } catch (err) {
+      toast({ title: 'Could not remove user', description: err.message || 'Please try again.', variant: 'destructive' });
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (

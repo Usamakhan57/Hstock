@@ -37,9 +37,14 @@ const GlobalSettingsCms = () => {
 
   const handleSave = async () => {
     setSaving(true);
-    await updateGlobalSettings(form);
-    toast({ title: 'Global settings saved' });
-    setSaving(false);
+    try {
+      await updateGlobalSettings(form);
+      toast({ title: 'Global settings saved' });
+    } catch (err) {
+      toast({ title: 'Could not save global settings', description: err.message || 'Please try again.', variant: 'destructive' });
+    } finally {
+      setSaving(false);
+    }
   };
 
   if (!form) return <p className="text-sm text-muted-foreground">Loading…</p>;

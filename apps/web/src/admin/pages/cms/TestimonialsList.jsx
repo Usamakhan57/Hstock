@@ -32,12 +32,17 @@ const TestimonialsList = () => {
   const handleSubmit = async () => {
     if (!form.customerName.trim() || !form.review.trim()) { toast({ title: 'Customer name and review are required', variant: 'destructive' }); return; }
     setSaving(true);
-    if (editing) await updateTestimonial(editing.id, form);
-    else await createTestimonial(form);
-    toast({ title: editing ? 'Testimonial updated' : 'Testimonial added', description: form.customerName });
-    setSaving(false);
-    setSheetOpen(false);
-    load();
+    try {
+      if (editing) await updateTestimonial(editing.id, form);
+      else await createTestimonial(form);
+      toast({ title: editing ? 'Testimonial updated' : 'Testimonial added', description: form.customerName });
+      setSheetOpen(false);
+      load();
+    } catch (err) {
+      toast({ title: 'Could not save testimonial', description: err.message || 'Please try again.', variant: 'destructive' });
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleDelete = async () => {

@@ -5,12 +5,13 @@ import {
   SellerProfile,
   AdminProfile,
   Product,
+  PasswordResetToken,
 } from '../models/index.js';
 import { AppError } from '../utils/AppError.js';
 import { hashPassword, comparePassword } from '../utils/password.js';
 import { parsePagination, buildPaginationMeta } from '../utils/pagination.js';
 import { USER_ROLES, STAFF_ROLES } from '../constants/roles.js';
-import { SellerStatusEnum, VerificationStatusEnum } from '../constants/enums.js';
+import { UserStatusEnum, SellerStatusEnum, VerificationStatusEnum } from '../constants/enums.js';
 import {
   APPROVAL_STATUS,
   PRODUCT_STATUS,
@@ -19,6 +20,23 @@ import {
 import { publicUser } from './auth.service.js';
 import { logActivity } from './activity.service.js';
 import { listActivityLogs } from './activity.service.js';
+import { generateOpaqueToken, hashToken } from '../utils/token.js';
+import { sendTemplatedEmail } from '../emails/email.service.js';
+import { env } from '../config/env.js';
+import { logger } from '../config/logger.js';
+
+const INVITEABLE_ROLES = Object.freeze([
+  USER_ROLES.ADMIN,
+  USER_ROLES.EDITOR,
+  USER_ROLES.SUPPORT,
+]);
+
+const ROLE_LABEL = Object.freeze({
+  [USER_ROLES.ADMIN]: 'Admin',
+  [USER_ROLES.EDITOR]: 'Editor',
+  [USER_ROLES.SUPPORT]: 'Support',
+  [USER_ROLES.SUPER_ADMIN]: 'Super Admin',
+});
 
 function serializeSeller(seller) {
   if (!seller) return null;
@@ -183,6 +201,7 @@ export async function adminUpdateUser(userId, payload, actorId) {
   }
 
   if (payload.status !== undefined) user.status = payload.status;
+  if (payload.name !== undefined) user.name = String(payload.name).trim();
   if (payload.verificationStatus !== undefined) {
     user.verificationStatus = payload.verificationStatus;
   }
@@ -220,6 +239,112 @@ export async function adminUpdateUser(userId, payload, actorId) {
   });
 
   return publicUser(user);
+}
+
+/**
+ * Invite a staff user to the Admin Panel.
+ * Creates the account as `invited`, issues a set-password token, and emails the invite.
+ */
+export async function adminInviteUser(payload, actorId) {
+  const name = String(payload?.name || '').trim();
+  const email = String(payload?.email || '').trim().toLowerCase();
+  const role = String(payload?.role || USER_ROLES.EDITOR).trim().toLowerCase();
+
+  if (!name || name.length < 2) {
+    throw new AppError('Name is required', 400, { code: 'VALIDATION_ERROR' });
+  }
+  if (!email || !email.includes('@')) {
+    throw new AppError('A valid email is required', 400, { code: 'VALIDATION_ERROR' });
+  }
+  if (!INVITEABLE_ROLES.includes(role)) {
+    throw new AppError('Role must be admin, editor, or support', 400, {
+      code: 'VALIDATION_ERROR',
+      details: { allowedRoles: INVITEABLE_ROLES },
+    });
+  }
+
+  const existing = await User.findOne({ email });
+  if (existing) {
+    throw new AppError('A user with this email already exists', 409, {
+      code: 'EMAIL_EXISTS',
+    });
+  }
+
+  const passwordHash = await hashPassword(generateOpaqueToken(32));
+  const user = await User.create({
+    name,
+    email,
+    passwordHash,
+    roles: [role],
+    status: UserStatusEnum.Invited,
+    emailVerified: true,
+    emailVerifiedAt: new Date(),
+    authProvider: 'local',
+  });
+
+  await AdminProfile.findOneAndUpdate(
+    { user: user._id },
+    {
+      $setOnInsert: {
+        user: user._id,
+        displayName: name,
+        staffRole: role === USER_ROLES.SUPER_ADMIN ? USER_ROLES.SUPER_ADMIN : role,
+      },
+    },
+    { upsert: true },
+  );
+
+  await PasswordResetToken.updateMany(
+    { user: user._id, usedAt: null },
+    { $set: { usedAt: new Date() } },
+  );
+
+  const raw = generateOpaqueToken(32);
+  const expiresAt = new Date(Date.now() + 72 * 60 * 60 * 1000);
+  await PasswordResetToken.create({
+    user: user._id,
+    tokenHash: hashToken(raw),
+    expiresAt,
+  });
+
+  const frontendBase = String(env.FRONTEND_URL || env.APP_URL || '').replace(/\/$/, '');
+  const resetUrl = `${frontendBase}/reset-password?token=${encodeURIComponent(raw)}&next=${encodeURIComponent('/admin/login')}`;
+
+  try {
+    const emailResult = await sendTemplatedEmail('admin_invite', {
+      to: user.email,
+      data: {
+        name: user.name,
+        roleLabel: ROLE_LABEL[role] || role,
+        resetUrl,
+        expiresInMinutes: 72 * 60,
+      },
+    });
+    logger.info('Admin invite email dispatch result', {
+      userId: String(user._id),
+      sent: emailResult.sent,
+      provider: emailResult.provider,
+    });
+  } catch (error) {
+    // Roll back invite if mail cannot be delivered — avoid orphaned invited accounts.
+    await PasswordResetToken.deleteMany({ user: user._id });
+    await AdminProfile.deleteOne({ user: user._id });
+    await User.deleteOne({ _id: user._id });
+    throw error;
+  }
+
+  await logActivity({
+    userId: actorId,
+    action: 'users.admin.invite',
+    resource: 'User',
+    resourceId: user._id,
+    meta: { email, role },
+  });
+
+  return {
+    user: publicUser(user),
+    ...(env.isProduction ? {} : { resetUrl, expiresAt }),
+  };
 }
 
 export async function adminListSellers(query = {}) {
@@ -386,6 +511,7 @@ export default {
   changePassword,
   listUsers,
   adminUpdateUser,
+  adminInviteUser,
   adminListSellers,
   adminGetSeller,
   adminUpdateSellerStatus,
