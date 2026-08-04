@@ -15,8 +15,9 @@ import { searchCategories } from '../services/categoryRepository';
 import { getStorefrontSellers } from '../services/sellerRepository';
 import { productsApi } from '../services/api';
 import { useFetch } from '../hooks/useFetch';
-import { POPULAR_SEARCHES } from '../constants';
 import { useStore } from '../context/StoreContext';
+import { useCms } from '../hooks/useCms';
+import { CMS_KEYS } from '../services/cmsApi';
 
 const SearchResultsPage = () => {
   const [searchParams] = useSearchParams();
@@ -25,6 +26,15 @@ const SearchResultsPage = () => {
   const [value, setValue] = useState(q);
   const { recent, addRecent, clearRecent } = useRecentSearches();
   const { catalogVersion } = useStore();
+  const { data: popularTagsDoc } = useCms(CMS_KEYS.POPULAR_TAGS);
+  const popularSearches = useMemo(() => (
+    Array.isArray(popularTagsDoc?.tags)
+      ? [...popularTagsDoc.tags]
+        .filter((t) => t?.enabled !== false && t?.label)
+        .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+        .map((t) => t.label)
+      : []
+  ), [popularTagsDoc]);
 
   useEffect(() => setValue(q), [q]);
   useEffect(() => { if (q.trim()) addRecent(q); }, [q]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -101,7 +111,7 @@ const SearchResultsPage = () => {
             <div>
               <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2.5">Popular searches</p>
               <div className="flex flex-wrap gap-2">
-                {POPULAR_SEARCHES.map((term) => (
+                {popularSearches.map((term) => (
                   <button key={term} type="button" onClick={() => goSearch(term)} className="flex items-center gap-1.5 text-sm font-medium px-4 py-2 rounded-full bg-white border border-border hover:bg-secondary transition-colors">
                     <TrendingUp className="w-3.5 h-3.5 text-primary" /> {term}
                   </button>

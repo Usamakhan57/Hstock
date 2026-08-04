@@ -12,7 +12,8 @@ import {
 } from '../services/blog/blogService';
 import { buildBlogPostingSchema, buildRobotsContent } from '../services/blog/seoUtils';
 import { getBlogPosts } from '../admin/api/blogPosts';
-import { SITE } from '../constants';
+import { useCms } from '../hooks/useCms';
+import { CMS_KEYS } from '../services/cmsApi';
 
 const formatDate = (d) => new Date(d).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 
@@ -22,6 +23,7 @@ const BlogPostPage = () => {
   const { slug } = useParams();
   const [searchParams] = useSearchParams();
   const isPreview = searchParams.get('preview') === '1';
+  const { data: global } = useCms(CMS_KEYS.GLOBAL);
 
   const [post, setPost] = useState(undefined); // undefined = loading, null = not found
   const [related, setRelated] = useState([]);
@@ -57,12 +59,13 @@ const BlogPostPage = () => {
 
   const schema = useMemo(() => {
     if (!post) return null;
+    const base = (global?.siteUrl || '').replace(/\/$/, '');
     return buildBlogPostingSchema(post, {
       authorName: author?.name,
       categoryLabel: categoryName(categories, post.categoryId),
-      url: `${SITE.url}/blog/${post.slug}`,
+      url: `${base}/blog/${post.slug}`,
     });
-  }, [post, author, categories]);
+  }, [post, author, categories, global?.siteUrl]);
 
   if (post === undefined || !settings) {
     return (

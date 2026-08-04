@@ -62,7 +62,7 @@ const ContactSettingsCms = () => {
           </div>
           <div>
             <label className="block text-sm font-medium mb-1.5">Office</label>
-            <input value={form.office || ''} onChange={set('office')} className={inputClass} placeholder="Remote-first support team" />
+            <input value={form.office || ''} onChange={set('office')} className={inputClass} placeholder="Support office or team name" />
           </div>
           <div>
             <label className="block text-sm font-medium mb-1.5">Address</label>

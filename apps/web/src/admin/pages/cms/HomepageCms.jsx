@@ -101,6 +101,30 @@ const SectionCard = ({ section, isFirst, isLast, isOpen, onToggleOpen, onToggleE
               <input value={section.buttonUrl} onChange={set('buttonUrl')} className={inputClass} placeholder="/shop" />
             </div>
           </div>
+
+          {section.type === 'hero' && (
+            <div className="space-y-4 pt-2 border-t border-border">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Hero extras</p>
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1.5">Secondary Button Text</label>
+                  <input value={section.secondaryButtonText || ''} onChange={set('secondaryButtonText')} className={inputClass} />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1.5">Secondary Button URL</label>
+                  <input value={section.secondaryButtonUrl || ''} onChange={set('secondaryButtonUrl')} className={inputClass} />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1.5">Search Placeholder</label>
+                <input value={section.searchPlaceholder || ''} onChange={set('searchPlaceholder')} className={inputClass} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1.5">Badge Text</label>
+                <input value={section.badgeText || ''} onChange={set('badgeText')} className={inputClass} />
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

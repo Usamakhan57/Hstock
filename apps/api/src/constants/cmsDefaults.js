@@ -21,7 +21,18 @@ export const CMS_KEYS = Object.freeze({
   TESTIMONIALS: 'testimonials',
   NAV_MENUS: 'nav_menus',
   EMAIL_TEMPLATES: 'email_templates',
+  BANNERS: 'banners',
 });
+
+/** Keys that public anonymous GET /cms may never return. */
+export const ADMIN_ONLY_CMS_KEYS = Object.freeze([
+  CMS_KEYS.EMAIL_TEMPLATES,
+]);
+
+/** Keys exposed on public CMS reads (after draft filtering). */
+export const PUBLIC_CMS_KEYS = Object.freeze(
+  Object.values(CMS_KEYS).filter((key) => !ADMIN_ONLY_CMS_KEYS.includes(key)),
+);
 
 export const DEFAULT_POPULAR_TAGS = Object.freeze({
   tags: [
@@ -38,10 +49,10 @@ export const DEFAULT_POPULAR_TAGS = Object.freeze({
 
 export const DEFAULT_CONTACT = Object.freeze({
   companyName: 'ApnaStore',
-  office: 'Remote-first support team',
+  office: '',
   address: '',
   phone: '',
-  email: 'support@apnastore.org',
+  email: '',
   whatsapp: '',
   googleMapsUrl: '',
   formTitle: 'Send us a message',
@@ -57,9 +68,29 @@ export const DEFAULT_CONTACT = Object.freeze({
 export const DEFAULT_HOMEPAGE = Object.freeze({
   sections: [
     {
-      key: 'hero', type: 'hero', label: 'Hero Section', enabled: true, sortOrder: 1,
-      title: 'Digital assets for creators who ship', subtitle: 'Secure marketplace for accounts & tools',
-      description: '', maxProducts: null, backgroundImage: '', buttonText: 'Explore the Shop', buttonUrl: '/shop',
+      key: 'hero',
+      type: 'hero',
+      label: 'Hero Section',
+      enabled: true,
+      sortOrder: 1,
+      title: 'Trade Digital Assets Securely',
+      subtitle: 'Secure marketplace for accounts & tools',
+      description: 'Buy and sell social accounts, domains, SaaS, source code, and tools with escrow protection and verified sellers.',
+      maxProducts: null,
+      backgroundImage: '',
+      buttonText: 'Browse Products',
+      buttonUrl: '/categories',
+      secondaryButtonText: 'Start Selling',
+      secondaryButtonUrl: '/become-a-seller',
+      searchPlaceholder: 'Search accounts, domains, SaaS, source code…',
+      badgeText: 'Trusted by creators worldwide',
+      trustItems: [
+        { id: 't1', label: 'SSL Secured' },
+        { id: 't2', label: 'Protected by Cloudflare' },
+        { id: 't3', label: 'Secure Crypto Payments' },
+        { id: 't4', label: 'Buyer Protection Guarantee' },
+        { id: 't5', label: 'Instant Delivery' },
+      ],
     },
     {
       key: 'popular_tags', type: 'popular_tags', label: 'Popular Tags', enabled: true, sortOrder: 2,
@@ -68,29 +99,74 @@ export const DEFAULT_HOMEPAGE = Object.freeze({
     },
     {
       key: 'featured_categories', type: 'categories', label: 'Featured Categories', enabled: true, sortOrder: 3,
-      title: 'Shop by Category', subtitle: 'Find exactly what your project needs',
-      description: '', maxProducts: 8, backgroundImage: '', buttonText: 'View All Categories', buttonUrl: '/categories',
+      title: 'Browse digital services', subtitle: 'Marketplace services',
+      description: '', maxProducts: 8, backgroundImage: '', buttonText: 'View all', buttonUrl: '/categories',
     },
     {
-      key: 'featured_products', type: 'products', label: 'Featured Products', enabled: true, sortOrder: 4,
-      title: 'Featured', subtitle: "Editor's picks this week",
-      description: '', maxProducts: 12, backgroundImage: '', buttonText: 'Shop Featured', buttonUrl: '/shop?featured=true',
+      key: 'popular_sellers', type: 'sellers', label: 'Popular Sellers', enabled: true, sortOrder: 4,
+      title: 'Premium seller storefronts', subtitle: 'Featured stores',
+      description: '', maxProducts: 8, backgroundImage: '', buttonText: 'Browse marketplace', buttonUrl: '/shop',
     },
     {
-      key: 'popular_sellers', type: 'sellers', label: 'Popular Sellers', enabled: true, sortOrder: 5,
-      title: 'Popular Sellers', subtitle: 'Top-rated shops on ApnaStore',
-      description: '', maxProducts: 8, backgroundImage: '', buttonText: 'Browse All Sellers', buttonUrl: '/sellers',
+      key: 'new_arrivals', type: 'products', label: 'New Arrivals', enabled: true, sortOrder: 5,
+      title: 'Latest products', subtitle: 'Recently added',
+      description: '', maxProducts: 10, backgroundImage: '', buttonText: 'View all products', buttonUrl: '/shop?sort=newest',
     },
     {
-      key: 'testimonials', type: 'testimonials', label: 'Customer Testimonials', enabled: true, sortOrder: 6,
+      key: 'trending_products', type: 'products', label: 'Trending Products', enabled: true, sortOrder: 6,
+      title: 'Trending products', subtitle: 'Trending now',
+      description: '', maxProducts: 10, backgroundImage: '', buttonText: 'Shop trending', buttonUrl: '/shop?sort=most-popular',
+    },
+    {
+      key: 'featured_products', type: 'products', label: 'Featured Products', enabled: true, sortOrder: 7,
+      title: 'Featured products', subtitle: 'Hand-picked',
+      description: '', maxProducts: 6, backgroundImage: '', buttonText: 'Explore featured', buttonUrl: '/shop',
+    },
+    {
+      key: 'stats', type: 'stats', label: 'Store Stats', enabled: true, sortOrder: 8,
+      title: 'Marketplace stats', subtitle: '',
+      description: '', maxProducts: null, backgroundImage: '', buttonText: '', buttonUrl: '',
+    },
+    {
+      key: 'why', type: 'why', label: 'Why Choose Us', enabled: true, sortOrder: 9,
+      title: 'A safer way to buy and sell digital assets', subtitle: 'Why choose ApnaStore',
+      description: '', maxProducts: null, backgroundImage: '', buttonText: '', buttonUrl: '',
+    },
+    {
+      key: 'seller_cta', type: 'seller_cta', label: 'Seller CTA', enabled: true, sortOrder: 10,
+      title: 'Start Selling on ApnaStore', subtitle: 'Become a Seller',
+      description: 'Open your storefront and list accounts, domains, websites, SaaS, source code, and tools for buyers who expect secure checkout.',
+      maxProducts: null, backgroundImage: '', buttonText: 'Become Seller', buttonUrl: '/become-a-seller',
+      secondaryButtonText: 'Learn More', secondaryButtonUrl: '/become-a-seller',
+    },
+    {
+      key: 'testimonials', type: 'testimonials', label: 'Customer Testimonials', enabled: true, sortOrder: 11,
       title: 'Loved by Creators', subtitle: 'Real feedback from real customers',
       description: '', maxProducts: null, backgroundImage: '', buttonText: '', buttonUrl: '',
     },
     {
-      key: 'newsletter', type: 'newsletter', label: 'Newsletter Block', enabled: true, sortOrder: 7,
+      key: 'newsletter', type: 'newsletter', label: 'Newsletter Block', enabled: true, sortOrder: 12,
       title: 'Never Miss a Drop', subtitle: 'New listings, deals & marketplace updates',
       description: '', maxProducts: null, backgroundImage: '', buttonText: 'Subscribe', buttonUrl: '',
     },
+  ],
+  stats: [
+    { id: 'stat-1', value: 100, suffix: 'K+', label: 'Products', icon: 'layers' },
+    { id: 'stat-2', value: 15, suffix: 'K+', label: 'Sellers', icon: 'users' },
+    { id: 'stat-3', value: 50, suffix: '+', label: 'Categories', icon: 'grid' },
+    { id: 'stat-4', value: 180, suffix: '+', label: 'Countries', icon: 'globe' },
+  ],
+  heroStats: [
+    { id: 'hs-1', value: '570+', label: 'Products', icon: 'layers' },
+    { id: 'hs-2', value: '154+', label: 'Sellers', icon: 'users' },
+    { id: 'hs-3', value: '3,622+', label: 'Orders', icon: 'download' },
+    { id: 'hs-4', value: '24/7', label: 'Support', icon: 'star' },
+  ],
+  whyFeatures: [
+    { id: 'why-1', icon: 'shield', title: 'Verified sellers', description: 'Shop from vetted sellers with clear listing standards and responsive support.' },
+    { id: 'why-2', icon: 'zap', title: 'Fast delivery', description: 'Most digital listings unlock right after payment so you can start using them immediately.' },
+    { id: 'why-3', icon: 'badge', title: 'Escrow protection', description: 'Payments stay protected until delivery is confirmed — safer for buyers and sellers.' },
+    { id: 'why-4', icon: 'star', title: 'Built for digital commerce', description: 'Accounts, domains, SaaS, source code, and tools in one secure marketplace.' },
   ],
 });
 
@@ -99,6 +175,7 @@ export const DEFAULT_HEADER = Object.freeze({
   stickyHeader: true,
   megaMenuEnabled: true,
   searchPlaceholder: 'Search for anything…',
+  brandName: '',
   topBar: { enabled: false, text: '', linkText: '', linkUrl: '' },
   announcementBar: {
     enabled: false,
@@ -109,6 +186,7 @@ export const DEFAULT_HEADER = Object.freeze({
   },
   becomeSellerButton: { enabled: true, text: 'Become a Seller', url: '/become-a-seller' },
   headerButtons: [],
+  popularSearches: [],
 });
 
 export const DEFAULT_FOOTER = Object.freeze({
@@ -116,12 +194,7 @@ export const DEFAULT_FOOTER = Object.freeze({
   description: 'A secure marketplace for digital accounts, domains, websites, SaaS, source code, and tools — with escrow protection and verified sellers.',
   tagline: 'Secure payments · Instant delivery · Escrow protection',
   copyrightText: '© {year} ApnaStore. All rights reserved.',
-  socialLinks: [
-    { id: 'soc-1', platform: 'Instagram', url: '' },
-    { id: 'soc-2', platform: 'Twitter', url: '' },
-    { id: 'soc-3', platform: 'Github', url: '' },
-    { id: 'soc-4', platform: 'Youtube', url: '' },
-  ],
+  socialLinks: [],
   paymentIcons: [],
   newsletter: {
     enabled: true,
@@ -173,8 +246,13 @@ export const DEFAULT_FOOTER = Object.freeze({
 export const DEFAULT_GLOBAL = Object.freeze({
   siteName: 'ApnaStore',
   tagline: 'Secure digital marketplace',
+  slogan: 'Secure digital marketplace',
+  siteUrl: 'https://apnastore.org',
   logo: '',
+  logoLight: '',
+  logoDark: '',
   favicon: '',
+  twitterHandle: '@apnastore',
   primaryColor: '#7C3AED',
   secondaryColor: '#F97316',
   headingFont: 'Inter',
@@ -193,6 +271,7 @@ export const DEFAULT_SOCIAL = Object.freeze({
   pinterest: '',
   linkedin: '',
   x: '',
+  github: '',
 });
 
 export const DEFAULT_NEWSLETTER = Object.freeze({
@@ -222,9 +301,9 @@ export const DEFAULT_FAQS = Object.freeze({
 export const DEFAULT_STATIC_PAGES = Object.freeze({
   items: [
     { id: 'page-about', title: 'About Us', slug: 'about', content: 'ApnaStore connects buyers and verified sellers for digital accounts, domains, SaaS, source code, and tools.', featuredImage: '', seoTitle: 'About Us | ApnaStore', metaDescription: 'Learn about ApnaStore, a secure digital marketplace.', ogImage: '', status: 'published' },
-    { id: 'page-privacy', title: 'Privacy Policy', slug: 'privacy', content: 'This policy explains what information we collect and how we use it. Contact support@apnastore.org for privacy requests.', featuredImage: '', seoTitle: 'Privacy Policy | ApnaStore', metaDescription: 'Read the ApnaStore privacy policy.', ogImage: '', status: 'published' },
-    { id: 'page-terms', title: 'Terms & Conditions', slug: 'terms', content: 'These terms govern your use of ApnaStore and the licenses attached to purchased products. Contact support@apnastore.org with questions.', featuredImage: '', seoTitle: 'Terms & Conditions | ApnaStore', metaDescription: 'Read the ApnaStore terms and conditions.', ogImage: '', status: 'published' },
-    { id: 'page-refund', title: 'Refund Policy', slug: 'refund-policy', content: 'Digital products are non-refundable once delivered, with exceptions handled through disputes. Contact support@apnastore.org for help.', featuredImage: '', seoTitle: 'Refund Policy | ApnaStore', metaDescription: 'Read the ApnaStore refund policy for digital products.', ogImage: '', status: 'published' },
+    { id: 'page-privacy', title: 'Privacy Policy', slug: 'privacy', content: 'This policy explains what information we collect and how we use it.', featuredImage: '', seoTitle: 'Privacy Policy | ApnaStore', metaDescription: 'Read the ApnaStore privacy policy.', ogImage: '', status: 'published' },
+    { id: 'page-terms', title: 'Terms & Conditions', slug: 'terms', content: 'These terms govern your use of ApnaStore and the licenses attached to purchased products.', featuredImage: '', seoTitle: 'Terms & Conditions | ApnaStore', metaDescription: 'Read the ApnaStore terms and conditions.', ogImage: '', status: 'published' },
+    { id: 'page-refund', title: 'Refund Policy', slug: 'refund-policy', content: 'Digital products are non-refundable once delivered, with exceptions handled through disputes.', featuredImage: '', seoTitle: 'Refund Policy | ApnaStore', metaDescription: 'Read the ApnaStore refund policy for digital products.', ogImage: '', status: 'published' },
     { id: 'page-cookies', title: 'Cookie Policy', slug: 'cookie-policy', content: 'We use cookies to keep you signed in and to understand how the site is used.', featuredImage: '', seoTitle: 'Cookie Policy | ApnaStore', metaDescription: 'Learn how ApnaStore uses cookies.', ogImage: '', status: 'published' },
   ],
 });
@@ -269,6 +348,7 @@ export const DEFAULT_SEO = Object.freeze({
     {
       id: 'seo-homepage',
       pageType: 'Homepage',
+      path: '/',
       metaTitle: 'ApnaStore — Secure Digital Marketplace',
       metaDescription: 'Buy and sell social accounts, domains, SaaS, source code, and digital tools with escrow protection.',
       keywords: 'digital marketplace, accounts, escrow',
@@ -280,11 +360,13 @@ export const DEFAULT_SEO = Object.freeze({
       twitterTitle: '',
       twitterDescription: '',
       twitterImage: '',
+      robots: 'index,follow',
       schemaType: 'WebSite',
     },
     {
       id: 'seo-contact',
       pageType: 'Contact',
+      path: '/contact',
       metaTitle: 'Contact Us | ApnaStore',
       metaDescription: 'Contact ApnaStore support for orders, seller questions, disputes, and partnership inquiries.',
       keywords: 'contact, support',
@@ -296,6 +378,7 @@ export const DEFAULT_SEO = Object.freeze({
       twitterTitle: '',
       twitterDescription: '',
       twitterImage: '',
+      robots: 'index,follow',
       schemaType: 'ContactPage',
     },
   ],
@@ -319,6 +402,10 @@ export const DEFAULT_EMAIL_TEMPLATES = Object.freeze({
   ],
 });
 
+export const DEFAULT_BANNERS = Object.freeze({
+  items: [],
+});
+
 export const CMS_DEFAULTS = Object.freeze({
   [CMS_KEYS.POPULAR_TAGS]: DEFAULT_POPULAR_TAGS,
   [CMS_KEYS.CONTACT]: DEFAULT_CONTACT,
@@ -337,6 +424,7 @@ export const CMS_DEFAULTS = Object.freeze({
   [CMS_KEYS.TESTIMONIALS]: DEFAULT_TESTIMONIALS,
   [CMS_KEYS.NAV_MENUS]: DEFAULT_NAV_MENUS,
   [CMS_KEYS.EMAIL_TEMPLATES]: DEFAULT_EMAIL_TEMPLATES,
+  [CMS_KEYS.BANNERS]: DEFAULT_BANNERS,
 });
 
 export const CMS_KEY_LIST = Object.freeze(Object.keys(CMS_DEFAULTS));
@@ -345,4 +433,6 @@ export default {
   CMS_KEYS,
   CMS_DEFAULTS,
   CMS_KEY_LIST,
+  PUBLIC_CMS_KEYS,
+  ADMIN_ONLY_CMS_KEYS,
 };

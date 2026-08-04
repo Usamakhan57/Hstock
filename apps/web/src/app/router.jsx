@@ -7,6 +7,8 @@ import ScrollToTop from '../components/ScrollToTop';
 import CompareBar from '../components/CompareBar';
 import { Toaster } from '../components/ui/toaster';
 import { ErrorBoundary } from '../components/ErrorState';
+import { CmsBrandSync } from '../components/Logo';
+import CmsPopupRenderer from '../components/CmsPopupRenderer';
 import { storefrontRoutes } from './routes/storefrontRoutes';
 import { adminRoutes } from './routes/adminRoutes';
 import ServerErrorPage from '../pages/ServerErrorPage';
@@ -20,6 +22,8 @@ export function AppRouter() {
         <AdminAuthProvider>
           <SellerAuthProvider>
             <ScrollToTop />
+            <CmsBrandSync />
+            <CmsPopupRenderer />
             <Routes>
               {/* Storefront routes (public, customer, seller) */}
               {storefrontRoutes()}

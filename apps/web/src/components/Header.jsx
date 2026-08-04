@@ -14,7 +14,7 @@ import SellerSidebar from './SellerSidebar';
 import { getCategoryTreeForStorefront } from '../services/categoryRepository';
 import { getProductCountByCategoryId } from '../services/productRepository';
 import { getRolledUpCount } from '../services/categoryTree';
-import { POPULAR_SEARCHES, POPULAR_TAGS, RECENT_SEARCHES_KEY, MAX_RECENT_SEARCHES } from '../constants';
+import { RECENT_SEARCHES_KEY, MAX_RECENT_SEARCHES } from '../constants';
 import { useCms } from '../hooks/useCms';
 import { CMS_KEYS } from '../services/cmsApi';
 
@@ -154,7 +154,7 @@ const saveRecent = (term) => {
 /* --------------------------------------------- live search suggestions */
 const EMPTY_SUGGESTIONS = { products: [], categories: [], sellers: [] };
 
-const SearchSuggestions = ({ query, recent, onPick, onClearRecent, popularTags = POPULAR_TAGS, popularSearches = POPULAR_SEARCHES }) => {
+const SearchSuggestions = ({ query, recent, onPick, onClearRecent, popularTags = [], popularSearches = [] }) => {
   const [suggestions, setSuggestions] = useState(EMPTY_SUGGESTIONS);
   const [suggestLoading, setSuggestLoading] = useState(false);
   const hasQuery = query.trim().length > 0;
@@ -301,6 +301,8 @@ const Header = () => {
   const isSellerUser = !isAdminUser && Boolean(user?.roles?.includes?.('seller') || isSellerAuthenticated);
   const showBuyerControls = isUserLoggedIn && !isAdminUser;
   const { data: popularTagsDoc } = useCms(CMS_KEYS.POPULAR_TAGS);
+  const { data: headerCms } = useCms(CMS_KEYS.HEADER);
+  const { data: global } = useCms(CMS_KEYS.GLOBAL);
   const cmsPopularTags = useMemo(() => (
     Array.isArray(popularTagsDoc?.tags)
       ? [...popularTagsDoc.tags]
@@ -309,7 +311,18 @@ const Header = () => {
         .map((t) => t.label)
       : []
   ), [popularTagsDoc]);
-  const cmsPopularSearches = cmsPopularTags.length ? cmsPopularTags : POPULAR_SEARCHES;
+  const cmsPopularSearches = useMemo(() => {
+    if (Array.isArray(headerCms?.popularSearches) && headerCms.popularSearches.length) {
+      return headerCms.popularSearches.map((s) => (typeof s === 'string' ? s : s?.label)).filter(Boolean);
+    }
+    return cmsPopularTags;
+  }, [headerCms, cmsPopularTags]);
+  const searchPlaceholder = headerCms?.searchPlaceholder || '';
+  const announcement = headerCms?.announcementBar;
+  const topBar = headerCms?.topBar;
+  const becomeSeller = headerCms?.becomeSellerButton;
+  const headerButtons = Array.isArray(headerCms?.headerButtons) ? headerCms.headerButtons : [];
+  const brandName = headerCms?.brandName || global?.siteName || '';
   const sellerNotificationsCount = notifications.filter((n) => !n.read).length;
   const [sellerWalletBalance, setSellerWalletBalance] = useState(0);
   const megaRef = useRef(null);
@@ -431,13 +444,38 @@ const Header = () => {
 
   return (
     <header
-      className={`sticky top-0 z-50 pt-safe transition-all duration-300 ${
+      className={`${headerCms?.stickyHeader === false ? 'relative' : 'sticky top-0'} z-50 pt-safe transition-all duration-300 ${
         scrolled ? 'bg-white/80 backdrop-blur-xl shadow-[0_8px_30px_-12px_rgba(108,59,255,0.18)] border-b border-border/60' : 'bg-white/40 backdrop-blur-md border-b border-transparent'
       }`}
     >
       <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-[60] focus:bg-white focus:text-primary focus:font-semibold focus:text-sm focus:px-4 focus:py-2 focus:rounded-full focus:soft-shadow">
         Skip to main content
       </a>
+
+      {announcement?.enabled && announcement?.text && (
+        <div
+          className="text-white text-center text-xs sm:text-sm font-medium px-4 py-2"
+          style={{ backgroundColor: announcement.backgroundColor || '#7C3AED' }}
+        >
+          <span>{announcement.text}</span>
+          {announcement.linkText && announcement.linkUrl && (
+            <Link to={announcement.linkUrl} className="ml-2 underline font-semibold">
+              {announcement.linkText}
+            </Link>
+          )}
+        </div>
+      )}
+
+      {topBar?.enabled && topBar?.text && (
+        <div className="bg-secondary/80 text-center text-xs sm:text-sm text-foreground/80 px-4 py-1.5 border-b border-border/50">
+          <span>{topBar.text}</span>
+          {topBar.linkText && topBar.linkUrl && (
+            <Link to={topBar.linkUrl} className="ml-2 text-primary font-semibold hover:underline">
+              {topBar.linkText}
+            </Link>
+          )}
+        </div>
+      )}
 
       {/* ROW 1 — logo, search, actions */}
       <div className="mx-auto max-w-[90rem] px-5 lg:px-8">
@@ -446,6 +484,7 @@ const Header = () => {
             to="/"
             size="header"
             priority
+            alt={brandName || undefined}
             className="group"
             imgClassName="transition-transform duration-300 group-hover:scale-[1.03]"
           />
@@ -466,7 +505,7 @@ const Header = () => {
                 aria-expanded={searchFocused}
                 aria-haspopup="listbox"
                 autoComplete="off"
-                placeholder="Search for anything…"
+                placeholder={searchPlaceholder}
                 className="bg-transparent outline-none text-sm w-full placeholder:text-muted-foreground py-2"
               />
               <button
@@ -483,7 +522,7 @@ const Header = () => {
                 recent={recent}
                 onPick={goSearch}
                 onClearRecent={() => { localStorage.removeItem(RECENT_SEARCHES_KEY); setRecent([]); }}
-                popularTags={cmsPopularTags.length ? cmsPopularTags : POPULAR_TAGS}
+                popularTags={cmsPopularTags}
                 popularSearches={cmsPopularSearches}
               />
             )}
@@ -644,14 +683,26 @@ const Header = () => {
               ))}
             </nav>
 
-            {!isSellerUser && !isAdminUser && (
-              <Link
-                to="/become-a-seller"
-                className="ml-auto text-sm font-semibold text-primary hover:opacity-80 transition-opacity focus-visible:outline-none focus-visible:underline"
-              >
-                Become a Seller
-              </Link>
-            )}
+            <div className="ml-auto flex items-center gap-2">
+              {headerButtons.map((btn) => (
+                <Link
+                  key={btn.id || btn.label}
+                  to={btn.url || '/'}
+                  {...(btn.openInNewTab ? { target: '_blank', rel: 'noreferrer' } : {})}
+                  className="text-sm font-medium text-foreground/75 hover:text-primary transition-colors px-2"
+                >
+                  {btn.label}
+                </Link>
+              ))}
+              {!isSellerUser && !isAdminUser && becomeSeller?.enabled !== false && (
+                <Link
+                  to={becomeSeller?.url || '/become-a-seller'}
+                  className="text-sm font-semibold text-primary hover:opacity-80 transition-opacity focus-visible:outline-none focus-visible:underline"
+                >
+                  {becomeSeller?.text || 'Become a Seller'}
+                </Link>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -665,7 +716,7 @@ const Header = () => {
               value={searchValue}
               onChange={(e) => setSearchValue(e.target.value)}
               aria-label="Search"
-              placeholder="Search for anything…"
+              placeholder={searchPlaceholder}
               className="bg-transparent outline-none text-sm w-full"
             />
           </form>
@@ -711,9 +762,14 @@ const Header = () => {
                 {l.name}
               </Link>
             ))}
-            {!isSellerUser && !isAdminUser && (
-              <Link to="/become-a-seller" className="block px-3 py-2.5 rounded-xl text-sm font-semibold text-primary hover:bg-secondary">
-                Become a Seller
+            {headerButtons.map((btn) => (
+              <Link key={btn.id || btn.label} to={btn.url || '/'} className="block px-3 py-2.5 rounded-xl text-sm font-medium hover:bg-secondary">
+                {btn.label}
+              </Link>
+            ))}
+            {!isSellerUser && !isAdminUser && becomeSeller?.enabled !== false && (
+              <Link to={becomeSeller?.url || '/become-a-seller'} className="block px-3 py-2.5 rounded-xl text-sm font-semibold text-primary hover:bg-secondary">
+                {becomeSeller?.text || 'Become a Seller'}
               </Link>
             )}
           </div>

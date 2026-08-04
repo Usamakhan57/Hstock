@@ -63,12 +63,24 @@ const GlobalSettingsCms = () => {
             <input value={form.siteName} onChange={set('siteName')} className={inputClass} />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1.5">Tagline</label>
-            <input value={form.tagline} onChange={set('tagline')} className={inputClass} />
+            <label className="block text-sm font-medium mb-1.5">Tagline / Slogan</label>
+            <input value={form.tagline || form.slogan || ''} onChange={(e) => setForm((f) => ({ ...f, tagline: e.target.value, slogan: e.target.value }))} className={inputClass} />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1.5">Site URL</label>
+            <input value={form.siteUrl || ''} onChange={set('siteUrl')} className={inputClass} placeholder="https://apnastore.org" />
           </div>
           <div className="grid sm:grid-cols-2 gap-4">
             <ImageUploadInput label="Logo" value={form.logo} onChange={(v) => setForm((f) => ({ ...f, logo: v }))} />
             <ImageUploadInput label="Favicon" value={form.favicon} onChange={(v) => setForm((f) => ({ ...f, favicon: v }))} />
+          </div>
+          <div className="grid sm:grid-cols-2 gap-4">
+            <ImageUploadInput label="Light Logo" value={form.logoLight || ''} onChange={(v) => setForm((f) => ({ ...f, logoLight: v }))} />
+            <ImageUploadInput label="Dark Logo" value={form.logoDark || ''} onChange={(v) => setForm((f) => ({ ...f, logoDark: v }))} />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1.5">Twitter Handle</label>
+            <input value={form.twitterHandle || ''} onChange={set('twitterHandle')} className={inputClass} placeholder="@apnastore" />
           </div>
         </Card>
 

@@ -9,14 +9,7 @@ import { getStorefrontSellers } from '../services/sellerRepository';
 import { fetchStorefrontTestimonials } from '../services/testimonialRepository';
 import { fetchStaticPageBySlug } from '../services/staticPagesRepository';
 import { subscribeCmsUpdates, CMS_KEYS } from '../services/cmsApi';
-import { SITE } from '../constants';
-
-const stats = [
-  { value: '100K+', label: 'Digital Listings' },
-  { value: '50K+', label: 'Active Buyers' },
-  { value: '15K+', label: 'Verified Sellers' },
-  { value: '4.9/5', label: 'Average Rating' },
-];
+import { useCms } from '../hooks/useCms';
 
 const values = [
   { icon: Sparkles, title: 'Quality listings', text: 'Every product is reviewed for clarity, delivery readiness, and marketplace standards before it goes live.' },
@@ -25,22 +18,27 @@ const values = [
   { icon: Heart, title: 'Seller-first economics', text: 'Transparent fees and reliable payouts help serious sellers grow sustainable digital businesses.' },
 ];
 
-const aboutJsonLd = {
-  '@context': 'https://schema.org',
-  '@type': 'AboutPage',
-  name: 'About ApnaStore',
-  url: `${SITE.url}/about`,
-  description: SITE.description,
-  mainEntity: {
-    '@type': 'Organization',
-    name: SITE.name,
-    url: SITE.url,
-  },
-};
-
 const AboutPage = () => {
   const [aboutPage, setAboutPage] = useState(null);
   const [testimonials, setTestimonials] = useState([]);
+  const { data: global } = useCms(CMS_KEYS.GLOBAL);
+  const { data: homepage } = useCms(CMS_KEYS.HOMEPAGE);
+  const stats = Array.isArray(homepage?.stats)
+    ? homepage.stats.map((s) => ({ value: `${s.value}${s.suffix || ''}`, label: s.label }))
+    : [];
+
+  const aboutJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'AboutPage',
+    name: aboutPage?.seoTitle || aboutPage?.title || `About ${global?.siteName || ''}`.trim(),
+    url: global?.siteUrl ? `${global.siteUrl}/about` : '/about',
+    description: aboutPage?.metaDescription || global?.slogan || global?.tagline || '',
+    mainEntity: {
+      '@type': 'Organization',
+      name: global?.siteName || '',
+      url: global?.siteUrl || '',
+    },
+  };
 
   const load = async () => {
     try {
@@ -69,7 +67,7 @@ const AboutPage = () => {
     <div className="min-h-screen">
       <Seo
         title={aboutPage?.seoTitle || 'About Us'}
-        description={aboutPage?.metaDescription || 'ApnaStore is a secure digital marketplace for accounts, domains, websites, SaaS, source code, and tools — built for buyers and verified sellers.'}
+        description={aboutPage?.metaDescription || global?.slogan || global?.tagline || ''}
         jsonLd={aboutJsonLd}
       />
       <Header />
@@ -79,11 +77,13 @@ const AboutPage = () => {
 
         <div className="max-w-2xl">
           <h1 className="text-4xl md:text-5xl font-black tracking-tight">
-            <span className="brand-text">ApnaStore</span> — {aboutPage?.title || 'a marketplace built for digital commerce'}
+            <span className="brand-text">{global?.siteName || 'ApnaStore'}</span> — {aboutPage?.title || 'a marketplace built for digital commerce'}
           </h1>
           <p className="text-muted-foreground mt-4 leading-relaxed whitespace-pre-wrap">
             {aboutPage?.content
-              || 'ApnaStore helps people buy and sell social accounts, domains, websites, SaaS products, source code, apps, AI tools, templates, courses, and other digital assets.'}
+              || global?.slogan
+              || global?.tagline
+              || ''}
           </p>
         </div>
 

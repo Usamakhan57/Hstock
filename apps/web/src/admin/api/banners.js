@@ -1,7 +1,8 @@
-import { createResource } from './db';
+import { createCmsList } from './cmsBackend';
 import { seedBanners } from './seedData';
+import { CMS_KEYS } from '../../services/cmsApi';
 
-const resource = createResource('banners', seedBanners);
+const resource = createCmsList(CMS_KEYS.BANNERS, seedBanners);
 
 export const getBanners = resource.getAll;
 export const getBanner = resource.getById;

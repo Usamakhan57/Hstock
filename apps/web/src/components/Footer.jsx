@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Instagram, Twitter, Github, Youtube, ArrowRight, Check } from 'lucide-react';
+import { Instagram, Twitter, Github, Youtube, Facebook, Linkedin, ArrowRight, Check } from 'lucide-react';
 import Logo from './Logo';
 import { newsletterApi } from '../services/api';
 import { useCms } from '../hooks/useCms';
@@ -11,13 +11,28 @@ const SOCIAL_ICONS = {
   Twitter,
   Github,
   Youtube,
+  Facebook,
+  Linkedin,
   X: Twitter,
+  TikTok: Instagram,
+  Pinterest: Instagram,
 };
 
-/** Inline newsletter signup — wired to the mock newsletterApi service. */
+const PLATFORM_MAP = [
+  { key: 'instagram', platform: 'Instagram' },
+  { key: 'x', platform: 'X' },
+  { key: 'facebook', platform: 'Facebook' },
+  { key: 'youtube', platform: 'Youtube' },
+  { key: 'linkedin', platform: 'Linkedin' },
+  { key: 'github', platform: 'Github' },
+  { key: 'tiktok', platform: 'TikTok' },
+  { key: 'pinterest', platform: 'Pinterest' },
+];
+
+/** Inline newsletter signup — wired to the newsletterApi service. */
 const NewsletterForm = ({ placeholder = 'Your email' }) => {
   const [email, setEmail] = useState('');
-  const [status, setStatus] = useState('idle'); // idle | loading | done
+  const [status, setStatus] = useState('idle');
 
   const submit = async (e) => {
     e.preventDefault();
@@ -61,11 +76,29 @@ const NewsletterForm = ({ placeholder = 'Your email' }) => {
 
 const Footer = () => {
   const { data: footer } = useCms(CMS_KEYS.FOOTER);
+  const { data: social } = useCms(CMS_KEYS.SOCIAL);
+
   const columns = Array.isArray(footer?.columns) && footer.columns.length
     ? footer.columns
     : [];
-  const socialLinks = Array.isArray(footer?.socialLinks) ? footer.socialLinks : [];
-  const copyright = String(footer?.copyrightText || '© {year} ApnaStore. All rights reserved.')
+
+  const socialLinks = useMemo(() => {
+    // Prefer dedicated Social CMS (not embedded in footer).
+    const fromSocial = PLATFORM_MAP
+      .map(({ key, platform }) => {
+        const url = social?.[key];
+        if (!url) return null;
+        return { id: `social-${key}`, platform, url };
+      })
+      .filter(Boolean);
+    if (fromSocial.length) return fromSocial;
+    // Legacy fallback only if Social CMS is empty and footer still has links.
+    return Array.isArray(footer?.socialLinks)
+      ? footer.socialLinks.filter((l) => l?.url && l.url !== '#')
+      : [];
+  }, [social, footer]);
+
+  const copyright = String(footer?.copyrightText || '© {year}')
     .replace('{year}', String(new Date().getFullYear()));
 
   return (
@@ -82,13 +115,15 @@ const Footer = () => {
                 {socialLinks.map((link) => {
                   const Ic = SOCIAL_ICONS[link.platform] || Instagram;
                   const href = link.url && link.url !== '#' ? link.url : undefined;
+                  if (!href) return null;
                   return (
                     <a
                       key={link.id || link.platform}
-                      href={href || undefined}
+                      href={href}
                       aria-label={link.platform || 'Social'}
                       className="grid place-items-center w-9 h-9 rounded-full bg-secondary text-primary hover:brand-gradient hover:text-white transition-colors"
-                      {...(href ? { target: '_blank', rel: 'noreferrer' } : { onClick: (e) => e.preventDefault() })}
+                      target="_blank"
+                      rel="noreferrer"
                     >
                       <Ic className="w-4 h-4" />
                     </a>

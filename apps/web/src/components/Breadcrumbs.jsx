@@ -2,7 +2,8 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronRight } from 'lucide-react';
 import { Helmet } from 'react-helmet';
-import { SITE } from '../constants';
+import { useCms } from '../hooks/useCms';
+import { CMS_KEYS } from '../services/cmsApi';
 
 /**
  * Site-wide breadcrumb trail.
@@ -11,6 +12,8 @@ import { SITE } from '../constants';
  * Emits BreadcrumbList structured data for SEO.
  */
 const Breadcrumbs = ({ items = [], className = '' }) => {
+  const { data: global } = useCms(CMS_KEYS.GLOBAL);
+  const siteUrl = (global?.siteUrl || '').replace(/\/$/, '');
   const trail = [{ name: 'Home', to: '/' }, ...items];
 
   const jsonLd = {
@@ -20,7 +23,7 @@ const Breadcrumbs = ({ items = [], className = '' }) => {
       '@type': 'ListItem',
       position: i + 1,
       name: item.name,
-      ...(item.to ? { item: `${SITE.url}${item.to}` } : {}),
+      ...(item.to && siteUrl ? { item: `${siteUrl}${item.to}` } : {}),
     })),
   };
 
@@ -39,14 +42,11 @@ const Breadcrumbs = ({ items = [], className = '' }) => {
                   {item.name}
                 </span>
               ) : (
-                <Link
-                  to={item.to}
-                  className="hover:text-primary transition-colors rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                >
+                <Link to={item.to} className="hover:text-primary transition-colors truncate max-w-[10rem]">
                   {item.name}
                 </Link>
               )}
-              {!last && <ChevronRight className="w-3 h-3 shrink-0 text-muted-foreground/60" aria-hidden="true" />}
+              {!last && <ChevronRight className="w-3 h-3 shrink-0 opacity-50" aria-hidden="true" />}
             </li>
           );
         })}

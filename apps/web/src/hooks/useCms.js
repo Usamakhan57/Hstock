@@ -1,11 +1,18 @@
 import { useCallback, useEffect, useState } from 'react';
-import { cmsApi, invalidateCmsClientCache, subscribeCmsUpdates } from '../services/cmsApi';
+import {
+  cmsApi,
+  invalidateCmsClientCache,
+  subscribeCmsUpdates,
+  subscribeCmsVersionChanges,
+  ensureCmsVersionPoller,
+} from '../services/cmsApi';
 
 /**
  * Live CMS document hook.
- * Re-fetches when admin saves (BroadcastChannel / CustomEvent) or versions change.
+ * Uses ONE global version poller (shared across all useCms calls).
+ * Also refreshes on BroadcastChannel / CustomEvent admin saves.
  */
-export function useCms(key, { enabled = true } = {}) {
+export function useCms(key, { enabled = true, admin = false } = {}) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(Boolean(enabled && key));
   const [error, setError] = useState(null);
@@ -17,7 +24,7 @@ export function useCms(key, { enabled = true } = {}) {
     setError(null);
     try {
       if (force) invalidateCmsClientCache(key);
-      const next = await cmsApi.get(key, { force });
+      const next = await cmsApi.get(key, { force, admin });
       setData(next);
       setVersion((v) => v + 1);
       return next;
@@ -27,15 +34,17 @@ export function useCms(key, { enabled = true } = {}) {
     } finally {
       setLoading(false);
     }
-  }, [enabled, key]);
+  }, [enabled, key, admin]);
 
   useEffect(() => {
     if (!enabled || !key) return undefined;
     let alive = true;
+    ensureCmsVersionPoller();
+
     (async () => {
       setLoading(true);
       try {
-        const next = await cmsApi.get(key);
+        const next = await cmsApi.get(key, { admin });
         if (alive) setData(next);
       } catch (err) {
         if (alive) setError(err);
@@ -44,41 +53,24 @@ export function useCms(key, { enabled = true } = {}) {
       }
     })();
 
-    const unsubscribe = subscribeCmsUpdates((detail) => {
+    const unsubscribeLocal = subscribeCmsUpdates((detail) => {
       if (!detail?.key || detail.key === key) {
         refresh({ force: true });
       }
     });
 
-    // Soft poll versions while the tab is visible so other browsers pick up saves.
-    let timer = null;
-    let knownVersion = null;
-    const poll = async () => {
-      if (document.visibilityState !== 'visible') return;
-      try {
-        const versions = await cmsApi.getVersions({ force: true });
-        const remote = versions?.versions?.[key]?.version;
-        if (remote == null) return;
-        if (knownVersion == null) {
-          knownVersion = remote;
-          return;
-        }
-        if (remote !== knownVersion) {
-          knownVersion = remote;
-          refresh({ force: true });
-        }
-      } catch {
-        // ignore poll errors
+    const unsubscribeVersions = subscribeCmsVersionChanges((detail) => {
+      if (!detail?.keys?.length || detail.keys.includes(key)) {
+        refresh({ force: true });
       }
-    };
-    timer = window.setInterval(poll, 8000);
+    });
 
     return () => {
       alive = false;
-      unsubscribe();
-      if (timer) window.clearInterval(timer);
+      unsubscribeLocal();
+      unsubscribeVersions();
     };
-  }, [enabled, key, refresh]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [enabled, key, admin, refresh]);
 
   return { data, loading, error, refresh, version };
 }

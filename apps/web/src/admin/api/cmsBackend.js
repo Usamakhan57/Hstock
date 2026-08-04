@@ -12,7 +12,8 @@ export function createCmsSingleton(key, seed = {}) {
   return {
     async get() {
       try {
-        const data = await cmsApi.get(key, { force: true });
+        // Admin reads must use authenticated endpoint (drafts + email templates).
+        const data = await cmsApi.getAdmin(key, { force: true });
         return { ...(seed || {}), ...(data || {}) };
       } catch {
         return { ...(seed || {}) };
@@ -29,7 +30,7 @@ export function createCmsSingleton(key, seed = {}) {
 export function createCmsList(key, seedItems = []) {
   const readItems = async () => {
     try {
-      const data = await cmsApi.get(key, { force: true });
+      const data = await cmsApi.getAdmin(key, { force: true });
       if (Array.isArray(data?.items)) return data.items;
       if (Array.isArray(data)) return data;
       return [...seedItems];

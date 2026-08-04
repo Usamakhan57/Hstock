@@ -13,9 +13,31 @@ import * as cmsController from '../../controllers/cms/cms.controller.js';
 
 const router = Router();
 
-/** Public — storefront reads CMS without auth. */
+/** Public — storefront reads published CMS only (never email_templates / drafts). */
 router.get('/versions', cmsController.getVersions);
 router.get('/', cmsController.getDocuments);
+
+/** Admin reads — full payload including drafts & email templates. */
+router.get(
+  '/admin/versions',
+  requireAuth,
+  requirePermission(PERMISSIONS.CONFIG_READ),
+  cmsController.getAdminVersions,
+);
+router.get(
+  '/admin',
+  requireAuth,
+  requirePermission(PERMISSIONS.CONFIG_READ),
+  cmsController.getAdminDocuments,
+);
+router.get(
+  '/admin/:key',
+  requireAuth,
+  requirePermission(PERMISSIONS.CONFIG_READ),
+  validate(cmsKeyParamsSchema),
+  cmsController.getAdminDocument,
+);
+
 router.get('/:key', validate(cmsKeyParamsSchema), cmsController.getDocument);
 
 /** Admin writes — requires config:write (admins/super_admins). */

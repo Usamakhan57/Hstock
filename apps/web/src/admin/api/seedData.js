@@ -272,7 +272,7 @@ export const seedBanners = [
   { id: 'ban-1', title: 'Summer Sale — Up to 40% Off Social Accounts', image: img.social, mobileImage: '', link: '/shop?search=sale', buttonText: 'Shop the Sale', position: 'homepage', status: 'active', startAt: '2026-06-01T00:00:00.000Z', endAt: '2026-08-31T00:00:00.000Z' },
   { id: 'ban-2', title: 'New Arrivals: Premium Domains', image: img.domain, mobileImage: '', link: '/shop?search=Domain', buttonText: 'Explore Domains', position: 'shop', status: 'active', startAt: '2026-06-15T00:00:00.000Z', endAt: '2026-12-31T00:00:00.000Z' },
   { id: 'ban-3', title: 'Launch Your SaaS — Starter Kits', image: img.saas, mobileImage: '', link: '/shop?search=SaaS', buttonText: 'Shop SaaS Kits', position: 'category', status: 'scheduled', startAt: '2026-08-01T00:00:00.000Z', endAt: '2026-09-15T00:00:00.000Z' },
-  { id: 'ban-4', title: 'AI Tools Launch Week', image: img.aiTool, mobileImage: '', link: '/shop?search=AI', buttonText: 'Shop Now', position: 'sale', status: 'draft', startAt: '2026-11-01T00:00:00.000Z', endAt: '2026-12-25T00:00:00.000Z' },
+  { id: 'ban-4', title: 'Creator Tools Launch Week', image: img.aiTool, mobileImage: '', link: '/shop?search=tools', buttonText: 'Shop Now', position: 'sale', status: 'draft', startAt: '2026-11-01T00:00:00.000Z', endAt: '2026-12-25T00:00:00.000Z' },
 ];
 
 export const seedUsers = [
@@ -882,9 +882,14 @@ export const seedEmailTemplates = [
 // visual identity fields the CMS spec calls for.
 export const seedGlobalSettings = {
   siteName: 'ApnaStore',
-  tagline: 'Digital assets for creators who ship',
+  tagline: 'Secure digital marketplace',
+  slogan: 'Secure digital marketplace',
+  siteUrl: 'https://apnastore.org',
   logo: '',
+  logoLight: '',
+  logoDark: '',
   favicon: '',
+  twitterHandle: '@apnastore',
   primaryColor: '#7C3AED',
   secondaryColor: '#F97316',
   headingFont: 'Inter',
@@ -907,11 +912,11 @@ export const seedSocialSettings = {
 // Contact Settings — company/contact info shown on the Contact page and
 // used for schema.org LocalBusiness/Organization markup later.
 export const seedContactSettings = {
-  companyName: 'ApnaStore Inc.',
-  office: 'Remote-first support team',
-  address: '123 Market Street, Suite 400, San Francisco, CA',
-  phone: '+1 555-010-0000',
-  email: 'hello@apnastore.org',
+  companyName: 'ApnaStore',
+  office: '',
+  address: '',
+  phone: '',
+  email: '',
   whatsapp: '',
   googleMapsUrl: '',
   formTitle: 'Send us a message',
