@@ -108,7 +108,7 @@ const escrowSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
-    /** When auto-release becomes eligible (lockedAt + platform hours) */
+    /** When auto-release becomes eligible (deliveredAt + platform hours). Null until delivery. */
     releaseAt: {
       type: Date,
       default: null,

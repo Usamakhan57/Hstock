@@ -339,6 +339,16 @@ export const resolveDisputeSchema = {
   }),
 };
 
+export const extendSellerReplacementDeadlineSchema = {
+  params: z.object({ id: objectIdSchema }),
+  body: z.object({
+    hours: z.number().positive().max(24 * 30).optional(),
+    until: z.string().datetime().optional(),
+  }).refine((v) => v.hours != null || v.until != null, {
+    message: 'Provide hours or until',
+  }),
+};
+
 export const createRefundSchema = {
   body: z.object({
     orderId: objectIdSchema,
@@ -419,6 +429,7 @@ export default {
   respondReplacementSchema,
   revealReplacementCredentialsSchema,
   resolveDisputeSchema,
+  extendSellerReplacementDeadlineSchema,
   createRefundSchema,
   listRefundsSchema,
   refundIdSchema,

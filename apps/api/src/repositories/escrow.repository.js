@@ -37,7 +37,7 @@ export async function findReleaseCandidates(now = new Date(), limit = 100) {
   return Escrow.find({
     status: ESCROW_STATUS.LOCKED,
     dispute: null,
-    releaseAt: { $lte: now },
+    releaseAt: { $ne: null, $lte: now },
     releaseJobProcessedAt: null,
   })
     .sort({ releaseAt: 1 })

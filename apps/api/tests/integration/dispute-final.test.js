@@ -118,6 +118,16 @@ async function buyAndPay({ buyerToken, productId, quantity = 1, buyerEmail, buye
     .set('Authorization', `Bearer ${buyerToken}`)
     .send({ productId, quantity, paymentMethod: 'wallet' });
   assert.equal(buy.status, 201, JSON.stringify(buy.body));
+
+  // Manual products: mark delivered so Timer #1 (inspection) starts and disputes are allowed.
+  const { startInspectionPeriodForOrder } = await import('../../src/services/escrow.service.js');
+  await Order.findByIdAndUpdate(buy.body.data.order._id, {
+    deliveryStatus: 'delivered',
+    deliveredAt: new Date(),
+    status: 'delivered',
+  });
+  await startInspectionPeriodForOrder(buy.body.data.order._id);
+
   return buy.body.data;
 }
 

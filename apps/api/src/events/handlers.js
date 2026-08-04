@@ -66,9 +66,13 @@ export function registerEventHandlers(eventBus) {
         userId: order.buyer,
         type: 'delivery',
         title: 'Order delivered',
-        body: `Order ${order.orderNumber || ''} has been delivered.`,
+        body: `Order ${order.orderNumber || ''} has been delivered. You have 24 hours to inspect — open a dispute if something is wrong.`,
         link: order.orderNumber ? `/orders/${order.orderNumber}` : '/orders',
-        meta: { orderId: String(order._id), orderNumber: order.orderNumber },
+        meta: {
+          orderId: String(order._id),
+          orderNumber: order.orderNumber,
+          inspectionStarted: true,
+        },
       });
     } catch (error) {
       logger.error('ORDER_DELIVERED handler failed', { message: error.message });
@@ -336,11 +340,13 @@ export function registerEventHandlers(eventBus) {
           userId: sellerId,
           type: 'dispute_opened',
           title: 'New dispute',
-          body: `A buyer opened a dispute for order ${order?.orderNumber || dispute?.orderNumber || ''}.`,
+          body: `A buyer opened a dispute for order ${order?.orderNumber || dispute?.orderNumber || ''}. Submit a replacement within 24 hours or the buyer will be refunded.`,
           link: dispute?._id ? `/seller/disputes/${dispute._id}` : '/seller/disputes',
           meta: {
             orderNumber: order?.orderNumber || dispute?.orderNumber,
             disputeId: dispute?._id ? String(dispute._id) : null,
+            sellerResponseDeadline: dispute?.sellerResponseDeadline || null,
+            replacementDeadline: true,
           },
         });
       }

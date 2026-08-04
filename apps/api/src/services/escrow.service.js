@@ -75,8 +75,68 @@ export async function createPendingEscrow({
 }
 
 /**
+ * Start Timer #1 (inspection / auto-release) AFTER delivery.
+ * Independent from Timer #2 (seller replacement window on dispute).
+ * Idempotent — does not move releaseAt once inspection has started.
+ */
+export async function startInspectionPeriodForOrder(orderId, { session = null } = {}) {
+  const findOrder = session
+    ? Order.findById(orderId).session(session)
+    : Order.findById(orderId);
+  const order = await findOrder;
+  if (!order) return null;
+  if (order.deliveryStatus !== DELIVERY_STATUS.DELIVERED || !order.deliveredAt) {
+    return null;
+  }
+
+  const escrow = await escrowRepository.findEscrowByOrder(orderId, { session });
+  if (!escrow) return null;
+  if ([ESCROW_STATUS.RELEASED, ESCROW_STATUS.REFUNDED].includes(escrow.status)) {
+    return escrow;
+  }
+  // Full dispute holds funds — inspection auto-release must not restart.
+  if (escrow.status === ESCROW_STATUS.DISPUTED && !escrow.partialDispute) {
+    return escrow;
+  }
+
+  const meta = escrow.metadata && typeof escrow.metadata === 'object' ? { ...escrow.metadata } : {};
+  if (meta.inspectionStartedAt && escrow.releaseAt) {
+    return escrow;
+  }
+
+  const platform = await getPlatformConfig();
+  const hours = platform?.escrowAutoReleaseHours || 24;
+  const startedAt = order.deliveredAt instanceof Date
+    ? order.deliveredAt
+    : new Date(order.deliveredAt);
+
+  escrow.releaseAt = addHours(startedAt, hours);
+  meta.inspectionStartedAt = startedAt;
+  meta.inspectionHours = hours;
+  escrow.metadata = meta;
+  if (session) await escrow.save({ session });
+  else await escrow.save();
+
+  await logActivity({
+    userId: null,
+    action: 'escrow.inspection_started',
+    resource: 'Escrow',
+    resourceId: escrow._id,
+    meta: {
+      orderId: order._id,
+      deliveredAt: startedAt,
+      releaseAt: escrow.releaseAt,
+      hours,
+    },
+    session,
+  });
+
+  return escrow;
+}
+
+/**
  * Lock funds into escrow after successful payment.
- * Starts the 24h auto-release timer.
+ * Inspection Timer #1 starts only after product delivery (not at lock).
  */
 export async function lockEscrowAfterPayment({
   orderId,
@@ -121,14 +181,15 @@ export async function lockEscrowAfterPayment({
       }
       // Retry Instant Access delivery if escrow already locked but delivery missing
       await tryFulfillInstantAccess(order, activeSession);
-      return escrow;
+      await startInspectionPeriodForOrder(orderId, { session: activeSession });
+      const refreshedLocked = await escrowRepository.findEscrowByOrder(orderId, { session: activeSession });
+      return refreshedLocked || escrow;
     }
 
-    const platform = await getPlatformConfig();
-    const hours = platform?.escrowAutoReleaseHours || 24;
     const now = new Date();
 
     // Atomic claim — only the first lock transition records ledger / wallet credit.
+    // releaseAt stays null until delivery starts the inspection timer.
     const claimOpts = { new: true };
     if (activeSession) claimOpts.session = activeSession;
     const claimed = await Escrow.findOneAndUpdate(
@@ -140,7 +201,7 @@ export async function lockEscrowAfterPayment({
         $set: {
           status: ESCROW_STATUS.LOCKED,
           lockedAt: now,
-          releaseAt: addHours(now, hours),
+          releaseAt: null,
           payment: paymentId,
         },
       },
@@ -165,7 +226,9 @@ export async function lockEscrowAfterPayment({
           else await order.save();
         }
         await tryFulfillInstantAccess(order, activeSession);
-        return current;
+        await startInspectionPeriodForOrder(orderId, { session: activeSession });
+        const refreshedRace = await escrowRepository.findEscrowByOrder(orderId, { session: activeSession });
+        return refreshedRace || current;
       }
       return current || escrow;
     }
@@ -203,6 +266,8 @@ export async function lockEscrowAfterPayment({
 
     // Instant Access: reserve inventory + attach credentials (does not block escrow)
     await tryFulfillInstantAccess(order, activeSession);
+    // Timer #1 starts when credentials are delivered (instant) or later (manual).
+    escrow = (await startInspectionPeriodForOrder(orderId, { session: activeSession })) || escrow;
 
     await logActivity({
       userId: actorId,
@@ -570,7 +635,7 @@ export async function processDueEscrowReleases({ limit = 100 } = {}) {
     partialDispute: true,
     undisputedReleasedAt: null,
     undisputedAmount: { $gt: 0 },
-    releaseAt: { $lte: now },
+    releaseAt: { $ne: null, $lte: now },
   })
     .sort({ releaseAt: 1 })
     .limit(limit)
@@ -581,12 +646,21 @@ export async function processDueEscrowReleases({ limit = 100 } = {}) {
   for (const escrow of fullCandidates) {
     results.processed += 1;
     try {
+      // Never auto-release before delivery — inspection clock starts at deliveredAt.
+      const order = await Order.findById(escrow.order).select('deliveryStatus deliveredAt status').lean();
+      if (!order
+        || order.deliveryStatus !== DELIVERY_STATUS.DELIVERED
+        || !order.deliveredAt
+        || !escrow.releaseAt) {
+        continue;
+      }
+
       const claimed = await Escrow.findOneAndUpdate(
         {
           _id: escrow._id,
           status: ESCROW_STATUS.LOCKED,
           dispute: null,
-          releaseAt: { $lte: new Date() },
+          releaseAt: { $ne: null, $lte: new Date() },
           releaseJobProcessedAt: null,
         },
         { $set: { releaseJobProcessedAt: new Date() } },
@@ -614,6 +688,13 @@ export async function processDueEscrowReleases({ limit = 100 } = {}) {
   for (const escrow of partialCandidates) {
     results.processed += 1;
     try {
+      const order = await Order.findById(escrow.order).select('deliveryStatus deliveredAt').lean();
+      if (!order
+        || order.deliveryStatus !== DELIVERY_STATUS.DELIVERED
+        || !order.deliveredAt
+        || !escrow.releaseAt) {
+        continue;
+      }
       await releaseUndisputedEscrowPortion(escrow._id, {
         reason: 'undisputed_auto_release_24h',
       });
@@ -676,6 +757,9 @@ export async function markOrderDelivered(orderId, actor) {
   }
   await order.save();
 
+  // Timer #1: 24h inspection starts at delivery (manual path).
+  await startInspectionPeriodForOrder(order._id);
+
   await logActivity({
     userId: actor.id,
     action: 'orders.delivered',
@@ -691,6 +775,7 @@ export async function markOrderDelivered(orderId, actor) {
 
 export default {
   createPendingEscrow,
+  startInspectionPeriodForOrder,
   lockEscrowAfterPayment,
   releaseEscrow,
   markEscrowDisputed,
