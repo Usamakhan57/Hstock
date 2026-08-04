@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
 import Header from '../components/Header';
@@ -6,12 +6,35 @@ import Footer from '../components/Footer';
 import Seo from '../components/Seo';
 import Breadcrumbs from '../components/Breadcrumbs';
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '../components/ui/accordion';
-import { getStorefrontFaqCategories } from '../services/faqRepository';
+import { fetchStorefrontFaqCategories } from '../services/faqRepository';
+import { subscribeCmsUpdates, CMS_KEYS } from '../services/cmsApi';
 
 const FAQPage = () => {
-  const faqCategories = getStorefrontFaqCategories();
+  const [faqCategories, setFaqCategories] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const jsonLd = {
+  const load = async () => {
+    setLoading(true);
+    try {
+      const next = await fetchStorefrontFaqCategories();
+      setFaqCategories(next);
+    } catch {
+      setFaqCategories([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    load();
+    return subscribeCmsUpdates((detail) => {
+      if (!detail?.key || detail.key === CMS_KEYS.FAQS || detail.key === CMS_KEYS.FAQ_CATEGORIES) {
+        load();
+      }
+    });
+  }, []);
+
+  const jsonLd = useMemo(() => ({
     '@context': 'https://schema.org',
     '@type': 'FAQPage',
     mainEntity: faqCategories.flatMap((c) =>
@@ -20,7 +43,7 @@ const FAQPage = () => {
         name: i.q,
         acceptedAnswer: { '@type': 'Answer', text: i.a },
       }))),
-  };
+  }), [faqCategories]);
 
   return (
     <div className="min-h-screen">
@@ -38,6 +61,10 @@ const FAQPage = () => {
         </p>
 
         <div className="mt-10 space-y-10">
+          {loading && <p className="text-sm text-muted-foreground">Loading FAQs…</p>}
+          {!loading && faqCategories.length === 0 && (
+            <p className="text-sm text-muted-foreground">No published FAQs yet.</p>
+          )}
           {faqCategories.map((cat) => (
             <section key={cat.title} aria-labelledby={`faq-${cat.title}`}>
               <h2 id={`faq-${cat.title}`} className="text-lg font-bold mb-3">{cat.title}</h2>
@@ -58,10 +85,10 @@ const FAQPage = () => {
         </div>
 
         <div className="mt-12 bg-white rounded-3xl border border-border soft-shadow p-8 text-center">
-          <h2 className="text-lg font-bold">Still have a question?</h2>
-          <p className="text-sm text-muted-foreground mt-1.5">Our support team usually replies within one business day.</p>
-          <Link to="/contact" className="mt-5 inline-flex items-center gap-1.5 px-6 py-3 rounded-full brand-gradient text-white text-sm font-semibold soft-shadow hover:opacity-95 transition-all">
-            Contact support <ArrowRight className="w-4 h-4" aria-hidden="true" />
+          <h2 className="text-lg font-bold">Still need help?</h2>
+          <p className="text-sm text-muted-foreground mt-2">Our support team is ready to assist.</p>
+          <Link to="/contact" className="inline-flex items-center gap-2 mt-5 px-6 py-3 rounded-full brand-gradient text-white text-sm font-semibold">
+            Contact support <ArrowRight className="w-4 h-4" />
           </Link>
         </div>
       </main>

@@ -23,7 +23,8 @@ import { productsApi } from '../services/api';
 import { useFetch } from '../hooks/useFetch';
 import { trackProductView, getRecentCategories } from '../services/recentlyViewed';
 import { getDeliveryTime, getStockStatus } from '../services/productMeta';
-import { SITE } from '../constants';
+import { useCms } from '../hooks/useCms';
+import { CMS_KEYS } from '../services/cmsApi';
 
 const RatingStars = ({ value, size = 'w-4 h-4' }) => (
   <div className="flex items-center gap-0.5" aria-label={`Rated ${value} out of 5`}>
@@ -144,6 +145,7 @@ const ProductDetailPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, toggleCompare, inCompare, compareList, MAX_COMPARE } = useStore();
+  const { data: global } = useCms(CMS_KEYS.GLOBAL);
   const [purchaseOpen, setPurchaseOpen] = useState(false);
 
   const { data: rawProduct, loading, error, retry } = useFetch(() => productsApi.get(id), [id]);
@@ -299,7 +301,7 @@ const ProductDetailPage = () => {
     } : {}),
     offers: {
       '@type': 'Offer',
-      url: `${SITE?.url || ''}/product/${product.id}`,
+      url: `${(global?.siteUrl || '').replace(/\/$/, '')}/product/${product.id}`,
       priceCurrency: 'USD',
       price: displayPrice,
       availability: outOfStock

@@ -5,12 +5,12 @@
  */
 
 export const SITE = {
-  name: 'ApnaStore',
-  tagline: 'Secure Digital Marketplace for Accounts, Assets & Tools',
-  url: 'https://apnastore.org',
-  description:
-    'ApnaStore is a secure marketplace to buy and sell social accounts, domains, websites, SaaS, source code, apps, AI tools, templates, courses, and digital assets — with escrow protection and verified sellers.',
-  twitter: '@apnastore',
+  /** @deprecated Prefer Global CMS (siteName / siteUrl / tagline). Kept only as empty-safe shape for legacy imports. */
+  name: '',
+  tagline: '',
+  url: '',
+  description: '',
+  twitter: '',
 };
 
 /** Backend API base (`/api/v1`). Override with VITE_API_URL. */
@@ -99,9 +99,10 @@ export const DELIVERY_TIME_FILTERS = [
   { id: 'manual', label: 'Delivered within 24–48h' },
 ];
 
-export const POPULAR_SEARCHES = ['Instagram account', 'Premium domain', 'SaaS starter kit', 'Source code', 'AI tool', 'Website'];
+export const POPULAR_SEARCHES = [];
 
-export const POPULAR_TAGS = ['social-account', 'domain', 'saas', 'source-code', 'mobile-app', 'ai-tool', 'template', 'commercial-use'];
+/** @deprecated Prefer CMS popular_tags — empty; storefront must not hardcode tags. */
+export const POPULAR_TAGS = [];
 
 export const RECENT_SEARCHES_KEY = 'pm_recent_searches';
 export const MAX_RECENT_SEARCHES = 6;
