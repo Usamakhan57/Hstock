@@ -325,12 +325,17 @@ const SellerDashboard = () => {
     <div className="min-h-screen bg-background text-foreground">
       <Seo title="Seller Dashboard" description="Manage your ApnaStore store, listings, and earnings." noIndex />
 
-      <div className="relative lg:flex">
+      {/*
+        Mobile uses normal document flow (single page scroll).
+        Desktop keeps the sticky sidebar + main split. Do not introduce
+        nested page scrollers or absolutely positioned dashboard cards.
+      */}
+      <div className="relative w-full lg:flex">
         <aside className="hidden lg:flex lg:h-screen lg:w-[320px] lg:sticky lg:top-0 shrink-0 flex-col border-r border-border bg-white px-6 py-8 shadow-sm overflow-hidden">
           {renderSidebarContent({ scrollable: true })}
         </aside>
 
-        <div className="flex-1 min-w-0">
+        <div className="relative z-0 flex w-full min-w-0 flex-1 flex-col">
           <div className="sticky top-0 z-50 border-b border-border bg-white pt-safe lg:hidden">
             <div className="flex items-center justify-between gap-2 px-4 py-4 sm:px-6">
               <button
@@ -356,36 +361,48 @@ const SellerDashboard = () => {
             </div>
           </div>
 
-          <div className={`fixed inset-0 z-[45] lg:hidden ${sidebarOpen ? 'pointer-events-auto' : 'pointer-events-none'}`}>
-            <div
-              className={`absolute inset-0 bg-slate-900/20 transition-opacity ${sidebarOpen ? 'opacity-100' : 'opacity-0'}`}
-              onClick={() => setSidebarOpen(false)}
-            />
-            <aside
-              className={`absolute left-0 top-0 flex h-[100vh] max-h-[100dvh] w-[min(88vw,320px)] flex-col overflow-hidden bg-white p-6 pt-[max(1.5rem,env(safe-area-inset-top,0px))] pb-safe shadow-2xl border-r border-border transition-transform duration-300 ease-out ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}
-            >
-              <div className="mb-4 flex shrink-0 items-start justify-between gap-3">
-                <div>
-                  <span className="inline-flex h-11 w-11 items-center justify-center rounded-3xl bg-primary/10 text-primary">
-                    <Package className="h-5 w-5" />
-                  </span>
+          {/*
+            Only mount the full-viewport drawer shell while open.
+            An always-present fixed inset-0 layer (even with pointer-events-none)
+            creates a competing compositing/stacking context on mobile and is a
+            common cause of overlapping cards + inconsistent scroll.
+          */}
+          {sidebarOpen ? (
+            <div className="fixed inset-0 z-[45] lg:hidden" data-testid="seller-mobile-drawer">
+              <div
+                className="absolute inset-0 bg-slate-900/20"
+                onClick={() => setSidebarOpen(false)}
+                aria-hidden="true"
+              />
+              <aside
+                className="absolute left-0 top-0 flex h-[100dvh] max-h-[100dvh] w-[min(88vw,320px)] flex-col overflow-hidden bg-white p-6 pt-[max(1.5rem,env(safe-area-inset-top,0px))] pb-safe shadow-2xl border-r border-border"
+                role="dialog"
+                aria-modal="true"
+                aria-label="Seller menu"
+              >
+                <div className="mb-4 flex shrink-0 items-start justify-between gap-3">
+                  <div>
+                    <span className="inline-flex h-11 w-11 items-center justify-center rounded-3xl bg-primary/10 text-primary">
+                      <Package className="h-5 w-5" />
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setSidebarOpen(false)}
+                    className="inline-flex h-11 w-11 items-center justify-center rounded-3xl bg-secondary text-foreground hover:bg-muted transition-colors"
+                    aria-label="Close seller menu"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setSidebarOpen(false)}
-                  className="inline-flex h-11 w-11 items-center justify-center rounded-3xl bg-secondary text-foreground hover:bg-muted transition-colors"
-                  aria-label="Close seller menu"
-                >
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
-              <div className="min-h-0 flex-1 overflow-hidden">
-                {renderSidebarContent({ scrollable: true })}
-              </div>
-            </aside>
-          </div>
+                <div className="min-h-0 flex-1 overflow-hidden">
+                  {renderSidebarContent({ scrollable: true })}
+                </div>
+              </aside>
+            </div>
+          ) : null}
 
-          <main className="mx-auto max-w-[1080px] px-4 py-8 pb-28 sm:px-6 lg:px-10 lg:pb-10">
+          <main className="relative z-0 mx-auto w-full min-w-0 max-w-[1080px] flex-1 px-4 py-8 pb-28 sm:px-6 lg:px-10 lg:pb-10">
             <SellerVerificationBanner seller={seller} />
 
             {tab !== 'overview' ? (
@@ -417,13 +434,13 @@ const SellerDashboard = () => {
             ) : null}
 
             {dataLoading ? (
-              <div className="space-y-3">
+              <div className="flex flex-col gap-3">
                 {[1, 2, 3].map((i) => <div key={i} className="h-24 animate-pulse rounded-[2rem] bg-secondary" />)}
               </div>
             ) : loadError ? (
               <NetworkErrorState onRetry={loadProducts} message={loadError.message} />
             ) : (
-              <div className="space-y-8">
+              <div className="flex w-full min-w-0 flex-col gap-6 sm:gap-8">
                 {tab === 'overview' && (
                   <SellerOverviewTab
                     seller={seller}

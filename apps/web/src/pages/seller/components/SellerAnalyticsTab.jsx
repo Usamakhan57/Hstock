@@ -41,8 +41,8 @@ const SellerAnalyticsTab = ({
   const totalDownloads = bestSelling.reduce((s, p) => s + (p.downloads || 0), 0);
 
   return (
-    <div className="space-y-6">
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="flex w-full min-w-0 flex-col gap-5 sm:gap-6">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {[
           { label: 'Gross Sales', value: money(stats.grossSales), icon: CircleDollarSign },
           { label: 'Net Profit', value: money(stats.netProfit), icon: TrendingUp },
@@ -53,21 +53,21 @@ const SellerAnalyticsTab = ({
           { label: 'Repeat Buyers', value: stats.repeatBuyers || 0, icon: Users },
           { label: 'Units Sold', value: totalDownloads, icon: Download },
         ].map((card) => (
-          <div key={card.label} className="rounded-[1.35rem] border border-border bg-white p-4 shadow-sm">
+          <div key={card.label} className="relative z-0 min-w-0 rounded-[1.35rem] border border-border bg-white p-4 shadow-sm">
             <div className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-primary/10 text-primary">
               <card.icon className="h-4 w-4" />
             </div>
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{card.label}</p>
-            <p className="mt-2 text-2xl font-black">{card.value}</p>
+            <p className="mt-2 break-words text-2xl font-black">{card.value}</p>
           </div>
         ))}
       </div>
 
-      <div className="grid gap-5 lg:grid-cols-[1.5fr_0.9fr]">
-        <div className="rounded-[1.75rem] border border-border bg-white p-5 shadow-sm sm:p-6">
-          <div className="mb-4 flex items-center justify-between gap-3">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1.5fr_0.9fr]">
+        <div className="relative z-0 min-w-0 rounded-[1.75rem] border border-border bg-white p-5 shadow-sm sm:p-6">
+          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <h3 className="font-black">Revenue & orders</h3>
-            <div className="inline-flex rounded-full border border-border bg-secondary/70 p-1">
+            <div className="inline-flex shrink-0 rounded-full border border-border bg-secondary/70 p-1">
               {['7', '30'].map((value) => (
                 <button
                   key={value}
@@ -82,9 +82,9 @@ const SellerAnalyticsTab = ({
               ))}
             </div>
           </div>
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={chart} margin={{ left: -20 }}>
+          <div className="relative h-64 w-full min-w-0 overflow-hidden">
+            <ResponsiveContainer width="100%" height="100%" minWidth={0} debounce={50}>
+              <AreaChart data={chart} margin={{ left: -20, right: 8 }}>
                 <defs>
                   <linearGradient id="sellerAnalyticsFill" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="#7C3AED" stopOpacity={0.35} />
@@ -93,7 +93,7 @@ const SellerAnalyticsTab = ({
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#EEE" />
                 <XAxis dataKey="day" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
-                <YAxis tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
+                <YAxis tick={{ fontSize: 11 }} tickLine={false} axisLine={false} width={40} />
                 <Tooltip formatter={(v, name) => (name === 'sales' ? [money(v), 'Sales'] : [v, 'Orders'])} />
                 <Area type="monotone" dataKey="sales" stroke="#7C3AED" strokeWidth={2.5} fill="url(#sellerAnalyticsFill)" />
               </AreaChart>
@@ -101,14 +101,14 @@ const SellerAnalyticsTab = ({
           </div>
         </div>
 
-        <div className="rounded-[1.75rem] border border-border bg-white p-5 shadow-sm sm:p-6">
+        <div className="relative z-0 min-w-0 rounded-[1.75rem] border border-border bg-white p-5 shadow-sm sm:p-6">
           <h3 className="mb-4 font-black">Top categories</h3>
           {topCategories.length === 0 ? (
             <p className="text-sm text-muted-foreground">No category data yet.</p>
           ) : (
             <>
-              <div className="h-40">
-                <ResponsiveContainer width="100%" height="100%">
+              <div className="relative h-40 w-full min-w-0 overflow-hidden">
+                <ResponsiveContainer width="100%" height="100%" minWidth={0} debounce={50}>
                   <PieChart>
                     <Pie data={topCategories} dataKey="count" nameKey="name" innerRadius={40} outerRadius={65} paddingAngle={2}>
                       {topCategories.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
@@ -121,8 +121,8 @@ const SellerAnalyticsTab = ({
                 {topCategories.map((c, i) => (
                   <li key={c.name} className="flex items-center gap-2 text-xs">
                     <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
-                    <span className="flex-1 truncate">{c.name}</span>
-                    <span className="text-muted-foreground">{c.count}</span>
+                    <span className="min-w-0 flex-1 truncate">{c.name}</span>
+                    <span className="shrink-0 text-muted-foreground">{c.count}</span>
                   </li>
                 ))}
               </ul>
@@ -131,15 +131,15 @@ const SellerAnalyticsTab = ({
         </div>
       </div>
 
-      <div className="grid gap-5 lg:grid-cols-2">
-        <div className="rounded-[1.75rem] border border-border bg-white p-5 shadow-sm sm:p-6">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+        <div className="relative z-0 min-w-0 rounded-[1.75rem] border border-border bg-white p-5 shadow-sm sm:p-6">
           <h3 className="mb-4 font-black">Orders by day</h3>
-          <div className="h-56">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chart} margin={{ left: -20 }}>
+          <div className="relative h-56 w-full min-w-0 overflow-hidden">
+            <ResponsiveContainer width="100%" height="100%" minWidth={0} debounce={50}>
+              <BarChart data={chart} margin={{ left: -20, right: 8 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#EEE" />
                 <XAxis dataKey="day" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
-                <YAxis allowDecimals={false} tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
+                <YAxis allowDecimals={false} tick={{ fontSize: 11 }} tickLine={false} axisLine={false} width={40} />
                 <Tooltip />
                 <Bar dataKey="orders" fill="#EC4899" radius={[6, 6, 0, 0]} />
               </BarChart>
@@ -147,7 +147,7 @@ const SellerAnalyticsTab = ({
           </div>
         </div>
 
-        <div className="rounded-[1.75rem] border border-border bg-white p-5 shadow-sm sm:p-6">
+        <div className="relative z-0 min-w-0 rounded-[1.75rem] border border-border bg-white p-5 shadow-sm sm:p-6">
           <div className="mb-4 flex items-center justify-between">
             <h3 className="font-black">Best performing listings</h3>
             <span className="inline-flex items-center gap-1 text-xs font-semibold text-primary">

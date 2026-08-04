@@ -80,9 +80,9 @@ const SellerVerificationBanner = ({ seller }) => {
 
   if (isApproved) {
     return (
-      <div className="mb-8 rounded-[1.75rem] border border-emerald-200 bg-emerald-50 p-6 shadow-sm">
+      <div className="relative z-0 mb-6 w-full min-w-0 rounded-[1.75rem] border border-emerald-200 bg-emerald-50 p-5 shadow-sm sm:mb-8 sm:p-6">
         <div className="flex flex-col gap-4">
-          <div>
+          <div className="min-w-0">
             <h2 className="text-lg font-black tracking-tight text-emerald-900">
               ✅ Seller Account Approved
             </h2>
@@ -158,7 +158,7 @@ const SellerVerificationBanner = ({ seller }) => {
       ? 'Your seller application was not approved. Contact support if you believe this is a mistake.'
       : 'Your seller account is suspended. Public store features and payouts are disabled until reinstated.';
     return (
-      <div className="mb-8 rounded-[1.75rem] border border-red-200 bg-red-50 p-6 shadow-sm">
+      <div className="relative z-0 mb-6 w-full min-w-0 rounded-[1.75rem] border border-red-200 bg-red-50 p-5 shadow-sm sm:mb-8 sm:p-6">
         <h2 className="text-lg font-black tracking-tight text-red-900">⛔ {title}</h2>
         <p className="mt-2 max-w-2xl text-sm text-red-800/90">{description}</p>
         <p className="mt-4 text-sm font-semibold text-red-950">
@@ -170,7 +170,7 @@ const SellerVerificationBanner = ({ seller }) => {
 
   // Pending (default)
   return (
-    <div className="mb-8 rounded-[1.75rem] border border-amber-200 bg-amber-50 p-6 shadow-sm">
+    <div className="relative z-0 mb-6 w-full min-w-0 rounded-[1.75rem] border border-amber-200 bg-amber-50 p-5 shadow-sm sm:mb-8 sm:p-6">
       <h2 className="text-lg font-black tracking-tight text-amber-950">
         ⏳ Seller Verification Pending
       </h2>
