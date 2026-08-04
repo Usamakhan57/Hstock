@@ -24,6 +24,7 @@ import {
   buildTokenMatchClause,
   escapeRegex,
   sortProductsBySearchRelevance,
+  sortProductsByPromotionThenDate,
   tokenizeSearchQuery,
 } from '../helpers/productSearch.helper.js';
 import {
@@ -173,7 +174,7 @@ export async function listProducts(query = {}, actor = null) {
       .populate('category', 'name slug')
       .populate('brand', 'name slug')
       .populate('tags', 'name slug')
-      .populate('seller', 'storeName slug status')
+      .populate('seller', 'storeName slug status verified storePromotionActive storePromotedUntil')
       .lean();
     const ranked = sortProductsBySearchRelevance(matched, searchTokens);
     const total = ranked.length;
@@ -181,18 +182,23 @@ export async function listProducts(query = {}, actor = null) {
     return { items, meta: buildPaginationMeta({ page, limit, total }) };
   }
 
-  const [items, total] = await Promise.all([
+  // Prefer actively promoted sellers, then newest. Over-fetch then re-rank for
+  // first-page / small windows; deep pages still prefer fresh listings.
+  const fetchLimit = Math.min(Math.max(limit * 5, skip + limit), 200);
+  const [pool, total] = await Promise.all([
     Product.find(filter)
       .populate('category', 'name slug')
       .populate('brand', 'name slug')
       .populate('tags', 'name slug')
-      .populate('seller', 'storeName slug status')
+      .populate('seller', 'storeName slug status verified storePromotionActive storePromotedUntil')
       .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit)
+      .limit(fetchLimit)
       .lean(),
     Product.countDocuments(filter),
   ]);
+
+  const ranked = sortProductsByPromotionThenDate(pool);
+  const items = ranked.slice(skip, skip + limit);
 
   return { items, meta: buildPaginationMeta({ page, limit, total }) };
 }
@@ -207,7 +213,7 @@ async function loadProductDocument(idOrSlug) {
     .populate('category', 'name slug')
     .populate('brand', 'name slug')
     .populate('tags', 'name slug')
-    .populate('seller', 'storeName slug status verified user')
+    .populate('seller', 'storeName slug status verified user storePromotionActive storePromotedUntil')
     .lean();
 }
 

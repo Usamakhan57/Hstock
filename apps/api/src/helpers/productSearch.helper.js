@@ -109,8 +109,41 @@ export function scoreProductAgainstTokens(product, tokens = []) {
 export function sortProductsBySearchRelevance(products, tokens = []) {
   if (!Array.isArray(products) || !tokens.length) return products || [];
   return [...products].sort((a, b) => {
+    const aPromoted = a.seller?.storePromotionActive
+      && a.seller?.storePromotedUntil
+      && new Date(a.seller.storePromotedUntil).getTime() > Date.now()
+      ? 1
+      : 0;
+    const bPromoted = b.seller?.storePromotionActive
+      && b.seller?.storePromotedUntil
+      && new Date(b.seller.storePromotedUntil).getTime() > Date.now()
+      ? 1
+      : 0;
+    if (bPromoted !== aPromoted) return bPromoted - aPromoted;
     const scoreDiff = scoreProductAgainstTokens(b, tokens) - scoreProductAgainstTokens(a, tokens);
     if (scoreDiff !== 0) return scoreDiff;
+    const aTime = new Date(a.createdAt || 0).getTime();
+    const bTime = new Date(b.createdAt || 0).getTime();
+    return bTime - aTime;
+  });
+}
+
+/** Prefer actively promoted sellers, then newest. */
+export function sortProductsByPromotionThenDate(products = []) {
+  if (!Array.isArray(products) || products.length < 2) return products || [];
+  const now = Date.now();
+  return [...products].sort((a, b) => {
+    const aPromoted = a.seller?.storePromotionActive
+      && a.seller?.storePromotedUntil
+      && new Date(a.seller.storePromotedUntil).getTime() > now
+      ? 1
+      : 0;
+    const bPromoted = b.seller?.storePromotionActive
+      && b.seller?.storePromotedUntil
+      && new Date(b.seller.storePromotedUntil).getTime() > now
+      ? 1
+      : 0;
+    if (bPromoted !== aPromoted) return bPromoted - aPromoted;
     const aTime = new Date(a.createdAt || 0).getTime();
     const bTime = new Date(b.createdAt || 0).getTime();
     return bTime - aTime;

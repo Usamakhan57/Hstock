@@ -2,6 +2,7 @@ import test, { before, after, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import request from 'supertest';
 import { resetDb, setupTestDb, teardownTestDb } from '../helpers/setup.js';
+import { fundBuyerWallet } from '../helpers/walletBuy.js';
 
 const { default: app } = await import('../../src/app.js');
 const {
@@ -106,15 +107,17 @@ async function createLiveProduct(adminToken, sellerToken, { stock = 20, price = 
   return product.body.data;
 }
 
-async function buyAndPay({ buyerToken, productId, quantity = 1 }) {
+async function buyAndPay({ buyerToken, productId, quantity = 1, buyerEmail, buyerUserId }) {
+  if (buyerUserId) {
+    await fundBuyerWallet(buyerUserId, 500);
+  } else {
+    await fundBuyerWallet(buyerEmail || 'final-buyer@example.com', 500);
+  }
   const buy = await request(app)
     .post('/api/v1/orders/buy-now')
     .set('Authorization', `Bearer ${buyerToken}`)
-    .send({ productId, quantity });
+    .send({ productId, quantity, paymentMethod: 'wallet' });
   assert.equal(buy.status, 201, JSON.stringify(buy.body));
-  await request(app)
-    .post(`/api/v1/payments/cryptomus/sandbox/${buy.body.data.cryptomus.uuid}`)
-    .send({});
   return buy.body.data;
 }
 
@@ -135,9 +138,9 @@ after(async () => {
 test('partial dispute holds only disputed escrow amount', async () => {
   const adminToken = await createAdminToken();
   const { token: sellerToken } = await createSeller();
-  const { token: buyerToken } = await createBuyer();
+  const { token: buyerToken, userId: buyerUserId } = await createBuyer();
   const product = await createLiveProduct(adminToken, sellerToken, { stock: 10, price: 10 });
-  const paid = await buyAndPay({ buyerToken, productId: product._id, quantity: 10 });
+  const paid = await buyAndPay({ buyerToken, productId: product._id, quantity: 10, buyerUserId });
 
   const order = await Order.findById(paid.order._id).lean();
   assert.equal(order.quantity, 10);
@@ -190,9 +193,9 @@ test('partial dispute holds only disputed escrow amount', async () => {
 test('partial escrow releases undisputed portion without freezing whole order', async () => {
   const adminToken = await createAdminToken();
   const { token: sellerToken } = await createSeller();
-  const { token: buyerToken } = await createBuyer();
+  const { token: buyerToken, userId: buyerUserId } = await createBuyer();
   const product = await createLiveProduct(adminToken, sellerToken, { stock: 10, price: 10 });
-  const paid = await buyAndPay({ buyerToken, productId: product._id, quantity: 10 });
+  const paid = await buyAndPay({ buyerToken, productId: product._id, quantity: 10, buyerUserId });
 
   await request(app)
     .post('/api/v1/disputes')
@@ -222,10 +225,10 @@ test('partial escrow releases undisputed portion without freezing whole order', 
 test('credential share encrypts, masks, reveals with audit; outsiders denied', async () => {
   const adminToken = await createAdminToken();
   const { token: sellerToken } = await createSeller();
-  const { token: buyerToken } = await createBuyer();
+  const { token: buyerToken, userId: buyerUserId } = await createBuyer();
   const outsider = await createBuyer(`outsider-${Date.now()}@example.com`);
   const product = await createLiveProduct(adminToken, sellerToken, { stock: 2, price: 50 });
-  const paid = await buyAndPay({ buyerToken, productId: product._id, quantity: 1 });
+  const paid = await buyAndPay({ buyerToken, productId: product._id, quantity: 1, buyerUserId });
 
   const dispute = await request(app)
     .post('/api/v1/disputes')
@@ -287,9 +290,9 @@ test('credential share encrypts, masks, reveals with audit; outsiders denied', a
 test('replacement versioning, reject then accept resolves dispute and read-only chat', async () => {
   const adminToken = await createAdminToken();
   const { token: sellerToken } = await createSeller();
-  const { token: buyerToken } = await createBuyer();
+  const { token: buyerToken, userId: buyerUserId } = await createBuyer();
   const product = await createLiveProduct(adminToken, sellerToken, { stock: 10, price: 10 });
-  const paid = await buyAndPay({ buyerToken, productId: product._id, quantity: 10 });
+  const paid = await buyAndPay({ buyerToken, productId: product._id, quantity: 10, buyerUserId });
 
   const order = await Order.findById(paid.order._id).lean();
   const accountIds = order.accounts.slice(0, 2).map((a) => String(a._id));
@@ -440,9 +443,9 @@ test('replacement versioning, reject then accept resolves dispute and read-only 
 test('replacement credentialBlob is stored exactly and never auto-closes dispute', async () => {
   const adminToken = await createAdminToken('blob-admin@example.com');
   const { token: sellerToken } = await createSeller('blob-seller@example.com');
-  const { token: buyerToken } = await createBuyer('blob-buyer@example.com');
+  const { token: buyerToken, userId: buyerUserId } = await createBuyer('blob-buyer@example.com');
   const product = await createLiveProduct(adminToken, sellerToken, { stock: 5, price: 12 });
-  const paid = await buyAndPay({ buyerToken, productId: product._id, quantity: 1 });
+  const paid = await buyAndPay({ buyerToken, productId: product._id, quantity: 1, buyerUserId });
 
   const dispute = await request(app)
     .post('/api/v1/disputes')
@@ -489,9 +492,9 @@ test('replacement credentialBlob is stored exactly and never auto-closes dispute
 test('partial refund refunds only disputed amount', async () => {
   const adminToken = await createAdminToken();
   const { token: sellerToken } = await createSeller();
-  const { token: buyerToken } = await createBuyer();
+  const { token: buyerToken, userId: buyerUserId } = await createBuyer();
   const product = await createLiveProduct(adminToken, sellerToken, { stock: 10, price: 10 });
-  const paid = await buyAndPay({ buyerToken, productId: product._id, quantity: 10 });
+  const paid = await buyAndPay({ buyerToken, productId: product._id, quantity: 10, buyerUserId });
 
   const dispute = await request(app)
     .post('/api/v1/disputes')
@@ -531,9 +534,9 @@ test('partial refund refunds only disputed amount', async () => {
 test('select exact disputed accounts and dashboard OCR/violation fields', async () => {
   const adminToken = await createAdminToken();
   const { token: sellerToken } = await createSeller();
-  const { token: buyerToken } = await createBuyer();
+  const { token: buyerToken, userId: buyerUserId } = await createBuyer();
   const product = await createLiveProduct(adminToken, sellerToken, { stock: 5, price: 20 });
-  const paid = await buyAndPay({ buyerToken, productId: product._id, quantity: 5 });
+  const paid = await buyAndPay({ buyerToken, productId: product._id, quantity: 5, buyerUserId });
   const order = await Order.findById(paid.order._id).lean();
   const pick = order.accounts.slice(0, 2).map((a) => String(a._id));
 
@@ -582,9 +585,9 @@ test('select exact disputed accounts and dashboard OCR/violation fields', async 
 test('credential expiry clears encrypted blobs and keeps audits', async () => {
   const adminToken = await createAdminToken();
   const { token: sellerToken } = await createSeller();
-  const { token: buyerToken } = await createBuyer();
+  const { token: buyerToken, userId: buyerUserId } = await createBuyer();
   const product = await createLiveProduct(adminToken, sellerToken, { stock: 1, price: 50 });
-  const paid = await buyAndPay({ buyerToken, productId: product._id, quantity: 1 });
+  const paid = await buyAndPay({ buyerToken, productId: product._id, quantity: 1, buyerUserId });
   const dispute = await request(app)
     .post('/api/v1/disputes')
     .set('Authorization', `Bearer ${buyerToken}`)

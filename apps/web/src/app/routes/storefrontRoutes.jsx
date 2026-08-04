@@ -113,6 +113,7 @@ export function storefrontRoutes() {
       <Route path="/disputes" element={<RequireCustomerAuth><DisputesPage /></RequireCustomerAuth>} />
       <Route path="/disputes/:id" element={<RequireCustomerAuth><DisputeDetailPage /></RequireCustomerAuth>} />
       <Route path="/wallet" element={<RequireCustomerAuth><AccountWalletPage /></RequireCustomerAuth>} />
+      <Route path="/account/wallet" element={<RequireCustomerAuth><AccountWalletPage /></RequireCustomerAuth>} />
       <Route path="/downloads" element={<RequireCustomerAuth><AccountDownloadsPage /></RequireCustomerAuth>} />
       <Route path="/settings" element={<RequireCustomerAuth><AccountSettingsPage /></RequireCustomerAuth>} />
       <Route path="/reviews" element={<RequireCustomerAuth><ReviewsPage /></RequireCustomerAuth>} />

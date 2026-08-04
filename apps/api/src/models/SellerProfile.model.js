@@ -169,6 +169,22 @@ const sellerProfileSchema = new mongoose.Schema(
       rating: { type: Number, default: 0 },
       responseTime: { type: String, default: null },
     },
+    /** Denormalized paid store promotion flags for fast ranking queries */
+    storePromotionActive: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+    storePromotedUntil: {
+      type: Date,
+      default: null,
+      index: true,
+    },
+    activeStorePromotion: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'StorePromotion',
+      default: null,
+    },
     joinedAt: {
       type: Date,
       default: Date.now,
@@ -178,6 +194,7 @@ const sellerProfileSchema = new mongoose.Schema(
 );
 
 sellerProfileSchema.index({ status: 1, verified: 1 });
+sellerProfileSchema.index({ storePromotionActive: 1, storePromotedUntil: -1 });
 
 const SellerProfile =
   mongoose.models.SellerProfile || mongoose.model('SellerProfile', sellerProfileSchema);

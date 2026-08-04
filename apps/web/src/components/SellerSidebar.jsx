@@ -53,7 +53,11 @@ const SellerSidebar = ({ open, closing, onClose, seller, walletBalance, notifica
       primary: false,
       disabled: !isApproved,
     },
-    { label: 'Promote Store', to: '/seller/analytics', primary: false },
+    {
+      label: 'Promote Store',
+      to: '/seller/overview?promote=1',
+      primary: false,
+    },
   ], [storeSlug, isApproved]);
 
   // Animate in from above the fold (mobile) / from the right (desktop).

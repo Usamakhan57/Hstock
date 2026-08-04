@@ -15,8 +15,12 @@ export const buyNowSchema = {
   body: z.object({
     productId: objectIdSchema,
     quantity: z.number().int().min(1).max(500).optional(),
-    /** cryptomus (default) or wallet (spend prepaid Cryptomus-funded balance) */
-    paymentMethod: z.enum(['cryptomus', 'wallet']).optional().default('cryptomus'),
+    /**
+     * Product purchases are wallet-only.
+     * Cryptomus is used solely for wallet deposits/top-ups.
+     * Accepting legacy 'cryptomus' is rejected by the service.
+     */
+    paymentMethod: z.enum(['wallet']).optional().default('wallet'),
     toCurrency: z.string().trim().min(2).max(20).optional(),
     network: z.string().trim().min(2).max(30).optional(),
     urlReturn: z.string().url().optional(),

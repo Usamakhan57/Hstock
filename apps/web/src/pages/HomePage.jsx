@@ -116,7 +116,10 @@ const HomePage = () => {
   const { data: popular, loading: popularLoading, error: popularError, retry: retryPopular } = useFetch(() => productsApi.popular(10), []);
   const { data: featuredProducts, loading: featuredLoading, error: featuredError, retry: retryFeatured } = useFetch(() => productsApi.featured(8), []);
   const { data: latestProducts, loading: latestLoading, error: latestError, retry: retryLatest } = useFetch(() => productsApi.latest(10), []);
-  const featuredStores = useMemo(() => getStorefrontSellers().slice(0, 6), [catalogVersion]);
+  const featuredStores = useMemo(() => {
+    const list = getStorefrontSellers();
+    return [...list].sort((a, b) => Number(!!b.storePromoted) - Number(!!a.storePromoted)).slice(0, 6);
+  }, [catalogVersion]);
   const popularCategories = useMemo(() => getHomepageCategories(), [catalogVersion]);
   const [recentlyViewed, setRecentlyViewed] = useState([]);
 
@@ -232,9 +235,14 @@ const HomePage = () => {
                 >
                   <div className="flex items-center justify-between gap-4">
                     <div className="grid h-14 w-14 place-items-center rounded-3xl bg-primary/10 text-primary text-lg font-bold">{seller.initials}</div>
-                    {seller.verified && (
-                      <div className="rounded-full border border-primary/15 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">Verified</div>
-                    )}
+                    <div className="flex flex-wrap justify-end gap-2">
+                      {seller.storePromoted ? (
+                        <div className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-800">Promoted Store</div>
+                      ) : null}
+                      {seller.verified && (
+                        <div className="rounded-full border border-primary/15 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">Featured Seller</div>
+                      )}
+                    </div>
                   </div>
                   <h3 className="mt-5 text-xl font-semibold text-foreground transition-colors group-hover:text-primary">{seller.name}</h3>
                   <p className="mt-2 text-sm text-muted-foreground leading-relaxed line-clamp-2">{seller.specialty || seller.bio || ''}</p>

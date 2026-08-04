@@ -58,6 +58,22 @@ const platformConfigSchema = new mongoose.Schema(
       type: String,
       default: 'support@apnastore.org',
     },
+    /** Paid store promotion system */
+    storePromotionEnabled: {
+      type: Boolean,
+      default: true,
+    },
+    storePromotionPriceUsd: {
+      type: Number,
+      min: 0,
+      default: 10,
+    },
+    storePromotionDurationHours: {
+      type: Number,
+      min: 1,
+      max: 8760,
+      default: 72,
+    },
     updatedBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',

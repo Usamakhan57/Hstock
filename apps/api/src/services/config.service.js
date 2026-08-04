@@ -23,6 +23,9 @@ const PLATFORM_DEFAULTS = Object.freeze({
   maxWithdrawalAmount: 100000,
   orderPaymentLifetimeSeconds: 3600,
   supportEmail: 'support@apnastore.org',
+  storePromotionEnabled: true,
+  storePromotionPriceUsd: 10,
+  storePromotionDurationHours: 72,
 });
 
 const COMMISSION_DEFAULTS = Object.freeze({

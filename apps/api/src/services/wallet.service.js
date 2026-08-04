@@ -529,6 +529,94 @@ export async function adminAdjustWallet({
   return withTransaction(run);
 }
 
+/**
+ * Debit seller available balance for a paid store promotion.
+ * Creates balanced promotion_fee ledger entries (reference = promotionId in meta).
+ */
+export async function debitForStorePromotion({
+  sellerId,
+  sellerUserId,
+  amount,
+  promotionId,
+  transferId,
+  description = 'Store promotion fee',
+  actor = null,
+  session = null,
+} = {}) {
+  const value = roundMoney(amount);
+  if (!(value > 0)) {
+    throw new AppError('Promotion amount must be positive', 400, { code: 'INVALID_AMOUNT' });
+  }
+  if (!promotionId) {
+    throw new AppError('Promotion id is required', 400, { code: 'PROMOTION_REQUIRED' });
+  }
+
+  const tid = transferId || `promo_${promotionId}`;
+
+  const run = async (activeSession) => {
+    const wallet = await getOrCreateSellerWallet(sellerId, sellerUserId, activeSession);
+    if (wallet.availableBalance + 1e-9 < value) {
+      throw new AppError(
+        `Insufficient wallet balance. Available $${roundMoney(wallet.availableBalance).toFixed(2)}, required $${value.toFixed(2)}.`,
+        400,
+        {
+          code: 'INSUFFICIENT_WALLET_BALANCE',
+          details: {
+            availableBalance: wallet.availableBalance,
+            required: value,
+          },
+        },
+      );
+    }
+
+    wallet.availableBalance = roundMoney(wallet.availableBalance - value);
+    wallet.withdrawableBalance = computeWithdrawable(
+      wallet.availableBalance,
+      wallet.reservedBalance,
+    );
+    wallet.lastTransactionAt = new Date();
+    wallet.version = (wallet.version || 0) + 1;
+    await walletRepository.saveWallet(wallet, activeSession);
+
+    await ledgerService.recordTransfer({
+      session: activeSession,
+      transferId: tid,
+      createdBy: actor?.id || sellerUserId || null,
+      context: {
+        seller: sellerId,
+        sellerUser: sellerUserId,
+        wallet: wallet._id,
+        promotion: promotionId,
+      },
+      lines: [
+        {
+          direction: LEDGER_DIRECTION.DEBIT,
+          account: LEDGER_ACCOUNT.SELLER_AVAILABLE,
+          amount: value,
+          entryType: LEDGER_ENTRY_TYPE.PROMOTION_FEE,
+          balanceAfter: wallet.availableBalance,
+          description,
+          meta: { promotionId: String(promotionId), reference: String(promotionId) },
+        },
+        {
+          direction: LEDGER_DIRECTION.CREDIT,
+          account: LEDGER_ACCOUNT.COMMISSION_REVENUE,
+          amount: value,
+          entryType: LEDGER_ENTRY_TYPE.PROMOTION_FEE,
+          description,
+          meta: { promotionId: String(promotionId), reference: String(promotionId) },
+        },
+      ],
+    });
+
+    return { wallet, transferId: tid, amount: value };
+  };
+
+  if (session) return run(session);
+  const { withTransaction } = await import('../utils/transaction.js');
+  return withTransaction(run);
+}
+
 export async function listWalletTransactions(sellerUserId, query = {}) {
   const seller = await SellerProfile.findOne({ user: sellerUserId }).lean();
   if (!seller) {
@@ -557,5 +645,6 @@ export default {
   releaseWithdrawalReservation,
   finalizeWithdrawalPayment,
   adminAdjustWallet,
+  debitForStorePromotion,
   listWalletTransactions,
 };

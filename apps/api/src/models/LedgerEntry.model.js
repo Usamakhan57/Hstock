@@ -119,6 +119,12 @@ const ledgerEntrySchema = new mongoose.Schema(
       default: null,
       index: true,
     },
+    promotion: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'StorePromotion',
+      default: null,
+      index: true,
+    },
     description: {
       type: String,
       default: '',

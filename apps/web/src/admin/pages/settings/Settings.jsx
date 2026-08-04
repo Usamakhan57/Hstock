@@ -140,6 +140,41 @@ const Settings = () => {
         <TabsContent value="finance">
           <div className="space-y-5 max-w-2xl">
             <div className="bg-white rounded-2xl border border-border p-5 space-y-4">
+              <h3 className="font-semibold text-sm">Store Promotion</h3>
+              <ToggleRow
+                label="Enable store promotion"
+                description="Allow sellers to purchase Featured Seller promotion from their wallet."
+                checked={!!form.storePromotionEnabled}
+                onChange={(v) => setForm((f) => ({ ...f, storePromotionEnabled: v }))}
+              />
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1.5">Promotion Price ($)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={form.storePromotionPriceUsd ?? 10}
+                    onChange={set('storePromotionPriceUsd')}
+                    className={inputClass}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1.5">Duration (hours)</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="8760"
+                    value={form.storePromotionDurationHours ?? 72}
+                    onChange={set('storePromotionDurationHours')}
+                    className={inputClass}
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">Default 72 hours (3 days).</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-2xl border border-border p-5 space-y-4">
               <h3 className="font-semibold text-sm">General</h3>
               <div className="grid sm:grid-cols-2 gap-4">
                 <div>
