@@ -9,11 +9,17 @@ import { sendTemplatedEmail } from '../emails/email.service.js';
 import { User } from '../models/index.js';
 import { logger } from '../config/logger.js';
 import { queueUserTelegramNotification } from './telegram.service.js';
+import {
+  HIDDEN_NOTIFICATION_TYPES,
+  MARKETPLACE_NOTIFICATION_TYPES,
+  marketplaceNotificationFilter,
+  resolveNotificationLink,
+} from '../constants/notifications.js';
 
 function mapNotification(doc) {
   if (!doc) return null;
   const n = doc.toObject ? doc.toObject() : doc;
-  return {
+  const mapped = {
     id: String(n._id),
     _id: String(n._id),
     type: n.type,
@@ -26,6 +32,26 @@ function mapNotification(doc) {
     createdAt: n.createdAt,
     readAt: n.readAt || null,
   };
+  if (!mapped.link) {
+    mapped.link = resolveNotificationLink(mapped);
+  }
+  return mapped;
+}
+
+function buildUserFacingFilter(userId, query = {}) {
+  const filter = marketplaceNotificationFilter({ user: userId });
+  if (query.read === 'true' || query.unreadOnly === 'false') filter.read = true;
+  if (query.read === 'false' || query.unreadOnly === 'true') filter.read = false;
+  if (query.type) {
+    // Only allow explicit marketplace types through; ignore auth/hidden types.
+    if (
+      MARKETPLACE_NOTIFICATION_TYPES.includes(query.type)
+      && !HIDDEN_NOTIFICATION_TYPES.includes(query.type)
+    ) {
+      filter.type = query.type;
+    }
+  }
+  return filter;
 }
 
 /**
@@ -46,6 +72,11 @@ export async function createNotification({
 }) {
   if (!userId) throw new AppError('userId is required', 400, { code: 'VALIDATION_ERROR' });
 
+  if (HIDDEN_NOTIFICATION_TYPES.includes(String(type || ''))) {
+    logger.warn('Blocked auth/internal notification create', { type, userId: String(userId) });
+    return null;
+  }
+
   const notification = await Notification.create({
     user: userId,
     type,
@@ -58,7 +89,9 @@ export async function createNotification({
   const mapped = mapNotification(notification);
 
   emitToUser(userId, SOCKET_EVENTS.NOTIFICATION, mapped);
-  const unread = await Notification.countDocuments({ user: userId, read: false });
+  const unread = await Notification.countDocuments(
+    marketplaceNotificationFilter({ user: userId, read: false }),
+  );
   emitToUser(userId, SOCKET_EVENTS.NOTIFICATION_UNREAD_COUNT, { count: unread });
 
   if (notifyAdmins) {
@@ -117,10 +150,8 @@ export async function notifyUsers(userIds, payload) {
 
 export async function listNotifications(userId, query = {}) {
   const pagination = parsePagination(query);
-  const filter = { user: userId };
-  if (query.read === 'true') filter.read = true;
-  if (query.read === 'false') filter.read = false;
-  if (query.type) filter.type = query.type;
+  const filter = buildUserFacingFilter(userId, query);
+  const unreadFilter = marketplaceNotificationFilter({ user: userId, read: false });
 
   const [items, total, unreadCount] = await Promise.all([
     Notification.find(filter)
@@ -129,7 +160,7 @@ export async function listNotifications(userId, query = {}) {
       .limit(pagination.limit)
       .lean(),
     Notification.countDocuments(filter),
-    Notification.countDocuments({ user: userId, read: false }),
+    Notification.countDocuments(unreadFilter),
   ]);
 
   return {
@@ -142,7 +173,9 @@ export async function listNotifications(userId, query = {}) {
 }
 
 export async function getUnreadCount(userId) {
-  const count = await Notification.countDocuments({ user: userId, read: false });
+  const count = await Notification.countDocuments(
+    marketplaceNotificationFilter({ user: userId, read: false }),
+  );
   return { count };
 }
 
@@ -163,7 +196,7 @@ export async function markRead(userId, notificationId) {
 
 export async function markAllRead(userId) {
   await Notification.updateMany(
-    { user: userId, read: false },
+    marketplaceNotificationFilter({ user: userId, read: false }),
     { $set: { read: true, readAt: new Date() } },
   );
   emitToUser(userId, SOCKET_EVENTS.NOTIFICATION_UNREAD_COUNT, { count: 0 });

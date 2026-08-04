@@ -294,6 +294,7 @@ const Header = () => {
   const loc = useLocation();
   const navigate = useNavigate();
   const { user, logout, notifications, markNotificationRead, catalogVersion } = useStore();
+
   const { seller, isAuthenticated: isSellerAuthenticated, logout: logoutSeller } = useSellerAuth();
   const isUserLoggedIn = Boolean(user);
   const isAdminUser = isAdmin(user);
@@ -329,6 +330,7 @@ const Header = () => {
   const searchRef = useRef(null);
   const drawerCloseTimeoutRef = useRef(null);
   const notifRef = useRef(null);
+  const notifPanelRef = useRef(null);
   const [notifPos, setNotifPos] = useState(null);
 
   useEffect(() => {
@@ -401,12 +403,15 @@ const Header = () => {
     const onClick = (e) => {
       if (megaRef.current && !megaRef.current.contains(e.target)) setMega(false);
       if (searchRef.current && !searchRef.current.contains(e.target)) setSearchFocused(false);
-      if (notifRef.current && !notifRef.current.contains(e.target)) setNotifOpen(false);
+      const inBell = notifRef.current?.contains(e.target);
+      const inPanel = notifPanelRef.current?.contains(e.target);
+      if (!inBell && !inPanel) setNotifOpen(false);
     };
     const onKey = (e) => { if (e.key === 'Escape') { setMega(false); setSearchFocused(false); closeSellerDrawer(); setNotifOpen(false); } };
-    document.addEventListener('mousedown', onClick);
+    // Use click (not mousedown) so Links inside the portaled panel receive the click first.
+    document.addEventListener('click', onClick);
     document.addEventListener('keydown', onKey);
-    return () => { document.removeEventListener('mousedown', onClick); document.removeEventListener('keydown', onKey); };
+    return () => { document.removeEventListener('click', onClick); document.removeEventListener('keydown', onKey); };
   }, []);
   useEffect(() => {
     document.body.style.overflow = showSellerDrawer ? 'hidden' : '';
@@ -550,6 +555,7 @@ const Header = () => {
 
                 {notifOpen && notifPos && createPortal(
                   <div
+                    ref={notifPanelRef}
                     role="menu"
                     data-testid="notifications-dropdown"
                     style={{
@@ -569,21 +575,38 @@ const Header = () => {
                     {notifications.length === 0 ? (
                       <p className="px-4 py-4 text-sm text-muted-foreground">You're all caught up.</p>
                     ) : (
-                      notifications.slice(0, 12).map((n) => (
-                        <Link
-                          key={n.id}
-                          to={n.link || '/notifications'}
-                          role="menuitem"
-                          onClick={() => { markNotificationRead(n.id); setNotifOpen(false); }}
-                          className="flex items-start gap-2.5 px-4 py-2.5 hover:bg-secondary active:bg-secondary/80 transition-colors"
-                        >
-                          <span className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${n.read ? 'bg-transparent' : 'bg-primary'}`} />
-                          <span className="min-w-0">
-                            <span className={`block text-sm ${n.read ? 'font-medium' : 'font-bold'} truncate`}>{n.title}</span>
-                            <span className="block text-xs text-muted-foreground line-clamp-2">{n.body}</span>
-                          </span>
-                        </Link>
-                      ))
+                      notifications.slice(0, 12).map((n) => {
+                        const href = n.link || '/notifications';
+                        return (
+                          <button
+                            key={n.id}
+                            type="button"
+                            role="menuitem"
+                            onClick={async (e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              try {
+                                await markNotificationRead(n.id);
+                              } catch {
+                                // keep navigation responsive
+                              }
+                              setNotifOpen(false);
+                              if (String(href).startsWith('http')) {
+                                window.open(href, '_blank', 'noopener,noreferrer');
+                              } else {
+                                navigate(href);
+                              }
+                            }}
+                            className="w-full text-left flex items-start gap-2.5 px-4 py-2.5 hover:bg-secondary active:bg-secondary/80 transition-colors"
+                          >
+                            <span className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${n.read ? 'bg-transparent' : 'bg-primary'}`} />
+                            <span className="min-w-0">
+                              <span className={`block text-sm ${n.read ? 'font-medium' : 'font-bold'} truncate`}>{n.title}</span>
+                              <span className="block text-xs text-muted-foreground line-clamp-2">{n.body}</span>
+                            </span>
+                          </button>
+                        );
+                      })
                     )}
                   </div>,
                   document.body,

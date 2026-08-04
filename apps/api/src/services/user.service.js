@@ -496,7 +496,13 @@ export async function adminUpdateSellerStatus(sellerOrUserId, payload, actorId) 
 
 export async function getMyActivity(userId, query = {}) {
   const { page, limit } = parsePagination(query);
-  const { items, total } = await listActivityLogs({ userId, page, limit });
+  // Buyer/seller activity feed must never surface auth/audit noise.
+  const { items, total } = await listActivityLogs({
+    userId,
+    page,
+    limit,
+    excludeHidden: true,
+  });
   return {
     items,
     meta: buildPaginationMeta({ page, limit, total }),

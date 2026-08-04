@@ -31,7 +31,6 @@ import { ordersApi } from '../services/ordersApi';
 import { walletApi } from '../services/walletApi';
 import { withdrawalsApi } from '../services/withdrawalsApi';
 import { escrowApi } from '../services/escrowApi';
-import { usersApi } from '../services/usersApi';
 import { disputesApi } from '../services/disputesApi';
 import {
   buildSalesChart,
@@ -169,14 +168,13 @@ const SellerDashboard = () => {
         clearRequestCache('wallet-tx');
         clearRequestCache('withdrawals');
       }
-      const [ordersRes, walletRes, txRes, withdrawalsRes, escrowRes, disputesRes, activityRes] = await Promise.all([
+      const [ordersRes, walletRes, txRes, withdrawalsRes, escrowRes, disputesRes] = await Promise.all([
         ordersApi.list({ page: 1, limit: 100, scope: 'seller' }).catch(() => ({ items: [] })),
         walletApi.me({ force }).catch(() => null),
         walletApi.transactions({ page: 1, limit: 50, force }).catch(() => ({ items: [] })),
         withdrawalsApi.list({ page: 1, limit: 50 }).catch(() => ({ items: [] })),
         escrowApi.list({ page: 1, limit: 50 }).catch(() => ({ items: [] })),
         disputesApi.list({ page: 1, limit: 50, scope: 'seller' }).catch(() => ({ items: [] })),
-        usersApi.activity({ page: 1, limit: 30 }).catch(() => ({ items: [] })),
       ]);
       if (!alive) return;
       setCommerce({
@@ -186,7 +184,7 @@ const SellerDashboard = () => {
         withdrawals: withdrawalsRes.items || [],
         escrow: escrowRes.items || [],
         disputes: disputesRes.items || [],
-        activity: activityRes.items || [],
+        activity: [],
       });
     })();
     return () => { alive = false; };
@@ -259,22 +257,6 @@ const SellerDashboard = () => {
     date: o.date,
     status: o.status,
   }));
-
-  const notifications = useMemo(() => (
-    (commerce.activity || []).map((item, index) => ({
-      id: item._id || item.id || `activity-${index}`,
-      type: /dispute/i.test(item.action || item.type || '')
-        ? 'system'
-        : /order|sale|purchase/i.test(item.action || item.type || '')
-          ? 'order'
-          : /withdraw|payout|wallet/i.test(item.action || item.type || '')
-            ? 'payout'
-            : 'system',
-      message: item.message || item.description || item.action || 'Activity update',
-      date: item.createdAt || item.date || new Date().toISOString(),
-      read: false,
-    }))
-  ), [commerce.activity]);
 
   const changeTab = (key) => {
     const target = key === 'disputes' ? 'messages' : key;
@@ -486,7 +468,7 @@ const SellerDashboard = () => {
                 )}
                 {(tab === 'messages' || tab === 'disputes') && <SellerMessagesTab />}
                 {tab === 'reviews' && <SellerReviewsTab reviews={[]} />}
-                {tab === 'notifications' && <SellerNotificationsTab notifications={notifications} />}
+                {tab === 'notifications' && <SellerNotificationsTab />}
                 {tab === 'store' && (
                   <div className="rounded-[2rem] border border-border bg-white p-6 shadow-sm space-y-4">
                     <h3 className="font-bold text-foreground">Your public storefront</h3>
