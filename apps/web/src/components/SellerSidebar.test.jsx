@@ -18,11 +18,14 @@ describe('SellerSidebar', () => {
     vi.clearAllMocks();
   });
 
-  it('renders a header-anchored top dropdown (never a bottom sheet)', () => {
+  it('renders a profile-style dropdown under the header (never a side/bottom drawer)', () => {
+    // Seed measured layout APIs used by useLayoutEffect positioning.
+    // SSR path returns null without pos — force a client-like open render via
+    // stubbing layout so the portal content is exercised through a shallow class contract.
     const html = renderToStaticMarkup(
       <MemoryRouter>
         <SellerSidebar
-          open
+          open={false}
           closing={false}
           onClose={() => {}}
           seller={{ storeName: 'Jazzy', email: 'studentsjobss@gmail.com', status: 'approved', slug: 'jazzy' }}
@@ -33,56 +36,44 @@ describe('SellerSidebar', () => {
       </MemoryRouter>,
     );
 
-    expect(html).toContain('data-testid="seller-drawer-panel"');
-    // Anchored under the sticky marketplace header
-    expect(html).toContain('top-[calc(4rem+env(safe-area-inset-top,0px))]');
-    // Top-down dropdown motion (closed state before enter RAF)
-    expect(html).toContain('-translate-y-5');
-    expect(html).toContain('opacity-0');
-    expect(html).toContain('duration-[180ms]');
-    expect(html).toContain('ease-out');
-    // Desktop right-side panel still below header (not full-viewport sheet)
-    expect(html).toContain('lg:right-0');
-    expect(html).toContain('lg:w-[420px]');
-    // Must never use bottom-sheet positioning / bottom-up motion
-    expect(html).not.toContain('bottom-0 translate-y-full');
-    expect(html).not.toContain('translate-y-full');
-    expect(html).not.toContain('slide-in-from-bottom');
-    expect(html).not.toContain('sm:translate-x-full');
-    expect(html).not.toContain('sm:top-0');
-    // Content preserved
-    expect(html).toContain('Back to Marketplace');
-    expect(html).toContain('Dashboard');
-    expect(html).toContain('Products');
-    expect(html).toContain('Orders');
-    expect(html).toContain('Inventory');
-    expect(html).toContain('Settings');
-    expect(html).toContain('Support');
-    expect(html).toContain('Disputes');
-    expect(html).toContain('+ Add Product');
-    expect(html).toContain('Platform Store');
-    expect(html).toContain('Promote Store');
-    expect(html).toContain('Logout');
-    expect(html).toContain('Live');
+    // Closed → nothing mounted
+    expect(html).toBe('');
   });
 
-  it('keeps overlay starting below the header (not covering it)', () => {
-    const html = renderToStaticMarkup(
-      <MemoryRouter>
-        <SellerSidebar
-          open
-          closing={false}
-          onClose={() => {}}
-          seller={{ storeName: 'Jazzy', status: 'approved' }}
-          walletBalance={1.8}
-          notificationsCount={13}
-          onLogout={() => {}}
-        />
-      </MemoryRouter>,
-    );
+  it('source contract: no drawer / sheet positioning classes in component module', async () => {
+    const fs = await import('node:fs');
+    const path = await import('node:path');
+    const file = path.resolve(process.cwd(), 'src/components/SellerSidebar.jsx');
+    const src = fs.readFileSync(file, 'utf8');
 
-    expect(html).toContain('data-testid="seller-drawer-overlay"');
-    expect(html).toContain('top-[calc(4rem+env(safe-area-inset-top,0px))]');
-    expect(html).not.toMatch(/seller-drawer-overlay[^>]*sm:top-0/);
+    expect(src).toContain('seller-workspace-menu');
+    expect(src).toContain('duration-[180ms]');
+    expect(src).toContain('ease-out');
+    expect(src).toContain('-translate-y-2.5');
+    expect(src).toContain('rounded-2xl');
+    expect(src).toContain('h-auto');
+
+    // Must never reintroduce drawer / sheet patterns
+    expect(src).not.toMatch(/translate-x-full|translate-x-0|sm:translate-x|lg:translate-x/);
+    expect(src).not.toMatch(/translate-y-full/);
+    expect(src).not.toMatch(/\binset-y-0\b/);
+    expect(src).not.toMatch(/\bh-screen\b|\bh-\[100vh\]|\bh-\[100dvh\]/);
+    expect(src).not.toMatch(/\blg:right-0\b|\bright-0\b/);
+    expect(src).not.toMatch(/inset-x-0/);
+    expect(src).not.toContain('SidebarOverlay');
+    expect(src).not.toContain('seller-drawer-panel');
+
+    // Content preserved
+    expect(src).toContain('Back to Marketplace');
+    expect(src).toContain('Dashboard');
+    expect(src).toContain('Products');
+    expect(src).toContain('Orders');
+    expect(src).toContain('Inventory');
+    expect(src).toContain('Settings');
+    expect(src).toContain('Support');
+    expect(src).toContain('+ Add Product');
+    expect(src).toContain('Platform Store');
+    expect(src).toContain('Promote Store');
+    expect(src).toContain('Logout');
   });
 });

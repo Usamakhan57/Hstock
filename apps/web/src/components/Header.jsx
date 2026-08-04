@@ -358,9 +358,11 @@ const Header = () => {
     }
     setSellerDrawerClosing(false);
     setSellerDrawerOpen(true);
+    setNotifOpen(false);
+    setOpen(false);
   };
   const closeSellerDrawer = () => {
-    if (!sellerDrawerOpen) return;
+    if (!sellerDrawerOpen && !sellerDrawerClosing) return;
     setSellerDrawerOpen(false);
     setSellerDrawerClosing(true);
     if (drawerCloseTimeoutRef.current) {
@@ -369,7 +371,11 @@ const Header = () => {
     drawerCloseTimeoutRef.current = window.setTimeout(() => {
       setSellerDrawerClosing(false);
       drawerCloseTimeoutRef.current = null;
-    }, 200);
+    }, 180);
+  };
+  const toggleSellerDrawer = () => {
+    if (sellerDrawerOpen) closeSellerDrawer();
+    else openSellerDrawer();
   };
 
   const headerCategories = useMemo(() => {
@@ -397,7 +403,7 @@ const Header = () => {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  useEffect(() => { setOpen(false); setMega(false); setSearchFocused(false); setSellerDrawerOpen(false); setNotifOpen(false); }, [loc]);
+  useEffect(() => { setOpen(false); setMega(false); setSearchFocused(false); setSellerDrawerOpen(false); setSellerDrawerClosing(false); setNotifOpen(false); }, [loc]);
 
   useEffect(() => {
     const onClick = (e) => {
@@ -406,17 +412,20 @@ const Header = () => {
       const inBell = notifRef.current?.contains(e.target);
       const inPanel = notifPanelRef.current?.contains(e.target);
       if (!inBell && !inPanel) setNotifOpen(false);
+
+      const inSellerFab = e.target?.closest?.('[data-testid="seller-fab"]');
+      const inSellerMenu = e.target?.closest?.('[data-testid="seller-workspace-menu"]');
+      const inSellerDismiss = e.target?.closest?.('[data-testid="seller-workspace-dismiss"]');
+      if (!inSellerFab && !inSellerMenu && !inSellerDismiss && (sellerDrawerOpen || sellerDrawerClosing)) {
+        closeSellerDrawer();
+      }
     };
     const onKey = (e) => { if (e.key === 'Escape') { setMega(false); setSearchFocused(false); closeSellerDrawer(); setNotifOpen(false); } };
     // Use click (not mousedown) so Links inside the portaled panel receive the click first.
     document.addEventListener('click', onClick);
     document.addEventListener('keydown', onKey);
     return () => { document.removeEventListener('click', onClick); document.removeEventListener('keydown', onKey); };
-  }, []);
-  useEffect(() => {
-    document.body.style.overflow = showSellerDrawer ? 'hidden' : '';
-    return () => { document.body.style.overflow = ''; };
-  }, [showSellerDrawer]);
+  }, [sellerDrawerOpen, sellerDrawerClosing]);
 
   // Keep notification panel fully inside the viewport (mobile was clipping off-screen).
   useEffect(() => {
@@ -445,10 +454,12 @@ const Header = () => {
     };
   }, [notifOpen]);
 
-  const hideSellerFab = showSellerDrawer || open || notifOpen;
+  // Keep FAB visible while open so it can toggle the dropdown closed (profile-menu pattern).
+  const hideSellerFab = open;
 
   return (
     <header
+      data-marketplace-header
       className={`${headerCms?.stickyHeader === false ? 'relative' : 'sticky top-0'} z-50 pt-safe transition-all duration-300 ${
         scrolled ? 'bg-white/80 backdrop-blur-xl shadow-[0_8px_30px_-12px_rgba(108,59,255,0.18)] border-b border-border/60' : 'bg-white/40 backdrop-blur-md border-b border-transparent'
       }`}
@@ -821,10 +832,12 @@ const Header = () => {
           {!hideSellerFab && createPortal(
             <button
               type="button"
-              onClick={openSellerDrawer}
-              aria-label="Open seller sidebar"
+              onClick={toggleSellerDrawer}
+              aria-label={showSellerDrawer ? 'Close seller workspace' : 'Open seller workspace'}
+              aria-expanded={showSellerDrawer}
+              aria-haspopup="menu"
               data-testid="seller-fab"
-              className="fixed z-40 inline-flex items-center gap-2 rounded-full bg-primary px-4 py-3 text-white shadow-2xl shadow-primary/30 hover:bg-primary/90 active:scale-[0.98] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring right-[max(1rem,env(safe-area-inset-right,0px))] bottom-[max(1.5rem,env(safe-area-inset-bottom,0px))]"
+              className="fixed z-[110] inline-flex items-center gap-2 rounded-full bg-primary px-4 py-3 text-white shadow-2xl shadow-primary/30 hover:bg-primary/90 active:scale-[0.98] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring right-[max(1rem,env(safe-area-inset-right,0px))] bottom-[max(1.5rem,env(safe-area-inset-bottom,0px))]"
             >
               <LucideStore className="w-5 h-5" aria-hidden="true" />
               <span className="hidden sm:inline text-sm font-semibold">Seller workspace</span>

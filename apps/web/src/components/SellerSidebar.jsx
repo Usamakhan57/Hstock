@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
   ArrowLeft,
@@ -15,17 +15,19 @@ import {
   Wallet,
 } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import SidebarOverlay from './SidebarOverlay';
 import SidebarHeader from './SidebarHeader';
 import SidebarNavigation from './SidebarNavigation';
 import SidebarFooter from './SidebarFooter';
 
 /**
- * Seller Workspace — header dropdown panel (never a bottom sheet).
+ * Seller Workspace — profile-style account dropdown (NOT a drawer / sheet).
  *
- * Mobile: full-width panel starting below the sticky header, slides down.
- * Desktop (≥1024px / lg): right-side panel starting below the header, drops down.
- * Animation: opacity + translateY(-20px → 0), 180ms ease-out. No bottom-up motion.
+ * Anchored under the marketplace header:
+ * - Desktop: ~420px, right-aligned with the Seller Workspace FAB, auto height
+ * - Mobile: full width minus margins, below header, auto height
+ *
+ * Animation only: opacity 0→1 + translateY(-10px→0), 180ms ease-out.
+ * No translate-x, no bottom sheet, no full-height side panel.
  */
 const SellerSidebar = ({ open, closing, onClose, seller, walletBalance, notificationsCount, onLogout }) => {
   const location = useLocation();
@@ -33,6 +35,7 @@ const SellerSidebar = ({ open, closing, onClose, seller, walletBalance, notifica
   const panelRef = useRef(null);
   const firstFocusableRef = useRef(null);
   const [entered, setEntered] = useState(false);
+  const [pos, setPos] = useState(null);
 
   const menuItems = useMemo(() => [
     { label: 'Dashboard', to: '/seller/dashboard', icon: LayoutDashboard },
@@ -67,7 +70,59 @@ const SellerSidebar = ({ open, closing, onClose, seller, walletBalance, notifica
     },
   ], [storeSlug, isApproved]);
 
-  // Drop in from above the header edge (both mobile + desktop).
+  // Position like a profile dropdown under the sticky header (never flush side sheet).
+  useLayoutEffect(() => {
+    if (!open) {
+      setPos(null);
+      return undefined;
+    }
+
+    const update = () => {
+      const header = document.querySelector('[data-marketplace-header]');
+      const fab = document.querySelector('[data-testid="seller-fab"]');
+      const headerBottom = header?.getBoundingClientRect().bottom ?? 72;
+      const top = Math.max(8, headerBottom + 8);
+      const viewportH = window.innerHeight;
+      const maxHeight = Math.max(240, viewportH - top - 16);
+      const isDesktop = window.innerWidth >= 1024;
+
+      if (isDesktop) {
+        const width = 420;
+        let right = 16;
+        if (fab) {
+          const fabRect = fab.getBoundingClientRect();
+          right = Math.max(8, Math.round(window.innerWidth - fabRect.right));
+        }
+        setPos({
+          top,
+          right,
+          left: null,
+          width,
+          maxHeight,
+          mode: 'desktop',
+        });
+        return;
+      }
+
+      setPos({
+        top,
+        left: 12,
+        right: 12,
+        width: null,
+        maxHeight,
+        mode: 'mobile',
+      });
+    };
+
+    update();
+    window.addEventListener('resize', update);
+    window.addEventListener('scroll', update, true);
+    return () => {
+      window.removeEventListener('resize', update);
+      window.removeEventListener('scroll', update, true);
+    };
+  }, [open]);
+
   useEffect(() => {
     if (!open || closing) {
       setEntered(false);
@@ -118,7 +173,7 @@ const SellerSidebar = ({ open, closing, onClose, seller, walletBalance, notifica
     };
   }, [open, onClose]);
 
-  if (!open) return null;
+  if (!open || !pos) return null;
 
   const handleNavigate = () => onClose();
   const handleBackToMarketplace = () => {
@@ -136,40 +191,51 @@ const SellerSidebar = ({ open, closing, onClose, seller, walletBalance, notifica
   };
 
   const showOpen = entered && !closing;
-  // Top-down dropdown only — never translate from the bottom, never slide from the side.
   const panelMotion = showOpen
     ? 'translate-y-0 opacity-100'
-    : '-translate-y-5 opacity-0 pointer-events-none';
+    : '-translate-y-2.5 opacity-0 pointer-events-none';
 
-  const headerOffset = 'top-[calc(4rem+env(safe-area-inset-top,0px))]';
-  const panelMaxHeight = 'max-h-[calc(100dvh-4rem-env(safe-area-inset-top,0px)-env(safe-area-inset-bottom,0px))]';
+  const panelStyle = {
+    position: 'fixed',
+    top: pos.top,
+    maxHeight: pos.maxHeight,
+    zIndex: 101,
+    ...(pos.mode === 'desktop'
+      ? { right: pos.right, width: pos.width, left: 'auto' }
+      : { left: pos.left, right: pos.right, width: 'auto' }),
+  };
 
   return createPortal(
-    <div className="fixed inset-0 z-[100] pointer-events-none" data-testid="seller-drawer-root">
-      <div className="pointer-events-auto">
-        <SidebarOverlay open={showOpen} onClose={onClose} />
-      </div>
-      <aside
+    <div className="contents" data-testid="seller-workspace-root">
+      {/* Transparent dismiss layer — not a modal scrim / drawer overlay */}
+      <button
+        type="button"
+        aria-label="Close seller workspace"
+        data-testid="seller-workspace-dismiss"
+        onClick={onClose}
+        className={`fixed inset-0 z-[100] cursor-default bg-transparent transition-opacity duration-[180ms] ease-out ${
+          showOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
+        }`}
+      />
+      <div
         ref={panelRef}
-        role="dialog"
-        aria-label="Seller sidebar"
-        aria-modal="true"
-        data-testid="seller-drawer-panel"
+        role="menu"
+        aria-label="Seller workspace"
+        data-testid="seller-workspace-menu"
         data-open={showOpen ? 'true' : 'false'}
+        data-mode={pos.mode}
+        style={panelStyle}
         className={[
-          'pointer-events-auto fixed inset-x-0 z-[101] flex w-full flex-col overflow-hidden',
-          'bg-white border-b border-[#E5E7EB]',
-          'shadow-[0_20px_80px_-24px_rgba(15,23,42,0.35)]',
+          'z-[101] flex flex-col overflow-hidden',
+          'bg-white border border-[#E5E7EB] rounded-2xl',
+          'shadow-[0_20px_50px_-20px_rgba(15,23,42,0.35)]',
           'transition-[transform,opacity] duration-[180ms] ease-out',
-          headerOffset,
-          panelMaxHeight,
-          // Desktop: right-side header dropdown (not full-bleed sheet, not bottom sheet)
-          'lg:inset-x-auto lg:right-0 lg:w-[420px] lg:border-b-0 lg:border-l lg:rounded-bl-2xl',
+          'h-auto w-auto',
           panelMotion,
         ].join(' ')}
       >
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-safe" style={{ WebkitOverflowScrolling: 'touch' }}>
-          <div className="flex min-h-full flex-col">
+        <div className="min-h-0 overflow-y-auto overscroll-contain" style={{ WebkitOverflowScrolling: 'touch' }}>
+          <div className="flex flex-col">
             <div className="sticky top-0 z-20 border-b border-[#E5E7EB] bg-white px-4 py-3">
               <button
                 type="button"
@@ -187,8 +253,8 @@ const SellerSidebar = ({ open, closing, onClose, seller, walletBalance, notifica
               onNavigate={handleNavigate}
             />
 
-            <div className="flex flex-1 flex-col">
-              <div className="flex-1 space-y-2.5 px-4 py-4">
+            <div className="flex flex-col">
+              <div className="space-y-2.5 px-4 py-4">
                 <SidebarNavigation items={menuItems} activePath={location.pathname} onNavigate={handleNavigate} />
               </div>
 
@@ -210,7 +276,7 @@ const SellerSidebar = ({ open, closing, onClose, seller, walletBalance, notifica
             </div>
           </div>
         </div>
-      </aside>
+      </div>
     </div>,
     document.body,
   );
