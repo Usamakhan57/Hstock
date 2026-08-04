@@ -99,9 +99,28 @@ export const DELIVERY_TIME_FILTERS = [
   { id: 'manual', label: 'Delivered within 24–48h' },
 ];
 
-export const POPULAR_SEARCHES = ['Instagram account', 'Premium domain', 'SaaS starter kit', 'Source code', 'AI tool', 'Website'];
+export const POPULAR_SEARCHES = [
+  'Gmail Accounts',
+  'Instagram Accounts',
+  'Yahoo Accounts',
+  'Facebook Accounts',
+  'TikTok Accounts',
+  'Twitter/X Accounts',
+  'Discord Accounts',
+  'Business Email',
+];
 
-export const POPULAR_TAGS = ['social-account', 'domain', 'saas', 'source-code', 'mobile-app', 'ai-tool', 'template', 'commercial-use'];
+/** @deprecated Prefer CMS popular_tags — kept as empty-safe fallback labels only. */
+export const POPULAR_TAGS = [
+  'Gmail Accounts',
+  'Instagram Accounts',
+  'Yahoo Accounts',
+  'Facebook Accounts',
+  'TikTok Accounts',
+  'Twitter/X Accounts',
+  'Discord Accounts',
+  'Business Email',
+];
 
 export const RECENT_SEARCHES_KEY = 'pm_recent_searches';
 export const MAX_RECENT_SEARCHES = 6;

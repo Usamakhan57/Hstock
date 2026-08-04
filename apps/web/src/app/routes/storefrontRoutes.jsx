@@ -35,6 +35,7 @@ import PrivacyPolicyPage from '../../pages/PrivacyPolicyPage';
 import TermsPage from '../../pages/TermsPage';
 import FAQPage from '../../pages/FAQPage';
 import RefundPolicyPage from '../../pages/RefundPolicyPage';
+import CookiePolicyPage from '../../pages/CookiePolicyPage';
 import BuyerGuidePage from '../../pages/BuyerGuidePage';
 import SellerGuidePage from '../../pages/SellerGuidePage';
 import ProfilePage from '../../pages/account/ProfilePage';
@@ -157,6 +158,7 @@ export function storefrontRoutes() {
       <Route path="/terms" element={<TermsPage />} />
       <Route path="/faq" element={<FAQPage />} />
       <Route path="/refund-policy" element={<RefundPolicyPage />} />
+      <Route path="/cookie-policy" element={<CookiePolicyPage />} />
       <Route path="/buyer-guide" element={<BuyerGuidePage />} />
       <Route path="/seller-guide" element={<SellerGuidePage />} />
     </>

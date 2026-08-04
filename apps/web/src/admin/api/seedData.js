@@ -908,11 +908,15 @@ export const seedSocialSettings = {
 // used for schema.org LocalBusiness/Organization markup later.
 export const seedContactSettings = {
   companyName: 'ApnaStore Inc.',
+  office: 'Remote-first support team',
   address: '123 Market Street, Suite 400, San Francisco, CA',
   phone: '+1 555-010-0000',
   email: 'hello@apnastore.org',
   whatsapp: '',
   googleMapsUrl: '',
+  formTitle: 'Send us a message',
+  formDescription: 'Questions about an order, dispute, payout, or becoming a seller? Our team is here to help.',
+  supportHours: 'Monday–Friday, 9am–6pm CST. We typically reply within one business day.',
   businessHours: [
     { id: 'bh-1', day: 'Monday – Friday', hours: '9:00 AM – 6:00 PM' },
     { id: 'bh-2', day: 'Saturday', hours: '10:00 AM – 4:00 PM' },

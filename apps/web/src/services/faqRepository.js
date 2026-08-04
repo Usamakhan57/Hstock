@@ -1,43 +1,19 @@
 /**
- * faqRepository.js — Single source of truth for storefront FAQs.
- *
- * Reads from `pm_admin_faq_categories` and `pm_admin_faqs` (written by the
- * Admin FAQ CMS) and joins them into the grouped shape FAQPage needs.
- * Mirrors categoryRepository.js / productRepository.js / sellerRepository.js
- * — closing the same gap (FAQPage previously read
- * a hardcoded `faqCategories` array from data.js, disconnected from the
- * FAQ CMS built in the Admin panel).
+ * faqRepository — storefront FAQs from Mongo CMS (`/api/v1/cms`).
  */
-import { seedFaqCategories, seedFaqs } from '../admin/api/seedData';
+import { cmsApi, CMS_KEYS } from './cmsApi';
 
-const CATEGORIES_KEY = 'pm_admin_faq_categories';
-const FAQS_KEY = 'pm_admin_faqs';
+export async function fetchStorefrontFaqCategories() {
+  const [categoriesDoc, faqsDoc] = await Promise.all([
+    cmsApi.get(CMS_KEYS.FAQ_CATEGORIES, { force: false }),
+    cmsApi.get(CMS_KEYS.FAQS, { force: false }),
+  ]);
 
-function loadRaw(key, seed) {
-  try {
-    const stored = localStorage.getItem(key);
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-    }
-  } catch {
-    // corrupted — fall through to seed
-  }
-  return seed;
-}
+  const categories = Array.isArray(categoriesDoc?.items) ? categoriesDoc.items : [];
+  const faqs = Array.isArray(faqsDoc?.items) ? faqsDoc.items : [];
 
-/**
- * Published FAQs grouped by category, in category then FAQ sort order.
- * Categories with no published FAQs are omitted so the page never shows
- * an empty section.
- */
-export function getStorefrontFaqCategories() {
-  const categories = loadRaw(CATEGORIES_KEY, seedFaqCategories);
-  const faqs = loadRaw(FAQS_KEY, seedFaqs);
-
-  const sortedCategories = [...categories].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
-
-  return sortedCategories
+  return [...categories]
+    .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
     .map((cat) => ({
       title: cat.name,
       items: faqs
@@ -47,3 +23,13 @@ export function getStorefrontFaqCategories() {
     }))
     .filter((cat) => cat.items.length > 0);
 }
+
+/** @deprecated Prefer fetchStorefrontFaqCategories / useCms */
+export function getStorefrontFaqCategories() {
+  return [];
+}
+
+export default {
+  fetchStorefrontFaqCategories,
+  getStorefrontFaqCategories,
+};

@@ -18,6 +18,7 @@ import notificationsRoutes from './notifications.routes.js';
 import telegramRoutes from './telegram.routes.js';
 import adminRoutes from './admin.routes.js';
 import uploadsRoutes from './uploads.routes.js';
+import cmsRoutes from './cms.routes.js';
 
 const router = Router();
 
@@ -34,6 +35,7 @@ router.get('/', (_req, res) => {
         'auth',
         'users',
         'config',
+        'cms',
         'categories',
         'brands',
         'tags',
@@ -60,6 +62,7 @@ router.get('/', (_req, res) => {
 router.use('/auth', authRoutes);
 router.use('/users', usersRoutes);
 router.use('/config', configRoutes);
+router.use('/cms', cmsRoutes);
 router.use('/categories', categoriesRoutes);
 router.use('/brands', brandsRoutes);
 router.use('/tags', tagsRoutes);

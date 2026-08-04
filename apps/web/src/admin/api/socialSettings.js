@@ -1,7 +1,8 @@
-import { createSingleton } from './db';
+import { createCmsSingleton } from './cmsBackend';
 import { seedSocialSettings } from './seedData';
+import { CMS_KEYS } from '../../services/cmsApi';
 
-const resource = createSingleton('social_settings', seedSocialSettings);
+const resource = createCmsSingleton(CMS_KEYS.SOCIAL, seedSocialSettings);
 
 export const getSocialSettings = resource.get;
 export const updateSocialSettings = resource.update;

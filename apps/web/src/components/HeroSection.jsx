@@ -11,8 +11,8 @@ import {
   SiApple, SiThreads, SiWhatsapp, SiVk, SiNaver,
   SiSteam, SiEpicgames, SiSpotify, SiNetflix,
 } from 'react-icons/si';
-import { getHomepageCategories } from '../services/categoryRepository';
-import { useStore } from '../context/StoreContext';
+import { useCms } from '../hooks/useCms';
+import { CMS_KEYS } from '../services/cmsApi';
 
 /* ------------------------------------------------------------------ */
 /*  Motion presets                                                     */
@@ -117,19 +117,26 @@ const HeroSearchBar = ({ className = '', size = 'lg' }) => {
 };
 
 const CategoryPills = ({ className = '', scrollable = false }) => {
-  const { catalogVersion } = useStore();
-  const pills = useMemo(() => getHomepageCategories().slice(0, 7), [catalogVersion]);
+  const { data } = useCms(CMS_KEYS.POPULAR_TAGS);
+  const pills = useMemo(() => {
+    const tags = Array.isArray(data?.tags) ? data.tags : [];
+    return [...tags]
+      .filter((t) => t && t.enabled !== false && t.label)
+      .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+  }, [data]);
+
+  if (!pills.length) return null;
+
   return (
     <div className={`flex items-center gap-2 ${scrollable ? 'overflow-x-auto no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0' : 'flex-wrap'} ${className}`}>
       <span className="text-xs font-semibold text-muted-foreground/80 shrink-0">Popular:</span>
-      {pills.map((c) => (
+      {pills.map((tag) => (
         <Link
-          key={c.id}
-          to={`/category/${c.slug}`}
+          key={tag.id || tag.label}
+          to={tag.url || '/shop'}
           className="inline-flex items-center gap-1.5 shrink-0 text-xs sm:text-[13px] font-semibold bg-white border border-border rounded-full px-3.5 py-1.5 hover:-translate-y-0.5 hover:soft-shadow transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
-          <c.icon className="w-3.5 h-3.5" style={{ color: c.color }} aria-hidden="true" />
-          {c.name}
+          {tag.label}
         </Link>
       ))}
     </div>

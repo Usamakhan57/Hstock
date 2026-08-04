@@ -26,13 +26,18 @@ const ContactSettingsCms = () => {
 
   const updateHours = (id, key, value) => setForm((f) => ({ ...f, businessHours: f.businessHours.map((h) => (h.id === id ? { ...h, [key]: value } : h)) }));
   const removeHours = (id) => setForm((f) => ({ ...f, businessHours: f.businessHours.filter((h) => h.id !== id) }));
-  const addHours = () => setForm((f) => ({ ...f, businessHours: [...f.businessHours, { id: `bh-${Date.now()}`, day: '', hours: '' }] }));
+  const addHours = () => setForm((f) => ({ ...f, businessHours: [...(f.businessHours || []), { id: `bh-${Date.now()}`, day: '', hours: '' }] }));
 
   const handleSave = async () => {
     setSaving(true);
-    await updateContactSettings(form);
-    toast({ title: 'Contact settings saved' });
-    setSaving(false);
+    try {
+      await updateContactSettings(form);
+      toast({ title: 'Contact settings saved', description: 'Contact page updates immediately.' });
+    } catch (err) {
+      toast({ title: 'Could not save contact settings', description: err.message || 'Please try again.', variant: 'destructive' });
+    } finally {
+      setSaving(false);
+    }
   };
 
   if (!form) return <p className="text-sm text-muted-foreground">Loading…</p>;
@@ -41,9 +46,9 @@ const ContactSettingsCms = () => {
     <div>
       <PageHeader
         title="Contact Settings"
-        description="Company details shown on the Contact page and used for schema markup."
+        description="Company details shown on the Contact page. Saves to MongoDB and sync live to the storefront."
         actions={
-          <button onClick={handleSave} disabled={saving} className="px-5 py-2.5 rounded-full brand-gradient text-white text-sm font-semibold soft-shadow disabled:opacity-60">
+          <button type="button" onClick={handleSave} disabled={saving} className="px-5 py-2.5 rounded-full brand-gradient text-white text-sm font-semibold soft-shadow disabled:opacity-60">
             {saving ? 'Saving…' : 'Save Changes'}
           </button>
         }
@@ -53,15 +58,19 @@ const ContactSettingsCms = () => {
         <Card title="Company">
           <div>
             <label className="block text-sm font-medium mb-1.5">Company Name</label>
-            <input value={form.companyName} onChange={set('companyName')} className={inputClass} />
+            <input value={form.companyName || ''} onChange={set('companyName')} className={inputClass} />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1.5">Office</label>
+            <input value={form.office || ''} onChange={set('office')} className={inputClass} placeholder="Remote-first support team" />
           </div>
           <div>
             <label className="block text-sm font-medium mb-1.5">Address</label>
-            <textarea value={form.address} onChange={set('address')} className={textareaClass} />
+            <textarea value={form.address || ''} onChange={set('address')} className={textareaClass} />
           </div>
           <div>
             <label className="block text-sm font-medium mb-1.5">Google Maps URL</label>
-            <input value={form.googleMapsUrl} onChange={set('googleMapsUrl')} className={inputClass} placeholder="Embed or share link" />
+            <input value={form.googleMapsUrl || ''} onChange={set('googleMapsUrl')} className={inputClass} placeholder="Embed or share link" />
           </div>
         </Card>
 
@@ -69,22 +78,37 @@ const ContactSettingsCms = () => {
           <div className="grid sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium mb-1.5">Phone</label>
-              <input value={form.phone} onChange={set('phone')} className={inputClass} />
+              <input value={form.phone || ''} onChange={set('phone')} className={inputClass} />
             </div>
             <div>
               <label className="block text-sm font-medium mb-1.5">Email</label>
-              <input type="email" value={form.email} onChange={set('email')} className={inputClass} />
+              <input type="email" value={form.email || ''} onChange={set('email')} className={inputClass} />
             </div>
             <div>
               <label className="block text-sm font-medium mb-1.5">WhatsApp</label>
-              <input value={form.whatsapp} onChange={set('whatsapp')} className={inputClass} placeholder="Optional" />
+              <input value={form.whatsapp || ''} onChange={set('whatsapp')} className={inputClass} placeholder="Optional" />
             </div>
+          </div>
+        </Card>
+
+        <Card title="Contact Form" description="Copy shown above the contact form on /contact.">
+          <div>
+            <label className="block text-sm font-medium mb-1.5">Form Title</label>
+            <input value={form.formTitle || ''} onChange={set('formTitle')} className={inputClass} />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1.5">Form Description</label>
+            <textarea value={form.formDescription || ''} onChange={set('formDescription')} className={textareaClass} />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1.5">Support Hours (summary)</label>
+            <textarea value={form.supportHours || ''} onChange={set('supportHours')} className={textareaClass} />
           </div>
         </Card>
 
         <Card title="Business Hours">
           <div className="space-y-2">
-            {form.businessHours.map((h) => (
+            {(form.businessHours || []).map((h) => (
               <div key={h.id} className="flex flex-wrap items-center gap-2 rounded-xl border border-border p-3 bg-secondary/20">
                 <input value={h.day} onChange={(e) => updateHours(h.id, 'day', e.target.value)} placeholder="Day(s)" className={`${inputClass} flex-1 min-w-[120px]`} />
                 <input value={h.hours} onChange={(e) => updateHours(h.id, 'hours', e.target.value)} placeholder="Hours" className={`${inputClass} flex-1 min-w-[120px]`} />

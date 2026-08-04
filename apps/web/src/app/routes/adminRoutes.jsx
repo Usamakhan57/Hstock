@@ -47,6 +47,7 @@ const EmailTemplatesList = lazy(() => import('../../admin/pages/cms/EmailTemplat
 const EmailTemplateForm = lazy(() => import('../../admin/pages/cms/EmailTemplateForm'));
 const GlobalSettingsCms = lazy(() => import('../../admin/pages/cms/GlobalSettingsCms'));
 const SocialSettingsCms = lazy(() => import('../../admin/pages/cms/SocialSettingsCms'));
+const PopularTagsCms = lazy(() => import('../../admin/pages/cms/PopularTagsCms'));
 const ContactSettingsCms = lazy(() => import('../../admin/pages/cms/ContactSettingsCms'));
 const PaymentsList = lazy(() => import('../../admin/pages/payments/PaymentsList'));
 const EscrowList = lazy(() => import('../../admin/pages/escrow/EscrowList'));
@@ -115,6 +116,7 @@ export function adminRoutes() {
         <Route path="blog/authors" element={<LazyPage><BlogAuthorsList /></LazyPage>} />
         <Route path="blog/settings" element={<LazyPage><BlogSettings /></LazyPage>} />
         <Route path="cms/homepage" element={<LazyPage><HomepageCms /></LazyPage>} />
+        <Route path="cms/popular-tags" element={<LazyPage><PopularTagsCms /></LazyPage>} />
         <Route path="cms/header" element={<LazyPage><HeaderCms /></LazyPage>} />
         <Route path="cms/footer" element={<LazyPage><FooterCms /></LazyPage>} />
         <Route path="cms/menus" element={<LazyPage><NavMenusList /></LazyPage>} />
