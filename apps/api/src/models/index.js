@@ -42,3 +42,4 @@ export { default as Notification } from './Notification.model.js';
 export { default as TelegramConnectToken } from './TelegramConnectToken.model.js';
 export { default as TelegramMessageLog } from './TelegramMessageLog.model.js';
 export { default as TelegramBroadcast } from './TelegramBroadcast.model.js';
+export { default as CmsContent } from './CmsContent.model.js';

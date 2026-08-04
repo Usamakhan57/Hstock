@@ -136,7 +136,7 @@ const HomepageCms = () => {
   const handleSave = async () => {
     setSaving(true);
     await updateHomepageCms({ sections });
-    toast({ title: 'Homepage saved', description: 'Changes will apply next time the storefront loads.' });
+    toast({ title: 'Homepage saved', description: 'Storefront updates immediately — no rebuild required.' });
     setSaving(false);
   };
 

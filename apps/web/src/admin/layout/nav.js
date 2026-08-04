@@ -71,6 +71,7 @@ export const adminNavSections = [
     label: 'CMS',
     items: [
       { label: 'Homepage', to: '/admin/cms/homepage', icon: LayoutTemplate },
+      { label: 'Popular Tags', to: '/admin/cms/popular-tags', icon: Tags },
       { label: 'Header', to: '/admin/cms/header', icon: PanelTop },
       { label: 'Footer', to: '/admin/cms/footer', icon: PanelBottom },
       { label: 'Navigation Menus', to: '/admin/cms/menus', icon: ListTree },

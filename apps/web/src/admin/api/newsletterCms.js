@@ -1,7 +1,8 @@
-import { createSingleton } from './db';
+import { createCmsSingleton } from './cmsBackend';
 import { seedNewsletterCms } from './seedData';
+import { CMS_KEYS } from '../../services/cmsApi';
 
-const resource = createSingleton('newsletter_cms', seedNewsletterCms);
+const resource = createCmsSingleton(CMS_KEYS.NEWSLETTER, seedNewsletterCms);
 
 export const getNewsletterCms = resource.get;
 export const updateNewsletterCms = resource.update;

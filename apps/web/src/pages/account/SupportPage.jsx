@@ -6,6 +6,8 @@ import EmptyState from '../../components/EmptyState';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '../../components/ui/dialog';
 import { useToast } from '../../hooks/use-toast';
 import { defaultTickets, faqItems, loadLS, saveLS, uid } from '../../services/buyerDashboard';
+import { useCms } from '../../hooks/useCms';
+import { CMS_KEYS } from '../../services/cmsApi';
 
 const KEY = 'pm_support_tickets';
 
@@ -90,6 +92,8 @@ const TicketCard = ({ t }) => (
 
 const SupportPage = () => {
   const { toast } = useToast();
+  const { data: contact } = useCms(CMS_KEYS.CONTACT);
+  const supportEmail = contact?.email || '';
   const [tickets, setTickets] = useState(() => loadLS(KEY, null) || defaultTickets);
   const [modalOpen, setModalOpen] = useState(false);
 
@@ -127,7 +131,11 @@ const SupportPage = () => {
             <div className="bg-white rounded-3xl border border-border soft-shadow p-6">
               <h3 className="font-bold text-sm mb-1">Contact Support</h3>
               <p className="text-xs text-muted-foreground mb-3">Prefer email? Reach us directly and we'll follow up.</p>
-              <a href="mailto:support@apnastore.org" className="text-sm font-semibold text-primary hover:underline">support@apnastore.org</a>
+              {supportEmail ? (
+                <a href={`mailto:${supportEmail}`} className="text-sm font-semibold text-primary hover:underline">{supportEmail}</a>
+              ) : (
+                <p className="text-sm text-muted-foreground">Support email is managed in CMS Contact Settings.</p>
+              )}
             </div>
           </div>
         </div>

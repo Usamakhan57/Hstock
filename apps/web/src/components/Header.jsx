@@ -15,6 +15,8 @@ import { getCategoryTreeForStorefront } from '../services/categoryRepository';
 import { getProductCountByCategoryId } from '../services/productRepository';
 import { getRolledUpCount } from '../services/categoryTree';
 import { POPULAR_SEARCHES, POPULAR_TAGS, RECENT_SEARCHES_KEY, MAX_RECENT_SEARCHES } from '../constants';
+import { useCms } from '../hooks/useCms';
+import { CMS_KEYS } from '../services/cmsApi';
 
 /**
  * Header-only visibility rule, kept local to this component (the shared
@@ -152,7 +154,7 @@ const saveRecent = (term) => {
 /* --------------------------------------------- live search suggestions */
 const EMPTY_SUGGESTIONS = { products: [], categories: [], sellers: [] };
 
-const SearchSuggestions = ({ query, recent, onPick, onClearRecent }) => {
+const SearchSuggestions = ({ query, recent, onPick, onClearRecent, popularTags = POPULAR_TAGS, popularSearches = POPULAR_SEARCHES }) => {
   const [suggestions, setSuggestions] = useState(EMPTY_SUGGESTIONS);
   const [suggestLoading, setSuggestLoading] = useState(false);
   const hasQuery = query.trim().length > 0;
@@ -215,7 +217,7 @@ const SearchSuggestions = ({ query, recent, onPick, onClearRecent }) => {
             <TrendingUp className="w-3.5 h-3.5" aria-hidden="true" /> Popular searches
           </p>
           <div className="flex flex-wrap gap-2 mb-4">
-            {POPULAR_SEARCHES.map((t) => (
+            {popularSearches.map((t) => (
               <button key={t} type="button" onMouseDown={(e) => { e.preventDefault(); onPick(t); }} className="text-sm px-3.5 py-1.5 rounded-full border border-border hover:bg-secondary transition-colors">
                 {t}
               </button>
@@ -225,7 +227,7 @@ const SearchSuggestions = ({ query, recent, onPick, onClearRecent }) => {
             <Hash className="w-3.5 h-3.5" aria-hidden="true" /> Popular tags
           </p>
           <div className="flex flex-wrap gap-2">
-            {POPULAR_TAGS.map((t) => (
+            {popularTags.map((t) => (
               <button key={t} type="button" onMouseDown={(e) => { e.preventDefault(); onPick(t); }} className="text-xs font-medium px-3 py-1.5 rounded-full bg-secondary/70 hover:bg-secondary transition-colors">
                 #{t}
               </button>
@@ -298,6 +300,16 @@ const Header = () => {
   // Admins are isolated to /admin — never show buyer/seller marketplace controls.
   const isSellerUser = !isAdminUser && Boolean(user?.roles?.includes?.('seller') || isSellerAuthenticated);
   const showBuyerControls = isUserLoggedIn && !isAdminUser;
+  const { data: popularTagsDoc } = useCms(CMS_KEYS.POPULAR_TAGS);
+  const cmsPopularTags = useMemo(() => (
+    Array.isArray(popularTagsDoc?.tags)
+      ? [...popularTagsDoc.tags]
+        .filter((t) => t?.enabled !== false && t?.label)
+        .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+        .map((t) => t.label)
+      : []
+  ), [popularTagsDoc]);
+  const cmsPopularSearches = cmsPopularTags.length ? cmsPopularTags : POPULAR_SEARCHES;
   const sellerNotificationsCount = notifications.filter((n) => !n.read).length;
   const [sellerWalletBalance, setSellerWalletBalance] = useState(0);
   const megaRef = useRef(null);
@@ -471,6 +483,8 @@ const Header = () => {
                 recent={recent}
                 onPick={goSearch}
                 onClearRecent={() => { localStorage.removeItem(RECENT_SEARCHES_KEY); setRecent([]); }}
+                popularTags={cmsPopularTags.length ? cmsPopularTags : POPULAR_TAGS}
+                popularSearches={cmsPopularSearches}
               />
             )}
           </div>
@@ -656,9 +670,9 @@ const Header = () => {
             />
           </form>
 
-          {(recent.length > 0 || POPULAR_SEARCHES.length > 0) && (
+          {(recent.length > 0 || cmsPopularSearches.length > 0) && (
             <div className="flex flex-wrap gap-2">
-              {(recent.length ? recent : POPULAR_SEARCHES).slice(0, 5).map((t) => (
+              {(recent.length ? recent : cmsPopularSearches).slice(0, 5).map((t) => (
                 <button key={t} type="button" onClick={() => goSearch(t)} className="text-xs px-3 py-1.5 rounded-full bg-secondary/70 hover:bg-secondary transition-colors">
                   {t}
                 </button>

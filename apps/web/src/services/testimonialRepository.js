@@ -1,34 +1,7 @@
 /**
- * testimonialRepository.js — Single source of truth for storefront
- * testimonials (customer quotes shown on the homepage and About page).
- *
- * Reads from `pm_admin_testimonials` (written by the Admin Testimonials
- * CMS) and maps the admin schema to the storefront shape those pages need.
- * Mirrors categoryRepository.js / productRepository.js / sellerRepository.js
- * / faqRepository.js — closing the same gap
- * (HomePage/AboutPage previously read a hardcoded `testimonials` array
- * from data.js, disconnected from the Testimonials CMS).
- *
- * The admin schema has no "role" field (e.g. "Etsy Shop Owner") yet, so
- * every mapped testimonial gets a generic "Verified Buyer" label rather
- * than inventing per-customer job titles that were never actually entered.
+ * Testimonials from Mongo CMS.
  */
-import { seedTestimonials } from '../admin/api/seedData';
-
-const STORAGE_KEY = 'pm_admin_testimonials';
-
-function loadRawTestimonials() {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-    }
-  } catch {
-    // corrupted — fall through to seed
-  }
-  return seedTestimonials;
-}
+import { cmsApi, CMS_KEYS } from './cmsApi';
 
 function initialsFor(name) {
   return (name || '')
@@ -50,9 +23,18 @@ function mapToStorefront(t) {
   };
 }
 
-/** Published testimonials, mapped for storefront use. */
-export function getStorefrontTestimonials() {
-  return loadRawTestimonials()
-    .filter((t) => t.status === 'published')
-    .map(mapToStorefront);
+export async function fetchStorefrontTestimonials() {
+  const data = await cmsApi.get(CMS_KEYS.TESTIMONIALS);
+  const items = Array.isArray(data?.items) ? data.items : [];
+  return items.filter((t) => t.status === 'published').map(mapToStorefront);
 }
+
+/** Sync fallback used only before async hydrate — prefer fetchStorefrontTestimonials. */
+export function getStorefrontTestimonials() {
+  return [];
+}
+
+export default {
+  fetchStorefrontTestimonials,
+  getStorefrontTestimonials,
+};
