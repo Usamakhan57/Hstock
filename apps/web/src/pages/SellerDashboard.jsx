@@ -43,6 +43,7 @@ import {
   buildActionRequired,
   summarizeSellerStats,
 } from '../lib/sellerAnalytics';
+import { clearRequestCache } from '../lib/requestCache';
 import { NetworkErrorState } from '../components/ErrorState';
 
 import SellerOverviewTab from './seller/components/SellerOverviewTab';
@@ -162,10 +163,16 @@ const SellerDashboard = () => {
   useEffect(() => {
     let alive = true;
     (async () => {
+      const force = commerceTick > 0;
+      if (force) {
+        clearRequestCache('wallet');
+        clearRequestCache('wallet-tx');
+        clearRequestCache('withdrawals');
+      }
       const [ordersRes, walletRes, txRes, withdrawalsRes, escrowRes, disputesRes, activityRes] = await Promise.all([
         ordersApi.list({ page: 1, limit: 100, scope: 'seller' }).catch(() => ({ items: [] })),
-        walletApi.me().catch(() => null),
-        walletApi.transactions({ page: 1, limit: 50 }).catch(() => ({ items: [] })),
+        walletApi.me({ force }).catch(() => null),
+        walletApi.transactions({ page: 1, limit: 50, force }).catch(() => ({ items: [] })),
         withdrawalsApi.list({ page: 1, limit: 50 }).catch(() => ({ items: [] })),
         escrowApi.list({ page: 1, limit: 50 }).catch(() => ({ items: [] })),
         disputesApi.list({ page: 1, limit: 50, scope: 'seller' }).catch(() => ({ items: [] })),
@@ -184,6 +191,15 @@ const SellerDashboard = () => {
     })();
     return () => { alive = false; };
   }, [commerceTick]);
+
+  const refreshCommerce = (opts = {}) => {
+    if (opts.force) {
+      clearRequestCache('wallet');
+      clearRequestCache('wallet-tx');
+      clearRequestCache('withdrawals');
+    }
+    setCommerceTick((t) => t + 1);
+  };
 
   useEffect(() => {
     setTab(currentTab);
@@ -259,8 +275,6 @@ const SellerDashboard = () => {
       read: false,
     }))
   ), [commerce.activity]);
-
-  const refreshCommerce = () => setCommerceTick((t) => t + 1);
 
   const changeTab = (key) => {
     const target = key === 'disputes' ? 'messages' : key;
@@ -518,7 +532,7 @@ const SellerDashboard = () => {
       <PromoteStoreModal
         open={promoteOpen}
         onOpenChange={setPromoteOpen}
-        onSuccess={() => refreshCommerce()}
+        onSuccess={() => refreshCommerce({ force: true })}
       />
     </div>
   );

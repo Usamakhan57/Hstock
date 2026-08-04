@@ -37,6 +37,12 @@ export const buyerDepositSchema = {
     network: z.string().trim().min(2).max(30).optional(),
     urlReturn: z.string().url().optional(),
     urlSuccess: z.string().url().optional(),
+    /**
+     * When true (seller dashboard top-up), Cryptomus still uses the buyer
+     * deposit pipeline; after payment the credited amount is moved into the
+     * seller earnings Wallet used for promotions / withdrawable balance.
+     */
+    creditToSellerWallet: z.boolean().optional(),
   }),
 };
 

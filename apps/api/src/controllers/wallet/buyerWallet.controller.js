@@ -34,6 +34,20 @@ export const topup = asyncHandler(async (req, res) => {
   });
 });
 
+export const listDeposits = asyncHandler(async (req, res) => {
+  const result = await buyerWalletService.listMyDeposits(req.user, req.query);
+  return sendSuccess(res, {
+    message: 'Wallet deposits',
+    data: result.items,
+    meta: result.meta,
+  });
+});
+
+export const refreshDeposit = asyncHandler(async (req, res) => {
+  const data = await buyerWalletService.refreshMyDeposit(req.user, req.params.depositId);
+  return sendSuccess(res, { message: 'Deposit refreshed', data });
+});
+
 export const adminGetBuyerWallet = asyncHandler(async (req, res) => {
   const data = await buyerWalletService.adminGetBuyerWallet(req.params.buyerId);
   return sendSuccess(res, { message: 'Buyer wallet', data });
@@ -82,6 +96,8 @@ export default {
   getHistory,
   deposit,
   topup,
+  listDeposits,
+  refreshDeposit,
   adminGetBuyerWallet,
   adminAdjust,
   adminFreeze,

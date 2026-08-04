@@ -38,6 +38,8 @@ export const SellerAuthProvider = ({ children }) => {
       phone: profile?.phone || user.phone || '',
       logo: profile?.logo || '',
       banner: profile?.banner || '',
+      storePromotionActive: !!profile?.storePromotionActive,
+      storePromotedUntil: profile?.storePromotedUntil || null,
     };
   }, [user, profiles]);
 
