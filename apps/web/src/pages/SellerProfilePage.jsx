@@ -145,6 +145,12 @@ const SellerProfilePage = () => {
                   {artist.verified && (
                     <span className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full bg-secondary text-secondary-foreground"><ShieldCheck className="w-3.5 h-3.5 text-primary" /> Verified Seller</span>
                   )}
+                  {artist.storePromoted && (
+                    <span className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-50 text-amber-800 border border-amber-200">Featured Seller</span>
+                  )}
+                  {artist.storePromoted && (
+                    <span className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full bg-orange-50 text-orange-800 border border-orange-200">Promoted Store</span>
+                  )}
                 </div>
                 <p className="text-sm text-muted-foreground mt-2 max-w-xl leading-relaxed">{artist.bio || artist.specialty || 'Digital products from a trusted ApnaStore seller.'}</p>
               </div>

@@ -19,6 +19,7 @@ import telegramRoutes from './telegram.routes.js';
 import adminRoutes from './admin.routes.js';
 import uploadsRoutes from './uploads.routes.js';
 import cmsRoutes from './cms.routes.js';
+import storePromotionsRoutes from './storePromotions.routes.js';
 
 const router = Router();
 
@@ -52,6 +53,7 @@ router.get('/', (_req, res) => {
         'telegram',
         'admin',
         'uploads',
+        'store-promotions',
       ],
       health: '/health',
       socket: '/socket.io',
@@ -78,5 +80,6 @@ router.use('/refunds', refundsRoutes);
 router.use('/notifications', notificationsRoutes);
 router.use('/telegram', telegramRoutes);
 router.use('/admin', adminRoutes);
+router.use('/store-promotions', storePromotionsRoutes);
 
 export default router;

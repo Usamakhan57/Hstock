@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import Seo from '../components/Seo';
 import Logo from '../components/Logo';
+import PromoteStoreModal from '../components/PromoteStoreModal';
 import { getSellerProducts } from './seller/api/sellerProducts';
 import { useSellerAuth } from '../context/SellerAuthContext';
 import { useDashboardBack } from '../hooks/useDashboardBack';
@@ -124,6 +125,7 @@ const SellerDashboard = () => {
 
   const [tab, setTab] = useState(currentTab);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [promoteOpen, setPromoteOpen] = useState(false);
 
   const [sellerProducts, setSellerProducts] = useState([]);
   const [dataLoading, setDataLoading] = useState(true);
@@ -186,6 +188,14 @@ const SellerDashboard = () => {
   useEffect(() => {
     setTab(currentTab);
   }, [currentTab]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get('promote') === '1') {
+      setPromoteOpen(true);
+      navigate(location.pathname, { replace: true });
+    }
+  }, [location.search, location.pathname, navigate]);
 
   const analytics = useMemo(() => {
     const salesChart7 = buildSalesChart(commerce.orders, 7);
@@ -431,6 +441,7 @@ const SellerDashboard = () => {
                     mostViewed={analytics.mostViewed}
                     actionRequired={analytics.actionRequired}
                     joinedDate={joinedDate}
+                    onPromote={() => setPromoteOpen(true)}
                   />
                 )}
                 {tab === 'products' && <SellerProductsTab />}
@@ -463,16 +474,25 @@ const SellerDashboard = () => {
                 {tab === 'reviews' && <SellerReviewsTab reviews={[]} />}
                 {tab === 'notifications' && <SellerNotificationsTab notifications={notifications} />}
                 {tab === 'store' && (
-                  <div className="rounded-[2rem] border border-border bg-white p-6 shadow-sm">
+                  <div className="rounded-[2rem] border border-border bg-white p-6 shadow-sm space-y-4">
                     <h3 className="font-bold text-foreground">Your public storefront</h3>
-                    <p className="mt-2 text-sm text-muted-foreground">This is what buyers see when they visit your store page.</p>
+                    <p className="text-sm text-muted-foreground">This is what buyers see when they visit your store page.</p>
                     {String(seller?.status || '').toLowerCase() === 'approved' ? (
-                      <a
-                        href={`/seller/${seller?.slug || (seller?.storeName || 'your-store').toLowerCase().replace(/\s+/g, '-')}`}
-                        className="mt-4 inline-flex items-center gap-2 rounded-full border border-border bg-secondary px-5 py-3 text-sm font-semibold text-foreground hover:bg-muted transition-colors"
-                      >
-                        <Store className="h-4 w-4" /> View storefront
-                      </a>
+                      <div className="flex flex-wrap gap-3">
+                        <a
+                          href={`/seller/${seller?.slug || (seller?.storeName || 'your-store').toLowerCase().replace(/\s+/g, '-')}`}
+                          className="inline-flex items-center gap-2 rounded-full border border-border bg-secondary px-5 py-3 text-sm font-semibold text-foreground hover:bg-muted transition-colors"
+                        >
+                          <Store className="h-4 w-4" /> View storefront
+                        </a>
+                        <button
+                          type="button"
+                          onClick={() => setPromoteOpen(true)}
+                          className="inline-flex items-center gap-2 rounded-full bg-orange-500 px-5 py-3 text-sm font-semibold text-white shadow-sm hover:bg-orange-600"
+                        >
+                          Promote Store
+                        </button>
+                      </div>
                     ) : (
                       <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
                         Public Store URL is disabled while your seller account is {seller?.status || 'pending'}.
@@ -494,6 +514,12 @@ const SellerDashboard = () => {
           <SellerMobileNav current={tab} onNavigate={changeTab} />
         </div>
       </div>
+
+      <PromoteStoreModal
+        open={promoteOpen}
+        onOpenChange={setPromoteOpen}
+        onSuccess={() => refreshCommerce()}
+      />
     </div>
   );
 };

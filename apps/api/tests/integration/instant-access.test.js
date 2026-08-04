@@ -2,6 +2,7 @@ import test, { before, after, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import request from 'supertest';
 import { resetDb, setupTestDb, teardownTestDb } from '../helpers/setup.js';
+import { fundBuyerWallet } from '../helpers/walletBuy.js';
 
 const { default: app } = await import('../../src/app.js');
 const {
@@ -150,18 +151,12 @@ test('Instant Access: payment locks escrow and auto-delivers credentials', async
   ]);
   const productId = product.id || product._id;
 
+  await fundBuyerWallet('ia-buyer@example.com', 500);
   const buy = await request(app)
     .post('/api/v1/orders/buy-now')
     .set('Authorization', `Bearer ${buyerToken}`)
-    .send({ productId });
+    .send({ paymentMethod: 'wallet', productId });
   assert.equal(buy.status, 201, JSON.stringify(buy.body));
-
-  const confirm = await request(app)
-    .post(`/api/v1/payments/cryptomus/sandbox/${buy.body.data.cryptomus.uuid}`)
-    .send({});
-  assert.equal(confirm.status, 200, JSON.stringify(confirm.body));
-  assert.equal(confirm.body.data.status, 'paid');
-
   const orderId = buy.body.data.order._id;
   const order = await request(app)
     .get(`/api/v1/orders/${orderId}`)
@@ -220,25 +215,23 @@ test('Instant Access: same account cannot be sold twice', async () => {
   ]);
   const productId = product.id || product._id;
 
+  await fundBuyerWallet('ia-buyer@example.com', 500);
   const buy1 = await request(app)
     .post('/api/v1/orders/buy-now')
     .set('Authorization', `Bearer ${buyerToken}`)
-    .send({ productId });
+    .send({ paymentMethod: 'wallet', productId });
   assert.equal(buy1.status, 201, JSON.stringify(buy1.body));
-
-  await request(app)
-    .post(`/api/v1/payments/cryptomus/sandbox/${buy1.body.data.cryptomus.uuid}`)
-    .send({});
 
   const delivery1 = await request(app)
     .get(`/api/v1/orders/${buy1.body.data.order._id}/delivery`)
     .set('Authorization', `Bearer ${buyerToken}`);
   assert.equal(delivery1.body.data.accounts[0].fields.email, 'onlyone@gmail.com');
 
+  await fundBuyerWallet('ia-buyer-two@example.com', 500);
   const buy2 = await request(app)
     .post('/api/v1/orders/buy-now')
     .set('Authorization', `Bearer ${buyer2Token}`)
-    .send({ productId });
+    .send({ paymentMethod: 'wallet', productId });
   assert.equal(buy2.status, 400);
   assert.ok(
     ['OUT_OF_STOCK', 'PRODUCT_NOT_AVAILABLE'].includes(buy2.body.code),
@@ -263,15 +256,12 @@ test('Instant Access: credentials remain after order completed', async () => {
     },
   ]);
 
+  await fundBuyerWallet('ia-buyer@example.com', 500);
   const buy = await request(app)
     .post('/api/v1/orders/buy-now')
     .set('Authorization', `Bearer ${buyerToken}`)
-    .send({ productId: product.id || product._id });
+    .send({ paymentMethod: 'wallet', productId: product.id || product._id });
   assert.equal(buy.status, 201);
-
-  await request(app)
-    .post(`/api/v1/payments/cryptomus/sandbox/${buy.body.data.cryptomus.uuid}`)
-    .send({});
 
   const escrowId = buy.body.data.escrow._id || buy.body.data.escrow.id;
   await releaseEscrow(escrowId, { reason: 'test_release' });
@@ -331,15 +321,12 @@ test('Manual Delivery products are not auto-fulfilled', async () => {
     .set('Authorization', `Bearer ${adminToken}`)
     .send({ approvalStatus: 'approved' });
 
+  await fundBuyerWallet('ia-buyer@example.com', 500);
   const buy = await request(app)
     .post('/api/v1/orders/buy-now')
     .set('Authorization', `Bearer ${buyerToken}`)
-    .send({ productId });
+    .send({ paymentMethod: 'wallet', productId });
   assert.equal(buy.status, 201);
-
-  await request(app)
-    .post(`/api/v1/payments/cryptomus/sandbox/${buy.body.data.cryptomus.uuid}`)
-    .send({});
 
   const order = await request(app)
     .get(`/api/v1/orders/${buy.body.data.order._id}`)
@@ -371,15 +358,12 @@ test('Instant Access: delivers full multi-code 2FA / recovery field exactly', as
   ]);
   const productId = product.id || product._id;
 
+  await fundBuyerWallet('ia-buyer@example.com', 500);
   const buy = await request(app)
     .post('/api/v1/orders/buy-now')
     .set('Authorization', `Bearer ${buyerToken}`)
-    .send({ productId });
+    .send({ paymentMethod: 'wallet', productId });
   assert.equal(buy.status, 201, JSON.stringify(buy.body));
-
-  await request(app)
-    .post(`/api/v1/payments/cryptomus/sandbox/${buy.body.data.cryptomus.uuid}`)
-    .send({});
 
   const delivery = await request(app)
     .get(`/api/v1/orders/${buy.body.data.order._id}/delivery`)

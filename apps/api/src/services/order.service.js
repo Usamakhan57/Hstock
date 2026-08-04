@@ -536,14 +536,20 @@ function buildBuyNowResponse({
 
 /**
  * BUY NOW — one order = one product.
- * paymentMethod: cryptomus (default invoice) | wallet (prepaid balance funded by Cryptomus).
+ * Product purchases are wallet-only. Cryptomus is for wallet deposits only.
  */
 export async function buyNow(payload, actor, requestMeta = {}) {
   if (!actor?.roles?.includes(USER_ROLES.BUYER) && !isStaff(actor)) {
     throw new AppError('Only buyers can purchase products', 403, { code: 'FORBIDDEN' });
   }
 
-  const paymentMethod = payload.paymentMethod === 'wallet' ? 'wallet' : 'cryptomus';
+  if (payload.paymentMethod && payload.paymentMethod !== 'wallet') {
+    throw new AppError(
+      'Product purchases must be paid from your Buyer Wallet. Deposit via Cryptomus on the Wallet page, then checkout.',
+      400,
+      { code: 'WALLET_ONLY_CHECKOUT' },
+    );
+  }
 
   const productId = payload.productId;
   const product = await Product.findById(productId);
@@ -602,370 +608,16 @@ export async function buyNow(payload, actor, requestMeta = {}) {
     categoryId: product.category,
   });
 
-  if (paymentMethod === 'wallet') {
-    return buyNowWithWallet({
-      actor,
-      product,
-      seller,
-      quantity,
-      unitPrice,
-      subtotal,
-      commission,
-      requestMeta,
-    });
-  }
-
-  const toCurrency = payload.toCurrency
-    ? String(payload.toCurrency).trim().toUpperCase()
-    : null;
-  const network = normalizeCryptomusNetwork(payload.network);
-  const idempotencyKey = payload.idempotencyKey
-    ? String(payload.idempotencyKey).trim()
-    : null;
-  const checkoutFingerprint = buildCheckoutFingerprint({
-    buyerId: actor.id,
-    productId: product._id,
+  return buyNowWithWallet({
+    actor,
+    product,
+    seller,
     quantity,
-    toCurrency,
-    network,
+    unitPrice,
+    subtotal,
+    commission,
+    requestMeta,
   });
-
-  const platform = await getPlatformConfig();
-  const lifetimeSeconds = platform?.orderPaymentLifetimeSeconds || 3600;
-  const callbackUrl = cryptomusService.buildCallbackUrl();
-  const successBase = payload.urlSuccess || undefined;
-
-  // 1) Exact client attempt key → one invoice only
-  if (idempotencyKey) {
-    const byKey = await paymentRepository.findPaymentByIdempotencyKey(
-      actor.id,
-      idempotencyKey,
-      { lean: true },
-    );
-    if (byKey) {
-      const bundle = await loadCheckoutBundle(byKey);
-      const resolved = await resolveExistingCheckout(bundle, {
-        amount: subtotal,
-        currency: product.currency || LEDGER_CURRENCY,
-        network,
-        toCurrency,
-        lifetimeSeconds,
-        urlCallback: callbackUrl,
-        urlReturn: payload.urlReturn || undefined,
-        urlSuccess: successBase
-          ? `${successBase}${successBase.includes('?') ? '&' : '?'}order=${encodeURIComponent(bundle.order.orderNumber)}`
-          : undefined,
-      });
-      if (resolved) return resolved;
-    }
-  }
-
-  // 2) Active fingerprint / reusable unpaid checkout (incl. in-flight)
-  const reusable = await findReusableCryptomusCheckout({
-    buyerId: actor.id,
-    productId: product._id,
-    quantity,
-    toCurrency,
-    network,
-    checkoutFingerprint,
-  });
-
-  if (reusable) {
-    const resolved = await resolveExistingCheckout(reusable, {
-      amount: subtotal,
-      currency: product.currency || LEDGER_CURRENCY,
-      network,
-      toCurrency,
-      lifetimeSeconds,
-      urlCallback: callbackUrl,
-      urlReturn: payload.urlReturn || undefined,
-      urlSuccess: successBase
-        ? `${successBase}${successBase.includes('?') ? '&' : '?'}order=${encodeURIComponent(reusable.order.orderNumber)}`
-        : undefined,
-    });
-    if (resolved) return resolved;
-  }
-
-  // Different asset route (or stale unpaid row) → drop prior unpaid checkouts first.
-  await abandonUnpaidCheckoutsForProduct({
-    buyerId: actor.id,
-    productId: product._id,
-    keepFingerprint: checkoutFingerprint,
-    reason: 'Superseded by a new Cryptomus checkout',
-  });
-
-  let result = null;
-  let orderNumber = null;
-  let cryptomusOrderId = null;
-
-  for (let attempt = 1; attempt <= CHECKOUT_CREATE_ATTEMPTS; attempt += 1) {
-    orderNumber = generateOrderNumber();
-    cryptomusOrderId = generatePaymentOrderId(orderNumber);
-    const expiresAt = addHours(new Date(), lifetimeSeconds / 3600);
-
-    try {
-      result = await withTransaction(async (session) => {
-        // Re-check under the transaction for a racing twin checkout.
-        const raced = await paymentRepository.findActivePaymentByFingerprint(
-          checkoutFingerprint,
-          { session, lean: true },
-        );
-        if (raced) {
-          return { racedPaymentId: raced._id };
-        }
-
-        if (product.stockType === STOCK_TYPES.LIMITED) {
-          const updateOpts = { new: true };
-          if (session) updateOpts.session = session;
-          const updated = await Product.findOneAndUpdate(
-            {
-              _id: product._id,
-              stock: { $gte: quantity },
-              status: PRODUCT_STATUS.LIVE,
-              deletedAt: null,
-            },
-            { $inc: { stock: -quantity } },
-            updateOpts,
-          );
-          if (!updated) {
-            throw new AppError('Product is out of stock', 400, { code: 'OUT_OF_STOCK' });
-          }
-          if (updated.stock === 0) {
-            updated.status = PRODUCT_STATUS.OUT_OF_STOCK;
-            if (session) await updated.save({ session });
-            else await updated.save();
-          }
-        }
-
-        const accounts = Array.from({ length: quantity }, (_, index) => ({
-          index,
-          identifier: `${orderNumber}-ACC-${index + 1}`,
-          status: 'active',
-          label: `Account ${index + 1}`,
-        }));
-
-        const order = await orderRepository.createOrder(
-          {
-            orderNumber,
-            buyer: actor.id,
-            seller: seller._id,
-            sellerUser: seller.user,
-            product: product._id,
-            productSnapshot: {
-              title: product.title,
-              slug: product.slug,
-              price: unitPrice,
-              currency: product.currency || LEDGER_CURRENCY,
-              productType: product.productType,
-              thumbnail: product.thumbnail,
-              deliveryType: product.deliveryType,
-            },
-            quantity,
-            accounts,
-            unitPrice,
-            subtotal,
-            commissionPercent: commission.percent,
-            commissionAmount: commission.commissionAmount,
-            sellerAmount: commission.sellerAmount,
-            totalAmount: subtotal,
-            currency: product.currency || LEDGER_CURRENCY,
-            status: ORDER_STATUS.PENDING_PAYMENT,
-            deliveryStatus: DELIVERY_STATUS.PENDING,
-            expiresAt,
-            metadata: {
-              toCurrency,
-              network,
-              checkoutFingerprint,
-              idempotencyKey: idempotencyKey || undefined,
-            },
-          },
-          session,
-        );
-
-        const paymentPayload = {
-          order: order._id,
-          orderNumber,
-          buyer: actor.id,
-          seller: seller._id,
-          gateway: 'cryptomus',
-          amount: subtotal,
-          currency: order.currency,
-          toCurrency,
-          network,
-          status: PAYMENT_STATUS.PENDING,
-          cryptomusOrderId,
-          invoiceUrl: null,
-          lifetimeSeconds,
-          expiresAt,
-          providerStatus: 'created',
-          checkoutFingerprint,
-          metadata: {},
-        };
-        if (idempotencyKey) paymentPayload.idempotencyKey = idempotencyKey;
-
-        const payment = await paymentRepository.createPayment(paymentPayload, session);
-
-        order.payment = payment._id;
-        if (session) await order.save({ session });
-        else await order.save();
-
-        const escrow = await escrowService.createPendingEscrow({
-          order,
-          payment,
-          session,
-        });
-        order.escrow = escrow._id;
-        if (session) await order.save({ session });
-        else await order.save();
-
-        await logActivity({
-          userId: actor.id,
-          action: 'orders.buy_now',
-          resource: 'Order',
-          resourceId: order._id,
-          ip: requestMeta.ip,
-          userAgent: requestMeta.userAgent,
-          meta: {
-            productId: product._id,
-            amount: subtotal,
-            quantity,
-            cryptomusOrderId,
-            toCurrency,
-            network,
-            attempt,
-            checkoutFingerprint,
-            idempotencyKey: idempotencyKey || null,
-          },
-          session,
-        });
-
-        return { order, payment, escrow };
-      });
-
-      if (result?.racedPaymentId) {
-        const racedPayment = await paymentRepository.findPaymentById(
-          result.racedPaymentId,
-          { lean: true },
-        );
-        const bundle = await loadCheckoutBundle(racedPayment);
-        const resolved = await resolveExistingCheckout(bundle, {
-          amount: subtotal,
-          currency: product.currency || LEDGER_CURRENCY,
-          network,
-          toCurrency,
-          lifetimeSeconds,
-          urlCallback: callbackUrl,
-          urlReturn: payload.urlReturn || undefined,
-          urlSuccess: successBase
-            ? `${successBase}${successBase.includes('?') ? '&' : '?'}order=${encodeURIComponent(bundle.order.orderNumber)}`
-            : undefined,
-        });
-        if (resolved) return resolved;
-      }
-
-      if (result?.order) break;
-    } catch (error) {
-      if (isDuplicateKeyError(error)) {
-        // Idempotency key or fingerprint unique index — coalesce onto winner.
-        if (idempotencyKey) {
-          const byKey = await paymentRepository.findPaymentByIdempotencyKey(
-            actor.id,
-            idempotencyKey,
-            { lean: true },
-          );
-          if (byKey) {
-            const bundle = await loadCheckoutBundle(byKey);
-            const resolved = await resolveExistingCheckout(bundle, {
-              amount: subtotal,
-              currency: product.currency || LEDGER_CURRENCY,
-              network,
-              toCurrency,
-              lifetimeSeconds,
-              urlCallback: callbackUrl,
-              urlReturn: payload.urlReturn || undefined,
-              urlSuccess: successBase
-                ? `${successBase}${successBase.includes('?') ? '&' : '?'}order=${encodeURIComponent(bundle.order.orderNumber)}`
-                : undefined,
-            });
-            if (resolved) return resolved;
-          }
-        }
-        const byFp = await paymentRepository.findActivePaymentByFingerprint(
-          checkoutFingerprint,
-          { lean: true },
-        );
-        if (byFp) {
-          const bundle = await loadCheckoutBundle(byFp);
-          const resolved = await resolveExistingCheckout(bundle, {
-            amount: subtotal,
-            currency: product.currency || LEDGER_CURRENCY,
-            network,
-            toCurrency,
-            lifetimeSeconds,
-            urlCallback: callbackUrl,
-            urlReturn: payload.urlReturn || undefined,
-            urlSuccess: successBase
-              ? `${successBase}${successBase.includes('?') ? '&' : '?'}order=${encodeURIComponent(bundle.order.orderNumber)}`
-              : undefined,
-          });
-          if (resolved) return resolved;
-        }
-        if (attempt < CHECKOUT_CREATE_ATTEMPTS) continue;
-        throw checkoutConflictError(error);
-      }
-      throw error;
-    }
-  }
-
-  if (!result?.order) {
-    throw new AppError('Could not create checkout session. Please try again.', 409, {
-      code: 'CHECKOUT_CONFLICT',
-    });
-  }
-
-  const orderSuccessUrl = successBase
-    ? `${successBase}${successBase.includes('?') ? '&' : '?'}order=${encodeURIComponent(orderNumber)}`
-    : undefined;
-
-  let invoiceResult;
-  try {
-    invoiceResult = await ensureCryptomusInvoiceForPayment({
-      payment: result.payment,
-      order: result.order,
-      amount: subtotal,
-      currency: result.order.currency,
-      network,
-      toCurrency,
-      lifetimeSeconds,
-      urlCallback: callbackUrl,
-      urlReturn: payload.urlReturn || undefined,
-      urlSuccess: orderSuccessUrl,
-    });
-  } catch (error) {
-    await restockLimitedProduct(product._id, quantity);
-    throw error;
-  }
-
-  const payment = invoiceResult.payment.toObject
-    ? invoiceResult.payment.toObject()
-    : invoiceResult.payment;
-
-  const response = buildBuyNowResponse({
-    order: (await orderRepository.findOrderById(result.order._id, { lean: true })),
-    payment,
-    escrow: (await escrowRepository.findEscrowById(result.escrow._id, { lean: true })),
-    paymentUrl: invoiceResult.invoice?.url || payment.invoiceUrl,
-    cryptomusOrderId: payment.cryptomusOrderId,
-    simulated: invoiceResult.simulated,
-    reused: Boolean(invoiceResult.reused),
-  });
-
-  emitDomainEvent(DOMAIN_EVENTS.ORDER_CREATED, {
-    order: response.order,
-    payment: response.payment,
-  });
-
-  return response;
 }
 
 /**
@@ -984,7 +636,7 @@ async function buyNowWithWallet({
   const buyerWalletService = await import('./buyerWallet.service.js');
   const walletPreview = await buyerWalletService.getMyWallet(actor);
   if (walletPreview.frozen) {
-    throw new AppError('Wallet is frozen. Contact support or pay with Cryptomus.', 403, {
+    throw new AppError('Wallet is frozen. Contact support or deposit after unfreeze.', 403, {
       code: 'WALLET_FROZEN',
     });
   }
@@ -1157,6 +809,13 @@ async function buyNowWithWallet({
     order: response.order,
     payment: response.payment,
   });
+
+  try {
+    const { trackPromotionEvent } = await import('./storePromotion.service.js');
+    await trackPromotionEvent(seller._id, 'ordersGenerated');
+  } catch {
+    /* analytics must not block checkout */
+  }
 
   return response;
 }

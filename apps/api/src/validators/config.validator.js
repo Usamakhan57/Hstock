@@ -21,6 +21,9 @@ export const updatePlatformConfigSchema = {
     maxWithdrawalAmount: z.number().min(0).optional(),
     orderPaymentLifetimeSeconds: z.number().min(300).max(43200).optional(),
     supportEmail: z.string().email().optional(),
+    storePromotionEnabled: z.boolean().optional(),
+    storePromotionPriceUsd: z.number().min(0).max(100000).optional(),
+    storePromotionDurationHours: z.number().min(1).max(8760).optional(),
   }),
 };
 

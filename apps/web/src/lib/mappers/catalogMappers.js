@@ -85,6 +85,9 @@ export function mapBackendProduct(product) {
   const sellerVerified = seller?.verified === true
     || seller?.status === 'approved'
     || !!product.verifiedSeller;
+  const storePromoted = seller?.storePromotionActive === true
+    && seller?.storePromotedUntil
+    && new Date(seller.storePromotedUntil).getTime() > Date.now();
   const soldRaw = product.soldCount ?? product.salesCount ?? product.downloads;
   const soldCount = soldRaw != null && soldRaw !== '' ? Number(soldRaw) : null;
 
@@ -135,11 +138,15 @@ export function mapBackendProduct(product) {
       name: artist,
       slug: seller?.storeSlug || slugOf(seller) || null,
       verified: sellerVerified,
+      storePromoted: !!storePromoted,
+      storePromotedUntil: seller?.storePromotedUntil || null,
     },
     artistSlug: seller?.storeSlug || slugOf(seller) || slugOf(brand) || null,
     sellerSlug: seller?.storeSlug || slugOf(seller) || null,
     sellerId: idOf(seller),
     verifiedSeller: sellerVerified,
+    storePromoted: !!storePromoted,
+    storePromotedUntil: seller?.storePromotedUntil || null,
     brandId: idOf(brand),
     fileTypes: Array.isArray(product.fileTypes) && product.fileTypes.length
       ? product.fileTypes
@@ -192,6 +199,10 @@ export function mapBackendSeller(seller) {
     logo: seller.logo || seller.avatar || null,
     banner: seller.banner || null,
     verified: seller.verified === true || seller.status === 'approved',
+    storePromoted: seller.storePromotionActive === true
+      && seller.storePromotedUntil
+      && new Date(seller.storePromotedUntil).getTime() > Date.now(),
+    storePromotedUntil: seller.storePromotedUntil || null,
     specialty: seller.specialty || '',
     productCount: metrics.productsCount ?? seller.productCount ?? 0,
     rating: metrics.rating ?? seller.rating ?? null,

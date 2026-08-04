@@ -59,6 +59,7 @@ const OcrReviewQueue = lazy(() => import('../../admin/pages/ocr/OcrReviewQueue')
 const ReplacementsList = lazy(() => import('../../admin/pages/replacements/ReplacementsList'));
 const SystemHealth = lazy(() => import('../../admin/pages/system/SystemHealth'));
 const TelegramAdmin = lazy(() => import('../../admin/pages/telegram/TelegramAdmin'));
+const PromotionsList = lazy(() => import('../../admin/pages/promotions/PromotionsList'));
 
 function LazyPage({ children }) {
   return (
@@ -90,6 +91,7 @@ export function adminRoutes() {
         <Route path="customers" element={<LazyPage><CustomersList /></LazyPage>} />
         <Route path="customers/:id" element={<LazyPage><CustomerDetail /></LazyPage>} />
         <Route path="sellers" element={<LazyPage><SellersList /></LazyPage>} />
+        <Route path="promotions" element={<LazyPage><PromotionsList /></LazyPage>} />
         <Route path="coupons" element={<LazyPage><CouponsList /></LazyPage>} />
         <Route path="payments" element={<LazyPage><PaymentsList /></LazyPage>} />
         <Route path="escrow" element={<LazyPage><EscrowList /></LazyPage>} />

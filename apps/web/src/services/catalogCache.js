@@ -37,6 +37,8 @@ function deriveSellersFromProducts(productList) {
         storeSlug: p.sellerSlug || p.artistSlug,
         status: p.verifiedSeller ? 'approved' : undefined,
         verified: !!p.verifiedSeller,
+        storePromotionActive: !!(p.storePromoted || existing?.storePromoted),
+        storePromotedUntil: p.storePromotedUntil || existing?.storePromotedUntil || null,
         metrics: {
           productsCount: productCount,
           totalSales: sales,
@@ -46,7 +48,9 @@ function deriveSellersFromProducts(productList) {
       _ratings: ratings,
     });
   });
-  return [...map.values()].map(({ _ratings, ...seller }) => seller);
+  return [...map.values()]
+    .map(({ _ratings, ...seller }) => seller)
+    .sort((a, b) => Number(!!b.storePromoted) - Number(!!a.storePromoted));
 }
 
 function notify() {

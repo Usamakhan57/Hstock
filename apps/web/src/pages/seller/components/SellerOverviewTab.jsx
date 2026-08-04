@@ -92,6 +92,7 @@ const SellerOverviewTab = ({
   mostViewed = [],
   actionRequired = [],
   joinedDate,
+  onPromote,
 }) => {
   const [chartRange, setChartRange] = React.useState('7');
   const chartData = chartRange === '7' ? salesChart7 : salesChart30;
@@ -143,13 +144,14 @@ const SellerOverviewTab = ({
                 <span className="text-lg leading-none">+</span>
                 Add Product
               </Link>
-              <Link
-                to="/seller/store"
+              <button
+                type="button"
+                onClick={() => (typeof onPromote === 'function' ? onPromote() : null)}
                 className="inline-flex flex-col items-center justify-center gap-1 rounded-2xl bg-orange-500 px-3 py-3 text-center text-xs font-bold text-white shadow-sm hover:bg-orange-600"
               >
                 <Megaphone className="h-4 w-4" />
                 Promote
-              </Link>
+              </button>
               <Link
                 to="/seller/analytics"
                 className="inline-flex flex-col items-center justify-center gap-1 rounded-2xl border border-border bg-white px-3 py-3 text-center text-xs font-bold text-foreground shadow-sm hover:bg-secondary"

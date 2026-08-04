@@ -8,6 +8,7 @@ import { registerCleanupJob } from './cleanup.job.js';
 import { registerWithdrawalJob } from './withdrawal.job.js';
 import { registerOrdersJob } from './orders.job.js';
 import { registerPaymentsJob } from './payments.job.js';
+import { registerStorePromotionJob } from './storePromotion.job.js';
 
 const jobs = [];
 const scheduled = [];
@@ -25,6 +26,7 @@ export function initializeJobs() {
     registerWithdrawalJob(),
     registerCleanupJob(),
     registerNotificationJob(),
+    registerStorePromotionJob(),
   ];
 
   jobs.length = 0;

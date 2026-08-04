@@ -91,6 +91,11 @@ const ProductCard = ({ p }) => {
                 Featured
               </span>
             ) : null}
+            {p.storePromoted || p.seller?.storePromoted ? (
+              <span className="rounded-md bg-amber-500 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white shadow-sm">
+                Promoted
+              </span>
+            ) : null}
           </div>
           <button
             type="button"
@@ -161,6 +166,11 @@ const ProductCard = ({ p }) => {
           </Link>
           {sellerVerified ? (
             <BadgeCheck className="h-3 w-3 shrink-0 text-primary" aria-label="Verified seller" />
+          ) : null}
+          {p.storePromoted || p.seller?.storePromoted ? (
+            <span className="rounded bg-amber-100 px-1 py-0.5 text-[9px] font-bold uppercase tracking-wide text-amber-800">
+              Featured Seller
+            </span>
           ) : null}
         </div>
 

@@ -8,6 +8,7 @@ const { User, SellerProfile, Escrow, Wallet, LedgerEntry } = await import('../..
 const { hashPassword } = await import('../../src/utils/password.js');
 const { USER_ROLES } = await import('../../src/constants/roles.js');
 const { releaseEscrow } = await import('../../src/services/escrow.service.js');
+const { fundBuyerWallet, buyNowWithWallet } = await import('../helpers/walletBuy.js');
 
 async function createAdminToken() {
   await User.create({
@@ -118,7 +119,27 @@ after(async () => {
   await teardownTestDb();
 });
 
-test('buy now creates order + simulated cryptomus invoice', async () => {
+test('buy now pays from wallet and locks escrow', async () => {
+  const adminToken = await createAdminToken();
+  const { token: sellerToken } = await createSeller();
+  const { token: buyerToken } = await createBuyer();
+  const product = await createLiveProduct(adminToken, sellerToken);
+  const productId = product.id || product._id;
+
+  await fundBuyerWallet('commerce-buyer@example.com', 200);
+
+  const buy = await buyNowWithWallet(app, { token: buyerToken, productId });
+
+  assert.equal(buy.status, 201, JSON.stringify(buy.body));
+  assert.equal(buy.body.data.paymentMethod, 'wallet');
+  assert.ok(['paid', 'escrow'].includes(buy.body.data.order.status), buy.body.data.order.status);
+  assert.equal(buy.body.data.order.commissionPercent, 10);
+  assert.equal(buy.body.data.order.commissionAmount, 10);
+  assert.equal(buy.body.data.order.sellerAmount, 90);
+  assert.ok(buy.body.data.escrow);
+});
+
+test('buy now rejects cryptomus direct product payment', async () => {
   const adminToken = await createAdminToken();
   const { token: sellerToken } = await createSeller();
   const { token: buyerToken } = await createBuyer();
@@ -128,125 +149,59 @@ test('buy now creates order + simulated cryptomus invoice', async () => {
   const buy = await request(app)
     .post('/api/v1/orders/buy-now')
     .set('Authorization', `Bearer ${buyerToken}`)
-    .send({ productId, toCurrency: 'USDT', network: 'tron' });
+    .send({ productId, paymentMethod: 'cryptomus', toCurrency: 'USDT', network: 'tron' });
 
+  assert.equal(buy.status, 400, JSON.stringify(buy.body));
+});
+
+test('buy now fails with insufficient wallet balance', async () => {
+  const adminToken = await createAdminToken();
+  const { token: sellerToken } = await createSeller();
+  const { token: buyerToken } = await createBuyer();
+  const product = await createLiveProduct(adminToken, sellerToken);
+  const productId = product.id || product._id;
+
+  const buy = await buyNowWithWallet(app, { token: buyerToken, productId });
+  assert.equal(buy.status, 400, JSON.stringify(buy.body));
+  assert.ok(
+    buy.body.code === 'INSUFFICIENT_WALLET_BALANCE'
+      || /insufficient wallet/i.test(buy.body.message || ''),
+    JSON.stringify(buy.body),
+  );
+});
+
+test('wallet buy-now creates paid order with escrow pending credit', async () => {
+  const adminToken = await createAdminToken();
+  const { token: sellerToken, seller } = await createSeller();
+  const { token: buyerToken } = await createBuyer();
+  const product = await createLiveProduct(adminToken, sellerToken);
+  const productId = product.id || product._id;
+
+  await fundBuyerWallet('commerce-buyer@example.com', 200);
+  const buy = await buyNowWithWallet(app, { token: buyerToken, productId });
   assert.equal(buy.status, 201, JSON.stringify(buy.body));
-  assert.equal(buy.body.data.order.status, 'pending_payment');
-  assert.ok(buy.body.data.paymentUrl);
-  assert.equal(buy.body.data.cryptomus.simulated, true);
-  assert.equal(buy.body.data.reused, false);
-  assert.equal(buy.body.data.order.commissionPercent, 10);
-  assert.equal(buy.body.data.order.commissionAmount, 10);
-  assert.equal(buy.body.data.order.sellerAmount, 90);
+
+  const wallet = await request(app)
+    .get('/api/v1/wallet/me')
+    .set('Authorization', `Bearer ${sellerToken}`);
+  assert.equal(wallet.body.data.pendingBalance, 100);
+
+  const sellerId = seller.id || seller._id;
+  const escrows = await Escrow.find({ seller: sellerId });
+  assert.equal(escrows.length, 1);
+  assert.equal(escrows[0].status, 'locked');
 });
 
-test('buy now reuses existing unpaid cryptomus invoice', async () => {
-  const adminToken = await createAdminToken();
-  const { token: sellerToken } = await createSeller();
-  const { token: buyerToken } = await createBuyer();
-  const product = await createLiveProduct(adminToken, sellerToken);
-  const productId = product.id || product._id;
-
-  const first = await request(app)
-    .post('/api/v1/orders/buy-now')
-    .set('Authorization', `Bearer ${buyerToken}`)
-    .send({ productId, toCurrency: 'USDT', network: 'TRC20' });
-
-  assert.equal(first.status, 201, JSON.stringify(first.body));
-
-  const second = await request(app)
-    .post('/api/v1/orders/buy-now')
-    .set('Authorization', `Bearer ${buyerToken}`)
-    .send({ productId, toCurrency: 'USDT', network: 'tron' });
-
-  assert.equal(second.status, 201, JSON.stringify(second.body));
-  assert.equal(second.body.data.reused, true);
-  assert.equal(second.body.data.order._id, first.body.data.order._id);
-  assert.equal(second.body.data.payment._id, first.body.data.payment._id);
-  assert.equal(second.body.data.cryptomus.orderId, first.body.data.cryptomus.orderId);
-  assert.equal(second.body.data.paymentUrl, first.body.data.paymentUrl);
-});
-
-test('concurrent buy-now requests create only one cryptomus payment', async () => {
-  const adminToken = await createAdminToken();
-  const { token: sellerToken } = await createSeller();
-  const { token: buyerToken } = await createBuyer();
-  const product = await createLiveProduct(adminToken, sellerToken);
-  const productId = product.id || product._id;
-  const idempotencyKey = `test-concurrent-${Date.now()}`;
-
-  const [a, b, c] = await Promise.all([
-    request(app)
-      .post('/api/v1/orders/buy-now')
-      .set('Authorization', `Bearer ${buyerToken}`)
-      .send({ productId, toCurrency: 'USDT', network: 'tron', idempotencyKey }),
-    request(app)
-      .post('/api/v1/orders/buy-now')
-      .set('Authorization', `Bearer ${buyerToken}`)
-      .send({ productId, toCurrency: 'USDT', network: 'tron', idempotencyKey }),
-    request(app)
-      .post('/api/v1/orders/buy-now')
-      .set('Authorization', `Bearer ${buyerToken}`)
-      .send({ productId, toCurrency: 'USDT', network: 'tron', idempotencyKey }),
-  ]);
-
-  assert.equal(a.status, 201, JSON.stringify(a.body));
-  assert.equal(b.status, 201, JSON.stringify(b.body));
-  assert.equal(c.status, 201, JSON.stringify(c.body));
-
-  const paymentIds = new Set([
-    a.body.data.payment._id,
-    b.body.data.payment._id,
-    c.body.data.payment._id,
-  ]);
-  const orderIds = new Set([
-    a.body.data.order._id,
-    b.body.data.order._id,
-    c.body.data.order._id,
-  ]);
-  const cryptomusOrderIds = new Set([
-    a.body.data.cryptomus.orderId,
-    b.body.data.cryptomus.orderId,
-    c.body.data.cryptomus.orderId,
-  ]);
-
-  assert.equal(paymentIds.size, 1, 'expected a single payment document');
-  assert.equal(orderIds.size, 1, 'expected a single order document');
-  assert.equal(cryptomusOrderIds.size, 1, 'expected a single Cryptomus order_id');
-  assert.equal(a.body.data.paymentUrl, b.body.data.paymentUrl);
-  assert.equal(b.body.data.paymentUrl, c.body.data.paymentUrl);
-
-  const { Payment } = await import('../../src/models/index.js');
-  const payments = await Payment.find({ buyer: a.body.data.payment.buyer, gateway: 'cryptomus' });
-  assert.equal(payments.length, 1);
-});
-
-test('duplicate webhook paid events charge only once', async () => {
+test('wallet checkout funds escrow ledger once', async () => {
   const adminToken = await createAdminToken();
   const { token: sellerToken, seller } = await createSeller();
   const { token: buyerToken } = await createBuyer();
   const product = await createLiveProduct(adminToken, sellerToken);
 
-  const buy = await request(app)
-    .post('/api/v1/orders/buy-now')
-    .set('Authorization', `Bearer ${buyerToken}`)
-    .send({ productId: product.id || product._id });
-
+  await fundBuyerWallet('commerce-buyer@example.com', 200);
+  const buy = await buyNowWithWallet(app, { token: buyerToken, productId: product.id || product._id });
   assert.equal(buy.status, 201, JSON.stringify(buy.body));
-  const uuid = buy.body.data.cryptomus.uuid;
   const paymentId = buy.body.data.payment._id;
-
-  const first = await request(app)
-    .post(`/api/v1/payments/cryptomus/sandbox/${uuid}`)
-    .send({});
-  const second = await request(app)
-    .post(`/api/v1/payments/cryptomus/sandbox/${uuid}`)
-    .send({});
-
-  assert.equal(first.status, 200, JSON.stringify(first.body));
-  assert.equal(second.status, 200, JSON.stringify(second.body));
-  assert.equal(first.body.data.status, 'paid');
-  assert.equal(second.body.data.status, 'paid');
 
   const wallet = await request(app)
     .get('/api/v1/wallet/me')
@@ -280,27 +235,16 @@ test('checkout assets endpoint returns currencies with networks', async () => {
   assert.equal(res.body.meta?.source, 'fallback');
 });
 
-test('payment confirmation locks escrow and credits seller pending', async () => {
+test('wallet payment confirmation locks escrow and credits seller pending', async () => {
   const adminToken = await createAdminToken();
   const { token: sellerToken, seller } = await createSeller();
   const { token: buyerToken } = await createBuyer();
   const product = await createLiveProduct(adminToken, sellerToken);
   const productId = product.id || product._id;
 
-  const buy = await request(app)
-    .post('/api/v1/orders/buy-now')
-    .set('Authorization', `Bearer ${buyerToken}`)
-    .send({ productId });
-
-  assert.equal(buy.status, 201);
-  const uuid = buy.body.data.cryptomus.uuid;
-
-  const confirm = await request(app)
-    .post(`/api/v1/payments/cryptomus/sandbox/${uuid}`)
-    .send({});
-
-  assert.equal(confirm.status, 200, JSON.stringify(confirm.body));
-  assert.equal(confirm.body.data.status, 'paid');
+  await fundBuyerWallet('commerce-buyer@example.com', 200);
+  const buy = await buyNowWithWallet(app, { token: buyerToken, productId });
+  assert.equal(buy.status, 201, JSON.stringify(buy.body));
 
   const order = await request(app)
     .get(`/api/v1/orders/${buy.body.data.order._id}`)
@@ -330,14 +274,9 @@ test('escrow release credits seller wallet minus commission', async () => {
   const { token: buyerToken } = await createBuyer();
   const product = await createLiveProduct(adminToken, sellerToken);
 
-  const buy = await request(app)
-    .post('/api/v1/orders/buy-now')
-    .set('Authorization', `Bearer ${buyerToken}`)
-    .send({ productId: product.id || product._id });
-
-  await request(app)
-    .post(`/api/v1/payments/cryptomus/sandbox/${buy.body.data.cryptomus.uuid}`)
-    .send({});
+  await fundBuyerWallet('commerce-buyer@example.com', 200);
+  const buy = await buyNowWithWallet(app, { token: buyerToken, productId: product.id || product._id });
+  assert.equal(buy.status, 201, JSON.stringify(buy.body));
 
   const escrowId = buy.body.data.escrow._id || buy.body.data.escrow.id;
   await releaseEscrow(escrowId, { reason: 'test_release' });
@@ -374,14 +313,9 @@ test('withdrawal is manual: request → approve → pay', async () => {
   const { token: buyerToken } = await createBuyer();
   const product = await createLiveProduct(adminToken, sellerToken);
 
-  const buy = await request(app)
-    .post('/api/v1/orders/buy-now')
-    .set('Authorization', `Bearer ${buyerToken}`)
-    .send({ productId: product._id });
-
-  await request(app)
-    .post(`/api/v1/payments/cryptomus/sandbox/${buy.body.data.cryptomus.uuid}`)
-    .send({});
+  await fundBuyerWallet('commerce-buyer@example.com', 200);
+  const buy = await buyNowWithWallet(app, { token: buyerToken, productId: product._id });
+  assert.equal(buy.status, 201, JSON.stringify(buy.body));
 
   await releaseEscrow(buy.body.data.escrow._id, { reason: 'test_release' });
 
@@ -423,14 +357,9 @@ test('dispute freezes escrow and blocks release', async () => {
   const { token: buyerToken } = await createBuyer();
   const product = await createLiveProduct(adminToken, sellerToken);
 
-  const buy = await request(app)
-    .post('/api/v1/orders/buy-now')
-    .set('Authorization', `Bearer ${buyerToken}`)
-    .send({ productId: product.id || product._id });
-
-  await request(app)
-    .post(`/api/v1/payments/cryptomus/sandbox/${buy.body.data.cryptomus.uuid}`)
-    .send({});
+  await fundBuyerWallet('commerce-buyer@example.com', 200);
+  const buy = await buyNowWithWallet(app, { token: buyerToken, productId: product.id || product._id });
+  assert.equal(buy.status, 201, JSON.stringify(buy.body));
 
   const dispute = await request(app)
     .post('/api/v1/disputes')
@@ -471,21 +400,11 @@ test('dispute freezes escrow and blocks release', async () => {
 });
 
 test('cryptomus webhook signature verification rejects fakes', async () => {
-  const adminToken = await createAdminToken();
-  const { token: sellerToken } = await createSeller();
-  const { token: buyerToken } = await createBuyer();
-  const product = await createLiveProduct(adminToken, sellerToken);
-
-  const buy = await request(app)
-    .post('/api/v1/orders/buy-now')
-    .set('Authorization', `Bearer ${buyerToken}`)
-    .send({ productId: product.id || product._id });
-
   const fake = await request(app)
     .post('/api/v1/payments/cryptomus/webhook')
     .send({
-      uuid: buy.body.data.cryptomus.uuid,
-      order_id: buy.body.data.cryptomus.orderId,
+      uuid: '00000000-0000-0000-0000-000000000000',
+      order_id: 'fake-order-id',
       status: 'paid',
       sign: 'invalidsignature0000000000000000',
     });

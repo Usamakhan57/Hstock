@@ -13,24 +13,19 @@ export const ordersApi = {
   async buyNow({
     productId,
     quantity = 1,
-    paymentMethod = 'cryptomus',
-    toCurrency = 'USDT',
-    network = 'tron',
+    paymentMethod = 'wallet',
     idempotencyKey,
   }) {
     const urls = originUrls();
     const { data } = await post('/orders/buy-now', {
       productId,
       quantity,
-      paymentMethod,
-      toCurrency: paymentMethod === 'wallet' ? undefined : toCurrency,
-      network: paymentMethod === 'wallet' ? undefined : network,
+      paymentMethod: 'wallet',
       urlSuccess: urls.urlSuccess,
       urlReturn: urls.urlReturn,
       ...(idempotencyKey ? { idempotencyKey } : {}),
     });
 
-    // Persist order refs so /order-success can resolve after Cryptomus redirect.
     const orderNumber = data?.order?.orderNumber || data?.order?._id;
     if (orderNumber && typeof window !== 'undefined') {
       sessionStorage.setItem('hs_pending_order', orderNumber);
@@ -44,7 +39,7 @@ export const ordersApi = {
       payment: data.payment,
       escrow: data.escrow,
       paymentUrl: data.paymentUrl,
-      paymentMethod: data.paymentMethod || paymentMethod,
+      paymentMethod: data.paymentMethod || paymentMethod || 'wallet',
       wallet: data.wallet || null,
       cryptomus: data.cryptomus,
       raw: data,

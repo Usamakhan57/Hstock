@@ -2,6 +2,7 @@ import test, { before, after, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import request from 'supertest';
 import { resetDb, setupTestDb, teardownTestDb } from '../helpers/setup.js';
+import { fundBuyerWallet } from '../helpers/walletBuy.js';
 
 const { default: app } = await import('../../src/app.js');
 const {
@@ -107,14 +108,12 @@ async function openPaidDispute() {
   const { token: buyerToken } = await createBuyer();
   const product = await createLiveProduct(adminToken, sellerToken);
 
+  await fundBuyerWallet('chat-buyer@example.com', 500);
   const buy = await request(app)
     .post('/api/v1/orders/buy-now')
     .set('Authorization', `Bearer ${buyerToken}`)
-    .send({ productId: product._id });
-
-  await request(app)
-    .post(`/api/v1/payments/cryptomus/sandbox/${buy.body.data.cryptomus.uuid}`)
-    .send({});
+    .send({ productId: product._id, paymentMethod: 'wallet' });
+  assert.equal(buy.status, 201, JSON.stringify(buy.body));
 
   const dispute = await request(app)
     .post('/api/v1/disputes')
