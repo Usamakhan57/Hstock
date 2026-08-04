@@ -115,6 +115,16 @@ async function openPaidDispute() {
     .send({ productId: product._id, paymentMethod: 'wallet' });
   assert.equal(buy.status, 201, JSON.stringify(buy.body));
 
+  // Inspection starts at delivery — required before opening a dispute.
+  const { startInspectionPeriodForOrder } = await import('../../src/services/escrow.service.js');
+  const { Order } = await import('../../src/models/index.js');
+  await Order.findByIdAndUpdate(buy.body.data.order._id, {
+    deliveryStatus: 'delivered',
+    deliveredAt: new Date(),
+    status: 'delivered',
+  });
+  await startInspectionPeriodForOrder(buy.body.data.order._id);
+
   const dispute = await request(app)
     .post('/api/v1/disputes')
     .set('Authorization', `Bearer ${buyerToken}`)

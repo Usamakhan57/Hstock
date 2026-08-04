@@ -4,7 +4,7 @@ import request from 'supertest';
 import { resetDb, setupTestDb, teardownTestDb } from '../helpers/setup.js';
 
 const { default: app } = await import('../../src/app.js');
-const { User, SellerProfile, Escrow, Wallet, LedgerEntry } = await import('../../src/models/index.js');
+const { User, SellerProfile, Escrow, Wallet, LedgerEntry, Order } = await import('../../src/models/index.js');
 const { hashPassword } = await import('../../src/utils/password.js');
 const { USER_ROLES } = await import('../../src/constants/roles.js');
 const { releaseEscrow } = await import('../../src/services/escrow.service.js');
@@ -265,7 +265,8 @@ test('wallet payment confirmation locks escrow and credits seller pending', asyn
   const escrow = await Escrow.findOne({ seller: sellerId });
   assert.ok(escrow);
   assert.equal(escrow.status, 'locked');
-  assert.ok(escrow.releaseAt);
+  // Manual delivery: inspection Timer #1 starts at delivery, not at escrow lock.
+  assert.equal(escrow.releaseAt, null);
 });
 
 test('escrow release credits seller wallet minus commission', async () => {
@@ -360,6 +361,14 @@ test('dispute freezes escrow and blocks release', async () => {
   await fundBuyerWallet('commerce-buyer@example.com', 200);
   const buy = await buyNowWithWallet(app, { token: buyerToken, productId: product.id || product._id });
   assert.equal(buy.status, 201, JSON.stringify(buy.body));
+
+  const { startInspectionPeriodForOrder } = await import('../../src/services/escrow.service.js');
+  await Order.findByIdAndUpdate(buy.body.data.order._id, {
+    deliveryStatus: 'delivered',
+    deliveredAt: new Date(),
+    status: 'delivered',
+  });
+  await startInspectionPeriodForOrder(buy.body.data.order._id);
 
   const dispute = await request(app)
     .post('/api/v1/disputes')

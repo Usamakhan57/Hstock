@@ -1,6 +1,7 @@
 import { AppError } from '../utils/AppError.js';
 import { withTransaction } from '../utils/transaction.js';
 import { roundMoney } from '../helpers/money.helper.js';
+import { addHours, isPast } from '../helpers/date.helper.js';
 import { generateDisputeNumber } from '../helpers/id.helper.js';
 import { env } from '../config/env.js';
 import {
@@ -8,6 +9,7 @@ import {
   DISPUTE_RESOLUTION,
   ORDER_STATUS,
   ESCROW_STATUS,
+  DELIVERY_STATUS,
 } from '../constants/statuses.js';
 import {
   DISPUTE_TIMELINE_EVENTS,
@@ -87,6 +89,13 @@ export async function openDispute(payload, actor, requestMeta = {}) {
       });
     }
 
+    // Inspection period starts at delivery — disputes are not allowed before credentials arrive.
+    if (order.deliveryStatus !== DELIVERY_STATUS.DELIVERED || !order.deliveredAt) {
+      throw new AppError('Order must be delivered before opening a dispute', 400, {
+        code: 'ORDER_NOT_DELIVERED',
+      });
+    }
+
     const existing = await disputeRepository.findDisputeByOrder(order._id, { session });
     if (existing) {
       throw new AppError('A dispute already exists for this order', 409, {
@@ -100,6 +109,12 @@ export async function openDispute(payload, actor, requestMeta = {}) {
     }
     if ([ESCROW_STATUS.RELEASED, ESCROW_STATUS.REFUNDED].includes(escrow.status)) {
       throw new AppError('Escrow is already closed', 400, { code: 'ESCROW_CLOSED' });
+    }
+    // Timer #1 expired without dispute → funds are eligible for auto-release; do not open late disputes.
+    if (escrow.releaseAt && isPast(escrow.releaseAt)) {
+      throw new AppError('Inspection period has expired', 400, {
+        code: 'INSPECTION_EXPIRED',
+      });
     }
 
     const orderQuantity = order.quantity || 1;
@@ -379,6 +394,14 @@ async function buildDashboard(dispute) {
       released: escrow?.releasedAmount ?? 0,
       refunded: escrow?.refundedAmount ?? dispute.refundAmount ?? 0,
       undisputed: escrow?.undisputedAmount ?? 0,
+    },
+    timers: {
+      inspectionStartedAt: escrow?.metadata?.inspectionStartedAt || order?.deliveredAt || null,
+      inspectionReleaseAt: escrow?.releaseAt || null,
+      sellerResponseDeadline: dispute.sellerResponseDeadline || null,
+      deliveredAt: order?.deliveredAt || null,
+      openedAt: dispute.openedAt || null,
+      firstReplacementAt: dispute.firstReplacementAt || null,
     },
     ocrFlagCount: dispute.ocrFlagCount || 0,
     violationCount: violation?.count || dispute.violationCountSnapshot || 0,
@@ -801,6 +824,85 @@ async function autoRefundDisputeForNoReplacement(disputeId) {
   });
 }
 
+
+/**
+ * Admin: extend Timer #2 (seller replacement window).
+ * Does not affect Timer #1 (inspection / auto-release).
+ */
+export async function extendSellerReplacementDeadline(disputeId, payload, actor) {
+  if (!isAdmin(actor) && !isSuperAdmin(actor)) {
+    throw new AppError('Forbidden', 403, { code: 'FORBIDDEN' });
+  }
+
+  const dispute = await Dispute.findById(disputeId);
+  if (!dispute) {
+    throw new AppError('Dispute not found', 404, { code: 'DISPUTE_NOT_FOUND' });
+  }
+  if ([DISPUTE_STATUS.RESOLVED, DISPUTE_STATUS.CLOSED].includes(dispute.status)) {
+    throw new AppError('Cannot extend deadline on a closed dispute', 400, {
+      code: 'DISPUTE_CLOSED',
+    });
+  }
+
+  const hours = Number(payload?.hours);
+  const until = payload?.until ? new Date(payload.until) : null;
+  let nextDeadline;
+  if (until && !Number.isNaN(until.getTime())) {
+    nextDeadline = until;
+  } else if (Number.isFinite(hours) && hours > 0) {
+    const base = dispute.sellerResponseDeadline && !isPast(dispute.sellerResponseDeadline)
+      ? dispute.sellerResponseDeadline
+      : new Date();
+    nextDeadline = addHours(base, hours);
+  } else {
+    throw new AppError('Provide hours (>0) or until (ISO date)', 400, {
+      code: 'INVALID_EXTENSION',
+    });
+  }
+
+  if (nextDeadline.getTime() <= Date.now()) {
+    throw new AppError('Extended deadline must be in the future', 400, {
+      code: 'INVALID_EXTENSION',
+    });
+  }
+
+  const previous = dispute.sellerResponseDeadline;
+  dispute.sellerResponseDeadline = nextDeadline;
+  await dispute.save();
+
+  await logActivity({
+    userId: actor.id,
+    action: 'disputes.extend_replacement_deadline',
+    resource: 'Dispute',
+    resourceId: dispute._id,
+    meta: {
+      previousDeadline: previous,
+      sellerResponseDeadline: nextDeadline,
+      hours: Number.isFinite(hours) ? hours : null,
+    },
+  });
+
+  await disputeTimelineService.appendTimelineEvent({
+    disputeId: dispute._id,
+    orderId: dispute.order,
+    event: DISPUTE_TIMELINE_EVENTS.ADMIN_DECISION,
+    actor,
+    role: 'admin',
+    message: 'Admin extended seller replacement deadline',
+    meta: {
+      previousDeadline: previous,
+      sellerResponseDeadline: nextDeadline,
+    },
+  });
+
+  return {
+    disputeId: dispute._id,
+    status: dispute.status,
+    previousDeadline: previous,
+    sellerResponseDeadline: nextDeadline,
+  };
+}
+
 export default {
   openDispute,
   listDisputes,
@@ -809,5 +911,6 @@ export default {
   getDisputeTimeline,
   addDisputeMessage,
   resolveDispute,
+  extendSellerReplacementDeadline,
   processUnansweredDisputeAutoRefunds,
 };

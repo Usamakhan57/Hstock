@@ -14,6 +14,7 @@ import {
   disputeIdSchema,
   disputeMessageSchema,
   resolveDisputeSchema,
+  extendSellerReplacementDeadlineSchema,
   listDisputeChatMessagesSchema,
   editDisputeChatMessageSchema,
   disputeChatMessageIdSchema,
@@ -101,6 +102,15 @@ router.post(
   requirePermission(PERMISSIONS.DISPUTES_MANAGE),
   validate(resolveDisputeSchema),
   disputesController.resolveDispute,
+);
+
+router.post(
+  '/:id/extend-replacement',
+  requireAuth,
+  requireRole(USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN, USER_ROLES.SUPPORT),
+  requirePermission(PERMISSIONS.DISPUTES_MANAGE),
+  validate(extendSellerReplacementDeadlineSchema),
+  disputesController.extendSellerReplacementDeadline,
 );
 
 // ---- Replacement accounts ----

@@ -4,8 +4,17 @@
 
 1. Never freeze the entire order unless the whole order is disputed.
 2. Only disputed quantity remains in escrow hold (`heldAmount` / `disputedAmount`).
-3. Undisputed amount continues the normal auto-release timer (`releaseAt`).
+3. Undisputed amount continues the normal auto-release timer (`releaseAt`, started at **delivery**).
 4. Partial refunds refund only disputed held funds.
+
+## Inspection timer (Timer #1)
+
+`releaseAt` is set when the order is delivered (`deliveredAt + escrowAutoReleaseHours`).  
+Escrow lock alone does **not** start auto-release. Auto-release jobs skip undelivered orders.
+
+## Replacement timer (Timer #2)
+
+Independent `sellerResponseDeadline` starts when a dispute opens. Auto-refund only if the seller never submits a replacement. Admin may extend via `POST /disputes/:id/extend-replacement`.
 
 ## Example
 

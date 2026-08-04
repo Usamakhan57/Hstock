@@ -49,10 +49,23 @@ export const resolveDispute = asyncHandler(async (req, res) => {
   return sendSuccess(res, { message: 'Dispute resolved', data });
 });
 
+export const extendSellerReplacementDeadline = asyncHandler(async (req, res) => {
+  const data = await disputeService.extendSellerReplacementDeadline(
+    req.params.id,
+    req.body,
+    req.user,
+  );
+  return sendSuccess(res, {
+    message: 'Seller replacement deadline extended',
+    data,
+  });
+});
+
 export default {
   openDispute,
   listDisputes,
   getDispute,
   addMessage,
   resolveDispute,
+  extendSellerReplacementDeadline,
 };
