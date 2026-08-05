@@ -334,7 +334,7 @@ const SellerOverviewTab = ({
 
       {/* KPI grid — single column on mobile, 2 cols from sm, 3 from xl */}
       <section className="relative z-0 grid w-full min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-        <MetricTile label="Total Sales" value={money(stats.grossSales)} hint={`+${money(stats.todaySales)} today`} icon={TrendingUp} hintTone="text-emerald-600" bg="bg-sky-50" tone="text-sky-600" />
+        <MetricTile label="Total Sales" value={money(stats.totalSales ?? stats.grossSales)} hint={`+${money(stats.todaySales)} today`} icon={TrendingUp} hintTone="text-emerald-600" bg="bg-sky-50" tone="text-sky-600" />
         <MetricTile label="Net Profit" value={money(stats.netProfit)} hint="after fees & refunds" icon={CircleDollarSign} hintTone="text-emerald-600" bg="bg-emerald-50" tone="text-emerald-600" />
         <MetricTile label="Total Orders" value={stats.ordersCount} hint={`${stats.pendingOrders} in progress`} icon={ShoppingCart} hintTone="text-orange-600" bg="bg-orange-50" tone="text-orange-600" />
         <MetricTile label="Completed" value={stats.completedOrders} hint={`${stats.disputedOrders} disputed`} icon={CheckCircle2} bg="bg-violet-50" tone="text-violet-600" />

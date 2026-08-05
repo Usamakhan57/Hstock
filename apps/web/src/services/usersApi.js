@@ -19,6 +19,7 @@ export const usersApi = {
       clearRequestCache('sellers');
       clearRequestCache('products');
       clearRequestCache('product');
+      clearRequestCache('seller-statistics');
       try {
         const { invalidateSellerCatalog } = await import('./catalogCache');
         await invalidateSellerCatalog();

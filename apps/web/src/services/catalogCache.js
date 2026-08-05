@@ -87,7 +87,8 @@ function mergeSellerLists(apiSellers, derived) {
         ...existing,
         productCount: Math.max(existing.productCount || 0, s.productCount || 0),
         rating: existing.rating ?? s.rating,
-        totalSalesAmount: Math.max(existing.totalSalesAmount || 0, s.totalSalesAmount || 0),
+        // Prefer API live Total Sales — never let product-derived counts override.
+        totalSalesAmount: Number(existing.totalSalesAmount ?? 0),
         storePromoted: existing.storePromoted || s.storePromoted,
         storePromotedUntil: existing.storePromotedUntil || s.storePromotedUntil,
       };

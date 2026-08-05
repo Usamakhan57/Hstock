@@ -86,19 +86,20 @@ export async function getSellerProducts(slugOrName) {
   );
 }
 
-/** Enrich a seller card with stats computed from their live products. */
+/** Enrich a seller card with stats computed from their live products.
+ * Total Sales always prefers the API-provided totalSalesAmount (live order aggregation).
+ */
 export function enrichSellerFromProducts(seller, products = []) {
   if (!seller) return null;
   const ratings = products.map((p) => p.rating).filter((r) => r != null && r > 0);
   const avgRating = ratings.length
     ? Math.round((ratings.reduce((sum, r) => sum + r, 0) / ratings.length) * 10) / 10
     : seller.rating;
-  const sales = products.reduce((sum, p) => sum + (p.salesCount || p.downloads || 0), 0);
   return {
     ...seller,
     productCount: products.length || seller.productCount || 0,
     rating: avgRating,
-    totalSalesAmount: seller.totalSalesAmount || sales,
+    totalSalesAmount: Number(seller.totalSalesAmount ?? 0),
   };
 }
 

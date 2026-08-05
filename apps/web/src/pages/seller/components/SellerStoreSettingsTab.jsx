@@ -17,7 +17,7 @@ const NOTIFICATION_TOGGLES = [
   { key: 'marketing', label: 'ApnaStore news & tips', hint: 'Occasional seller tips and platform updates.' },
 ];
 
-const SellerStoreSettingsTab = ({ seller, canManagePayouts = true }) => {
+const SellerStoreSettingsTab = ({ seller, canManagePayouts = true, onTelegramStatusChange }) => {
   const { toast } = useToast();
   const { refreshSeller } = useSellerAuth();
   const [saving, setSaving] = useState(false);
@@ -170,7 +170,7 @@ const SellerStoreSettingsTab = ({ seller, canManagePayouts = true }) => {
       </div>
 
       <div className="space-y-6">
-        <TelegramConnectSection compact pollUntilConnected />
+        <TelegramConnectSection compact pollUntilConnected onStatusChange={onTelegramStatusChange} />
 
         <div className="bg-white rounded-3xl border border-border soft-shadow p-6 space-y-4">
           <h3 className="font-bold">Notification Settings</h3>

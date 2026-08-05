@@ -8,7 +8,7 @@ import { usersApi } from '../../../services/usersApi';
 import { invalidateSellerCatalog } from '../../../services/catalogCache';
 import { useSellerAuth } from '../../../context/SellerAuthContext';
 
-const SellerProfileTab = ({ seller, productsCount, joinedDate }) => {
+const SellerProfileTab = ({ seller, productsCount, joinedDate, onTelegramStatusChange }) => {
   const { toast } = useToast();
   const { refreshSeller } = useSellerAuth();
   const [saving, setSaving] = useState(false);
@@ -110,7 +110,7 @@ const SellerProfileTab = ({ seller, productsCount, joinedDate }) => {
           </div>
         </div>
 
-        <TelegramConnectSection pollUntilConnected />
+        <TelegramConnectSection pollUntilConnected onStatusChange={onTelegramStatusChange} />
 
         <button type="submit" disabled={saving} className="inline-flex items-center gap-2 px-6 py-3 rounded-full brand-gradient text-white text-sm font-semibold soft-shadow hover:opacity-95 transition-all disabled:opacity-60">
           {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}

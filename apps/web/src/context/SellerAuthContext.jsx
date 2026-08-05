@@ -45,6 +45,15 @@ export const SellerAuthProvider = ({ children }) => {
       banner: profile?.banner || '',
       storePromotionActive: !!profile?.storePromotionActive,
       storePromotedUntil: profile?.storePromotedUntil || null,
+      // Shared Telegram connection state (same source as /telegram/me → User.telegramConnected).
+      telegramConnected: Boolean(user.telegram?.connected),
+      telegram: user.telegram || {
+        connected: false,
+        username: null,
+        telegramUserId: null,
+        connectedAt: null,
+        notificationsEnabled: true,
+      },
     };
   }, [user, profiles]);
 

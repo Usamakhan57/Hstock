@@ -2,6 +2,10 @@ import { AppError } from '../utils/AppError.js';
 import { parsePagination, buildPaginationMeta } from '../utils/pagination.js';
 import { SellerProfile } from '../models/index.js';
 import { SellerStatusEnum } from '../constants/enums.js';
+import {
+  getSellerStatistics,
+  getSellerStatisticsMap,
+} from './sellerStatistics.service.js';
 
 const PUBLIC_SELLER_FIELDS = [
   'storeName',
@@ -29,12 +33,16 @@ function isPromotionLive(seller, now = new Date()) {
     && new Date(seller.storePromotedUntil).getTime() > now.getTime();
 }
 
-export function serializePublicSeller(doc) {
+export function serializePublicSeller(doc, stats = null) {
   if (!doc) return null;
   const raw = typeof doc.toObject === 'function' ? doc.toObject() : { ...doc };
   const metrics = raw.metrics || {};
   const verified = raw.verified === true;
   const storePromoted = isPromotionLive(raw);
+  // Live order aggregation is the only Total Sales source (never stale metrics.totalSales).
+  const totalSales = stats && typeof stats.totalSales === 'number'
+    ? Number(stats.totalSales)
+    : 0;
   return {
     _id: raw._id,
     id: String(raw._id || raw.id),
@@ -55,13 +63,13 @@ export function serializePublicSeller(doc) {
     storePromotedUntil: storePromoted ? raw.storePromotedUntil : null,
     metrics: {
       productsCount: metrics.productsCount ?? 0,
-      totalSales: metrics.totalSales ?? 0,
+      totalSales,
       rating: metrics.rating ?? 0,
       responseTime: metrics.responseTime || raw.defaultProcessingTime || null,
     },
     productCount: metrics.productsCount ?? 0,
     rating: metrics.rating ?? null,
-    totalSalesAmount: metrics.totalSales ?? 0,
+    totalSalesAmount: totalSales,
     responseTime: metrics.responseTime || raw.defaultProcessingTime || null,
     joinedAt: raw.joinedAt || null,
     country: raw.country || null,
@@ -97,8 +105,10 @@ export async function listPublicSellers(query = {}) {
     SellerProfile.countDocuments(filter),
   ]);
 
+  const statsMap = await getSellerStatisticsMap(items.map((row) => row._id));
+
   return {
-    items: items.map(serializePublicSeller),
+    items: items.map((row) => serializePublicSeller(row, statsMap.get(String(row._id)))),
     meta: buildPaginationMeta({ ...pagination, total }),
   };
 }
@@ -118,11 +128,20 @@ export async function getPublicSellerBySlug(slug) {
   if (!seller) {
     throw new AppError('Seller not found', 404, { code: 'SELLER_NOT_FOUND' });
   }
-  return serializePublicSeller(seller);
+  const stats = await getSellerStatistics(seller._id);
+  return serializePublicSeller(seller, stats);
+}
+
+/**
+ * Authenticated seller dashboard statistics — same aggregation as public profile.
+ */
+export async function getMySellerStatistics(sellerProfileId) {
+  return getSellerStatistics(sellerProfileId);
 }
 
 export default {
   listPublicSellers,
   getPublicSellerBySlug,
+  getMySellerStatistics,
   serializePublicSeller,
 };

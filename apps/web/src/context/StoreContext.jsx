@@ -28,10 +28,12 @@ const nowIso = () => new Date().toISOString();
 
 function toStoreUser(user) {
   if (!user) return null;
+  const telegram = user.telegram || null;
   return {
     id: user.id || user._id,
     email: user.email,
     name: user.name,
+    username: user.username || null,
     roles: user.roles || [],
     permissions: user.permissions || [],
     avatar: user.avatar || null,
@@ -40,6 +42,22 @@ function toStoreUser(user) {
     timezone: user.timezone || '',
     emailVerified: !!user.emailVerified,
     status: user.status,
+    // Official Telegram connection status from /auth/me (User.telegramConnected).
+    telegram: telegram
+      ? {
+        connected: Boolean(telegram.connected),
+        username: telegram.username || null,
+        telegramUserId: telegram.telegramUserId || null,
+        connectedAt: telegram.connectedAt || null,
+        notificationsEnabled: telegram.notificationsEnabled !== false,
+      }
+      : {
+        connected: false,
+        username: null,
+        telegramUserId: null,
+        connectedAt: null,
+        notificationsEnabled: true,
+      },
   };
 }
 

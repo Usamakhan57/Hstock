@@ -45,6 +45,9 @@ import {
 } from '../lib/sellerAnalytics';
 import { clearRequestCache } from '../lib/requestCache';
 import { NetworkErrorState } from '../components/ErrorState';
+import { telegramApi } from '../services/telegramApi';
+import { sellerStatisticsApi } from '../services/sellerStatisticsApi';
+import { useStore } from '../context/StoreContext';
 
 import SellerOverviewTab from './seller/components/SellerOverviewTab';
 import SellerProductsTab from './seller/components/SellerProductsTab';
@@ -117,6 +120,7 @@ const menuGroups = [
 
 const SellerDashboard = () => {
   const { seller, logout, refreshSeller } = useSellerAuth();
+  const { refreshProfile } = useStore();
   const navigate = useNavigate();
   const location = useLocation();
   const handleDashboardBack = useDashboardBack('/');
@@ -142,6 +146,12 @@ const SellerDashboard = () => {
     activity: [],
   });
   const [commerceTick, setCommerceTick] = useState(0);
+  /** Shared Telegram status for banner + Action Required (from /telegram/me). */
+  const [telegramStatus, setTelegramStatus] = useState(() => (
+    seller?.telegram || null
+  ));
+  /** Shared Total Sales from GET /sellers/me/statistics (same as public profile). */
+  const [apiStatistics, setApiStatistics] = useState(null);
 
   const loadProducts = async () => {
     setDataLoading(true);
@@ -169,14 +179,18 @@ const SellerDashboard = () => {
         clearRequestCache('wallet');
         clearRequestCache('wallet-tx');
         clearRequestCache('withdrawals');
+        sellerStatisticsApi.invalidate();
+        clearRequestCache('telegram');
       }
-      const [ordersRes, walletRes, txRes, withdrawalsRes, escrowRes, disputesRes] = await Promise.all([
+      const [ordersRes, walletRes, txRes, withdrawalsRes, escrowRes, disputesRes, statsRes, telegramRes] = await Promise.all([
         ordersApi.list({ page: 1, limit: 100, scope: 'seller' }).catch(() => ({ items: [] })),
         walletApi.me({ force }).catch(() => null),
         walletApi.transactions({ page: 1, limit: 50, force }).catch(() => ({ items: [] })),
         withdrawalsApi.list({ page: 1, limit: 50 }).catch(() => ({ items: [] })),
         escrowApi.list({ page: 1, limit: 50 }).catch(() => ({ items: [] })),
         disputesApi.list({ page: 1, limit: 50, scope: 'seller' }).catch(() => ({ items: [] })),
+        sellerStatisticsApi.me({ force }).catch(() => null),
+        telegramApi.status().catch(() => null),
       ]);
       if (!alive) return;
       setCommerce({
@@ -188,9 +202,26 @@ const SellerDashboard = () => {
         disputes: disputesRes.items || [],
         activity: [],
       });
+      if (statsRes) setApiStatistics(statsRes);
+      if (telegramRes) setTelegramStatus(telegramRes);
     })();
     return () => { alive = false; };
   }, [commerceTick]);
+
+  const handleTelegramStatusChange = async (next) => {
+    if (next) setTelegramStatus(next);
+    await telegramApi.invalidateCaches();
+    sellerStatisticsApi.invalidate();
+    try {
+      await refreshProfile();
+    } catch {
+      // ignore profile refresh failures
+    }
+  };
+
+  useEffect(() => telegramApi.subscribe((next) => {
+    if (next) setTelegramStatus(next);
+  }), []);
 
   const refreshCommerce = (opts = {}) => {
     if (opts.force) {
@@ -222,7 +253,7 @@ const SellerDashboard = () => {
     const mostViewed = buildMostViewed(sellerProducts, 8);
     const topCategories = buildTopCategories(commerce.orders, sellerProducts, 6);
     const downloads = buildDownloadsFromOrders(commerce.orders);
-    const stats = summarizeSellerStats({
+    const statsBase = summarizeSellerStats({
       orders: commerce.orders,
       products: sellerProducts,
       wallet: commerce.wallet,
@@ -230,11 +261,21 @@ const SellerDashboard = () => {
       withdrawals: commerce.withdrawals,
       disputes: commerce.disputes,
     });
+    // Prefer live API Total Sales (same aggregation as public profile / featured stores).
+    const totalSales = apiStatistics && typeof apiStatistics.totalSales === 'number'
+      ? Number(apiStatistics.totalSales)
+      : statsBase.totalSales;
+    const stats = {
+      ...statsBase,
+      totalSales,
+      grossSales: totalSales,
+    };
     const actionRequired = buildActionRequired({
       products: sellerProducts,
       orders: commerce.orders,
       disputes: commerce.disputes,
       seller,
+      telegramStatus: telegramStatus ?? seller?.telegram ?? null,
     });
     return {
       salesChart,
@@ -248,7 +289,7 @@ const SellerDashboard = () => {
       stats,
       actionRequired,
     };
-  }, [commerce, sellerProducts, seller]);
+  }, [commerce, sellerProducts, seller, telegramStatus, apiStatistics]);
 
   const overviewOrders = commerce.orders.map((o) => ({
     id: o.id,
@@ -405,7 +446,11 @@ const SellerDashboard = () => {
           ) : null}
 
           <main className="relative z-0 mx-auto w-full min-w-0 max-w-[1080px] flex-1 px-4 py-8 pb-28 sm:px-6 lg:px-10 lg:pb-10">
-            <SellerVerificationBanner seller={seller} />
+            <SellerVerificationBanner
+              seller={seller}
+              telegramStatus={telegramStatus}
+              onTelegramStatusChange={handleTelegramStatusChange}
+            />
 
             {tab !== 'overview' ? (
               <div className="mb-8 flex flex-col gap-4 rounded-[1.75rem] border border-border bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-6">
@@ -479,6 +524,7 @@ const SellerDashboard = () => {
                     onRefresh={refreshCommerce}
                     canWithdraw={String(seller?.status || '').toLowerCase() === 'approved'}
                     stats={analytics.stats}
+                    onTelegramStatusChange={handleTelegramStatusChange}
                   />
                 )}
                 {tab === 'analytics' && (
@@ -522,11 +568,19 @@ const SellerDashboard = () => {
                     )}
                   </div>
                 )}
-                {tab === 'profile' && <SellerProfileTab seller={seller} productsCount={sellerProducts.length} joinedDate={joinedDate} />}
+                {tab === 'profile' && (
+                  <SellerProfileTab
+                    seller={seller}
+                    productsCount={sellerProducts.length}
+                    joinedDate={joinedDate}
+                    onTelegramStatusChange={handleTelegramStatusChange}
+                  />
+                )}
                 {tab === 'settings' && (
                   <SellerStoreSettingsTab
                     seller={seller}
                     canManagePayouts={String(seller?.status || '').toLowerCase() === 'approved'}
+                    onTelegramStatusChange={handleTelegramStatusChange}
                   />
                 )}
               </div>

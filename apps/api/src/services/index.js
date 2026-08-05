@@ -20,3 +20,5 @@ export * as disputeReplacementService from './disputeReplacement.service.js';
 export * as disputeTimelineService from './disputeTimeline.service.js';
 export * as ocrService from './ocr.service.js';
 export * as refundService from './refund.service.js';
+export * as sellerStatisticsService from './sellerStatistics.service.js';
+export * as publicSellersService from './publicSellers.service.js';
