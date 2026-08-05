@@ -71,8 +71,13 @@ export function normalizeApiError(error) {
       data: payload.data || null,
     });
   }
-  const message = payload.message
-    || messageForStatus(status, error.message);
+
+  const fieldErrors = formatFieldErrors(payload.errors || payload.details);
+  let message = payload.message || messageForStatus(status, error.message);
+  // Prefer concrete field errors over the generic "Validation failed" label.
+  if (fieldErrors && /^validation failed\.?$/i.test(String(message || '').trim())) {
+    message = fieldErrors;
+  }
 
   return new ApiError(message, {
     status,
@@ -82,8 +87,36 @@ export function normalizeApiError(error) {
   });
 }
 
+/** Turn API `errors` arrays/objects into a short user-facing string. */
+export function formatFieldErrors(errors) {
+  if (!errors) return null;
+  if (typeof errors === 'string') return errors;
+  if (Array.isArray(errors)) {
+    const parts = errors.map((entry) => {
+      if (!entry) return null;
+      if (typeof entry === 'string') return entry;
+      const path = entry.path || entry.field || entry.param;
+      const msg = entry.message || entry.msg || entry.error;
+      if (path && msg) return `${path}: ${msg}`;
+      return msg || path || null;
+    }).filter(Boolean);
+    return parts.length ? parts.join('; ') : null;
+  }
+  if (typeof errors === 'object') {
+    const parts = Object.entries(errors).map(([key, value]) => {
+      if (value == null) return null;
+      if (typeof value === 'string') return `${key}: ${value}`;
+      if (value?.message) return `${key}: ${value.message}`;
+      return `${key}: ${String(value)}`;
+    }).filter(Boolean);
+    return parts.length ? parts.join('; ') : null;
+  }
+  return null;
+}
+
 export default {
   ApiError,
   messageForStatus,
   normalizeApiError,
+  formatFieldErrors,
 };

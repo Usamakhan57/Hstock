@@ -3,11 +3,79 @@ import { objectIdSchema, paginationSchema } from './common.validator.js';
 
 const statusEnum = z.enum(['active', 'inactive']);
 
-/** Accept absolute/relative/data URLs; coerce blank strings to null. */
+function blankToNull(value) {
+  if (value === '' || value === undefined || value === null) return null;
+  if (typeof value === 'string' && value.trim() === '') return null;
+  return value;
+}
+
+function blankToUndefined(value) {
+  if (value === '' || value === undefined || value === null) return undefined;
+  if (typeof value === 'string' && value.trim() === '') return undefined;
+  return value;
+}
+
+/**
+ * Accept absolute/relative/data URLs or media paths.
+ * Blank / whitespace strings become null so edit forms can omit images.
+ */
 const optionalImageRef = z.preprocess(
-  (value) => (value === '' || value === undefined ? null : value),
-  z.string().min(1).max(4000).nullable().optional(),
+  blankToNull,
+  z.union([z.string().min(1).max(4000), z.null()]).optional(),
 );
+
+const optionalIconRef = z.preprocess(
+  blankToNull,
+  z.union([z.string().max(80), z.null()]).optional(),
+);
+
+/** Parent category id — blank / root sentinels / populated objects → null or id string. */
+const optionalParentRef = z.preprocess((value) => {
+  if (value === '' || value === undefined || value === null) return null;
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed) return null;
+    const lower = trimmed.toLowerCase();
+    if (lower === '__root__' || lower === 'null' || lower === 'undefined' || lower === 'none') {
+      return null;
+    }
+    return trimmed;
+  }
+  if (typeof value === 'object') {
+    const id = value._id || value.id;
+    return id ? String(id) : null;
+  }
+  return value;
+}, objectIdSchema.nullable().optional());
+
+const optionalSeoString = (max) => z.preprocess(
+  blankToNull,
+  z.union([z.string().max(max), z.null()]).optional(),
+);
+
+const optionalDescription = z.preprocess(
+  (value) => (value === null || value === undefined ? '' : value),
+  z.string().max(5000).optional(),
+);
+
+const optionalSlug = z.preprocess(
+  blankToUndefined,
+  z.string().min(2).max(160).optional(),
+);
+
+const optionalDisplayOrder = z.preprocess(
+  blankToUndefined,
+  z.coerce.number().int().optional(),
+);
+
+const optionalBoolean = z.preprocess((value) => {
+  if (value === '' || value === undefined) return undefined;
+  if (value === null) return undefined;
+  if (typeof value === 'boolean') return value;
+  if (value === 'true' || value === '1') return true;
+  if (value === 'false' || value === '0') return false;
+  return value;
+}, z.boolean().optional());
 
 export const listQuerySchema = {
   query: paginationSchema.extend({
@@ -35,33 +103,21 @@ export const idOrSlugParamSchema = {
 export const categoryBodySchema = {
   body: z.object({
     name: z.string().min(2).max(160),
-    slug: z.string().min(2).max(160).optional(),
-    description: z.string().max(5000).optional(),
+    slug: optionalSlug,
+    description: optionalDescription,
     image: optionalImageRef,
-    icon: z.preprocess(
-      (value) => (value === '' || value === undefined ? null : value),
-      z.string().max(80).nullable().optional(),
-    ),
-    parent: z.preprocess(
-      (value) => (value === '' || value === undefined ? null : value),
-      objectIdSchema.nullable().optional(),
-    ),
-    displayOrder: z.number().int().optional(),
+    icon: optionalIconRef,
+    parent: optionalParentRef,
+    displayOrder: optionalDisplayOrder,
     status: statusEnum.optional(),
-    featured: z.boolean().optional(),
-    showInHeader: z.boolean().optional(),
-    showOnHomepage: z.boolean().optional(),
-    seoTitle: z.preprocess(
-      (value) => (value === '' || value === undefined ? null : value),
-      z.string().max(200).nullable().optional(),
-    ),
-    seoDescription: z.preprocess(
-      (value) => (value === '' || value === undefined ? null : value),
-      z.string().max(500).nullable().optional(),
-    ),
+    featured: optionalBoolean,
+    showInHeader: optionalBoolean,
+    showOnHomepage: optionalBoolean,
+    seoTitle: optionalSeoString(200),
+    seoDescription: optionalSeoString(500),
     ogImage: optionalImageRef,
     deletedAt: z.preprocess(
-      (value) => (value === '' || value === undefined ? null : value),
+      blankToNull,
       z.union([z.string().datetime(), z.null()]).optional(),
     ),
   }),
@@ -69,7 +125,10 @@ export const categoryBodySchema = {
 
 export const categoryUpdateSchema = {
   params: z.object({ id: objectIdSchema }),
-  body: categoryBodySchema.body.partial(),
+  body: categoryBodySchema.body.partial().extend({
+    // Name stays optional on PATCH but still enforces min length when provided.
+    name: z.string().min(2).max(160).optional(),
+  }),
 };
 
 export const brandBodySchema = {
