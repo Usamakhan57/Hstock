@@ -40,6 +40,7 @@ export const updateSellerProfileSchema = {
   body: z.object({
     storeName: z.string().min(2).max(160).optional(),
     ownerName: z.string().max(120).optional(),
+    username: z.string().min(3).max(30).optional(),
     phone: z.string().max(40).nullable().optional(),
     country: z.string().max(80).nullable().optional(),
     timezone: z.string().max(80).optional(),

@@ -6,6 +6,8 @@ import {
   AdminProfile,
   Product,
   PasswordResetToken,
+  RefreshToken,
+  EmailVerificationToken,
 } from '../models/index.js';
 import { AppError } from '../utils/AppError.js';
 import { hashPassword, comparePassword } from '../utils/password.js';
@@ -24,6 +26,7 @@ import { generateOpaqueToken, hashToken } from '../utils/token.js';
 import { sendTemplatedEmail } from '../emails/email.service.js';
 import { env } from '../config/env.js';
 import { logger } from '../config/logger.js';
+import { normalizeUsername } from '../utils/username.js';
 
 const INVITEABLE_ROLES = Object.freeze([
   USER_ROLES.ADMIN,
@@ -37,6 +40,18 @@ const ROLE_LABEL = Object.freeze({
   [USER_ROLES.SUPPORT]: 'Support',
   [USER_ROLES.SUPER_ADMIN]: 'Super Admin',
 });
+
+function actorRoles(actor) {
+  return Array.isArray(actor?.roles) ? actor.roles : [];
+}
+
+function isSuperAdminActor(actor) {
+  return actorRoles(actor).includes(USER_ROLES.SUPER_ADMIN);
+}
+
+function actorId(actor) {
+  return actor?.id || actor?._id || null;
+}
 
 function serializeSeller(seller) {
   if (!seller) return null;
@@ -102,7 +117,12 @@ export async function getUserById(userId) {
     user: publicUser(user),
     profiles: {
       buyer,
-      seller: seller ? serializeSeller(seller) : null,
+      seller: seller
+        ? {
+          ...serializeSeller(seller),
+          username: user.username || seller.ownerName || null,
+        }
+        : null,
       admin,
     },
   };
@@ -148,6 +168,44 @@ export async function updateSellerProfile(userId, payload) {
     throw new AppError('Seller profile not found', 404, { code: 'SELLER_NOT_FOUND' });
   }
 
+  if (payload.username !== undefined) {
+    const result = normalizeUsername(payload.username);
+    if (!result.ok) {
+      throw new AppError(result.message, 400, { code: result.code });
+    }
+    const username = result.username;
+    const clash = await User.findOne({
+      username,
+      _id: { $ne: userId },
+    });
+    if (clash) {
+      throw new AppError('Username is already taken', 409, { code: 'USERNAME_EXISTS' });
+    }
+    const buyerClash = await BuyerProfile.findOne({
+      username,
+      user: { $ne: userId },
+    });
+    if (buyerClash) {
+      throw new AppError('Username is already taken', 409, { code: 'USERNAME_EXISTS' });
+    }
+
+    const user = await User.findById(userId);
+    if (user) {
+      user.username = username;
+      // Keep display name aligned with username when it previously matched the old handle.
+      if (!user.name || user.name === profile.ownerName || user.name === user.username) {
+        user.name = username;
+      }
+      await user.save();
+    }
+    profile.ownerName = username;
+    const buyer = await BuyerProfile.findOne({ user: userId });
+    if (buyer) {
+      buyer.username = username;
+      await buyer.save();
+    }
+  }
+
   const blocked = [
     'status',
     'verified',
@@ -159,7 +217,11 @@ export async function updateSellerProfile(userId, payload) {
     'metrics',
     'user',
     'slug',
+    'username',
   ];
+  if (payload.username !== undefined) {
+    blocked.push('ownerName');
+  }
   for (const key of Object.keys(payload)) {
     if (!blocked.includes(key)) {
       profile[key] = payload[key];
@@ -167,7 +229,12 @@ export async function updateSellerProfile(userId, payload) {
   }
 
   await profile.save();
-  return serializeSeller(profile);
+  const serialized = serializeSeller(profile);
+  const freshUser = await User.findById(userId).lean();
+  return {
+    ...serialized,
+    username: freshUser?.username || profile.ownerName || null,
+  };
 }
 
 export async function changePassword(userId, { currentPassword, newPassword }) {
@@ -198,14 +265,21 @@ export async function changePassword(userId, { currentPassword, newPassword }) {
 
 export async function listUsers(query = {}) {
   const { page, limit, skip } = parsePagination(query);
-  const filter = {};
+  const filter = {
+    deleted: { $ne: true },
+  };
 
   if (query.role) filter.roles = query.role;
-  if (query.status) filter.status = query.status;
+  if (query.status) {
+    filter.status = query.status;
+  } else {
+    filter.status = { $ne: UserStatusEnum.Deleted };
+  }
   if (query.search) {
     filter.$or = [
       { email: new RegExp(query.search, 'i') },
       { name: new RegExp(query.search, 'i') },
+      { username: new RegExp(query.search, 'i') },
     ];
   }
 
@@ -265,6 +339,94 @@ export async function adminUpdateUser(userId, payload, actorId) {
   });
 
   return publicUser(user);
+}
+
+/**
+ * Soft-delete a staff/admin user. Super Admin only.
+ * Preserves the User row for audit; blocks deleting the last Super Admin.
+ */
+export async function adminSoftDeleteUser(userId, { confirm } = {}, actor) {
+  if (String(confirm || '').trim() !== 'DELETE') {
+    throw new AppError('Type DELETE to confirm user deletion', 400, {
+      code: 'DELETE_CONFIRMATION_REQUIRED',
+    });
+  }
+
+  if (!isSuperAdminActor(actor)) {
+    throw new AppError('Only Super Admin can delete admin users', 403, {
+      code: 'ADMIN_DELETE_FORBIDDEN',
+    });
+  }
+
+  if (!mongoose.isValidObjectId(userId)) {
+    throw new AppError('User not found', 404, { code: 'USER_NOT_FOUND' });
+  }
+
+  const user = await User.findById(userId);
+  if (!user || user.deleted === true || user.status === UserStatusEnum.Deleted) {
+    throw new AppError('User not found', 404, { code: 'USER_NOT_FOUND' });
+  }
+
+  const isStaff = (user.roles || []).some((role) => STAFF_ROLES.includes(role));
+  if (!isStaff) {
+    throw new AppError('Only admin panel users can be deleted here', 400, {
+      code: 'NOT_STAFF_USER',
+    });
+  }
+
+  const isTargetSuperAdmin = (user.roles || []).includes(USER_ROLES.SUPER_ADMIN);
+  if (isTargetSuperAdmin) {
+    const superAdminCount = await User.countDocuments({
+      roles: USER_ROLES.SUPER_ADMIN,
+      deleted: { $ne: true },
+      status: { $ne: UserStatusEnum.Deleted },
+    });
+    if (superAdminCount <= 1) {
+      throw new AppError('Cannot delete the last Super Admin', 409, {
+        code: 'LAST_SUPER_ADMIN',
+      });
+    }
+  }
+
+  const adminActorId = actorId(actor);
+  const now = new Date();
+  user.deleted = true;
+  user.deletedAt = now;
+  user.deletedBy = adminActorId;
+  user.status = UserStatusEnum.Deleted;
+  // Strip staff roles so a restored account cannot silently regain panel access.
+  user.roles = (user.roles || []).filter((role) => !STAFF_ROLES.includes(role));
+  if (!user.roles.length) user.roles = [USER_ROLES.BUYER];
+  await user.save();
+
+  await Promise.all([
+    RefreshToken.deleteMany({ user: user._id }),
+    PasswordResetToken.deleteMany({ user: user._id }),
+    EmailVerificationToken.deleteMany({ user: user._id }),
+    AdminProfile.deleteOne({ user: user._id }),
+  ]);
+
+  await logActivity({
+    userId: adminActorId,
+    action: 'users.admin.delete',
+    resource: 'User',
+    resourceId: user._id,
+    meta: {
+      softDelete: true,
+      previousEmail: user.email,
+      wasSuperAdmin: isTargetSuperAdmin,
+    },
+  });
+
+  logger.info('Admin user soft-deleted', {
+    userId: String(user._id),
+    by: String(adminActorId),
+  });
+
+  return {
+    user: publicUser(user),
+    deleted: true,
+  };
 }
 
 /**
@@ -567,6 +729,7 @@ export default {
   changePassword,
   listUsers,
   adminUpdateUser,
+  adminSoftDeleteUser,
   adminInviteUser,
   adminListSellers,
   adminGetSeller,

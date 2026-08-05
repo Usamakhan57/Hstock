@@ -25,6 +25,8 @@ export const SellerAuthProvider = ({ children }) => {
       id: profile?._id || profile?.id || user.id,
       storeName: profile?.storeName || user.name,
       name: user.name,
+      username: user.username || profile?.username || profile?.ownerName || null,
+      ownerName: profile?.ownerName || user.username || user.name || '',
       email: user.email,
       slug: profile?.slug || profile?.storeSlug || null,
       joinedAt: profile?.createdAt || user.createdAt || null,
@@ -48,11 +50,12 @@ export const SellerAuthProvider = ({ children }) => {
 
   const refreshSeller = async () => refreshProfile().catch(() => null);
 
-  const register = async ({ storeName, name, email, password }) => {
+  const register = async ({ storeName, username, name, email, password }) => {
     try {
       const data = await authApi.sellerRegister({
         storeName,
-        name: name || storeName,
+        username: username || name,
+        name: username || name || storeName,
         email,
         password,
       }, { remember: getRememberMe() });

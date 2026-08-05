@@ -46,6 +46,7 @@ export const updateUser = async (id, payload) => {
   return mapAdminUser(user);
 };
 
-export const deleteUser = async () => {
-  throw new Error('Deleting users via API is not supported.');
+export const deleteUser = async (id, { confirm } = {}) => {
+  const data = await usersApi.adminDelete(id, { confirm });
+  return data?.user ? mapAdminUser(data.user) : data;
 };
