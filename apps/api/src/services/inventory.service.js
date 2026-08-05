@@ -561,6 +561,128 @@ export async function fulfillInstantAccessOrder(order, { session = null } = {}) 
   return delivery;
 }
 
+/**
+ * Attach seller-provided credentials for a MANUAL order (OrderDelivery record).
+ * Does not change escrow release logic — call markOrderDelivered afterward.
+ */
+export async function fulfillManualDeliveryOrder(orderId, actor, payload = {}) {
+  const { Order } = await import('../models/index.js');
+
+  let order = null;
+  if (/^[a-fA-F0-9]{24}$/.test(String(orderId))) {
+    order = await Order.findById(orderId);
+  }
+  if (!order) {
+    order = await Order.findOne({ orderNumber: orderId });
+  }
+  if (!order) {
+    throw new AppError('Order not found', 404, { code: 'ORDER_NOT_FOUND' });
+  }
+
+  const isSeller = String(order.sellerUser) === String(actor.id);
+  if (!isSeller && !isStaff(actor)) {
+    throw new AppError('Forbidden', 403, { code: 'FORBIDDEN' });
+  }
+
+  const snapType = order.productSnapshot?.deliveryType || null;
+  let deliveryType = snapType;
+  if (!deliveryType) {
+    const product = await Product.findById(order.product).select('deliveryType').lean();
+    deliveryType = product?.deliveryType || null;
+  }
+  if (deliveryType !== DELIVERY_TYPES.MANUAL && deliveryType !== 'handover') {
+    throw new AppError('Only Manual Delivery orders accept seller credentials here', 400, {
+      code: 'NOT_MANUAL_DELIVERY',
+    });
+  }
+
+  const existing = await OrderDelivery.findOne({ order: order._id });
+  if (existing) {
+    return existing;
+  }
+
+  const rawAccounts = Array.isArray(payload.accounts) ? payload.accounts : [];
+  const legacyFields = payload.credentials && typeof payload.credentials === 'object'
+    ? payload.credentials
+    : null;
+  const accountInputs = rawAccounts.length
+    ? rawAccounts
+    : (legacyFields ? [{ fields: legacyFields }] : []);
+
+  if (!accountInputs.length && payload.message) {
+    accountInputs.push({ fields: { note: String(payload.message) } });
+  }
+  if (!accountInputs.length) {
+    throw new AppError('Delivery credentials are required', 400, {
+      code: 'MANUAL_DELIVERY_EMPTY',
+    });
+  }
+
+  const deliveredAccounts = accountInputs.map((entry, index) => {
+    const fields = normalizeFields(entry?.fields || entry || {});
+    if (!Object.keys(fields).length) {
+      throw new AppError('Each delivery account needs at least one credential field', 400, {
+        code: 'MANUAL_DELIVERY_EMPTY_ACCOUNT',
+      });
+    }
+    return {
+      index,
+      inventoryItem: null,
+      label: fields.email || fields.username || entry?.label || `Account ${index + 1}`,
+      credentialsEncrypted: encryptFields(fields),
+      credentialsMasked: maskFields(fields),
+      fieldKeys: Object.keys(fields),
+    };
+  });
+
+  let delivery;
+  try {
+    delivery = await OrderDelivery.create({
+      order: order._id,
+      product: order.product,
+      buyer: order.buyer,
+      seller: order.seller,
+      deliveryType: DELIVERY_TYPES.MANUAL,
+      sourceFormat: INVENTORY_SOURCE_FORMATS.PASTE,
+      accounts: deliveredAccounts,
+      accountCount: deliveredAccounts.length,
+      deliveredAt: new Date(),
+    });
+  } catch (error) {
+    if (error?.code === 11000) {
+      return OrderDelivery.findOne({ order: order._id });
+    }
+    throw error;
+  }
+
+  order.accounts = deliveredAccounts.map((account) => ({
+    index: account.index,
+    identifier: account.label,
+    label: account.label,
+    status: 'active',
+  }));
+  order.metadata = {
+    ...(order.metadata || {}),
+    manualDeliveryId: String(delivery._id),
+    manualDeliveredBy: String(actor.id),
+  };
+  await order.save();
+
+  await logActivity({
+    userId: actor.id,
+    action: 'orders.manual_delivery_attached',
+    resource: 'Order',
+    resourceId: order._id,
+    meta: {
+      productId: order.product,
+      accountCount: deliveredAccounts.length,
+      deliveryId: delivery._id,
+    },
+  });
+
+  return delivery;
+}
+
 export async function getOrderDeliveryForBuyer(orderId, actor) {
   const { Order } = await import('../models/index.js');
   let order = null;
@@ -640,5 +762,6 @@ export default {
   replaceProductInventory,
   listProductInventory,
   fulfillInstantAccessOrder,
+  fulfillManualDeliveryOrder,
   getOrderDeliveryForBuyer,
 };

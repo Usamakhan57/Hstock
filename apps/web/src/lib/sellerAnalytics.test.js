@@ -124,4 +124,23 @@ describe('sellerAnalytics', () => {
     expect(stats.repeatBuyers).toBe(1);
     expect(stats.netProfit).toBe(36);
   });
+
+  it('surfaces manual orders awaiting delivery in action required', () => {
+    const actions = buildActionRequired({
+      products,
+      orders: [
+        ...orders,
+        {
+          id: 'm1',
+          status: 'escrow',
+          deliveryStatus: 'awaiting_delivery',
+          amount: 15,
+          product: { id: 'p2', title: 'Pack B', deliveryType: 'manual' },
+        },
+      ],
+      disputes: [],
+      seller: { telegramConnected: true },
+    });
+    expect(actions.some((a) => a.id === 'manual-delivery' && a.count === 1)).toBe(true);
+  });
 });

@@ -458,7 +458,12 @@ const SellerDashboard = () => {
                   />
                 )}
                 {tab === 'products' && <SellerProductsTab />}
-                {tab === 'orders' && <SellerOrdersTab orders={commerce.orders} />}
+                {tab === 'orders' && (
+                  <SellerOrdersTab
+                    orders={commerce.orders}
+                    onRefresh={refreshCommerce}
+                  />
+                )}
                 {tab === 'escrow' && (
                   <SellerEscrowTab escrowItems={commerce.escrow} />
                 )}

@@ -25,7 +25,13 @@ describe('commerceMappers', () => {
       createdAt: '2026-07-01T00:00:00.000Z',
       paidAt: '2026-07-01T00:05:00.000Z',
       escrowedAt: '2026-07-01T00:05:01.000Z',
-      productSnapshot: { title: 'Premium Account', thumbnail: '/a.jpg', productType: 'account' },
+      productSnapshot: {
+        title: 'Premium Account',
+        thumbnail: '/a.jpg',
+        productType: 'account',
+        deliveryType: 'manual',
+      },
+      deliveryStatus: 'awaiting_delivery',
       seller: { storeName: 'Acme Shop', slug: 'acme' },
       payment: {
         _id: 'pay1',
@@ -47,6 +53,11 @@ describe('commerceMappers', () => {
     expect(order.escrowStatus).toBe('locked');
     expect(order.product.title).toBe('Premium Account');
     expect(order.product.artist).toBe('Acme Shop');
+    expect(order.product.deliveryType).toBe('manual');
+    expect(order.deliveryType).toBe('manual');
+    expect(order.deliveryStatus).toBe('awaiting_delivery');
+    expect(order.deliveryStatusLabel).toBe('Awaiting Delivery');
+    expect(order.canDeliver).toBe(true);
     expect(order.timeline.some((step) => step.key === 'payment_verified' && step.done)).toBe(true);
     expect(order.timeline.some((step) => step.key === 'escrow_created' && step.done)).toBe(true);
   });

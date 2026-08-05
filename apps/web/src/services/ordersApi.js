@@ -72,9 +72,11 @@ export const ordersApi = {
     return mapBackendOrder(data);
   },
 
-  async deliver(idOrNumber) {
-    const { data } = await post(`/orders/${idOrNumber}/deliver`, {});
+  async deliver(idOrNumber, payload = {}) {
+    const body = payload && typeof payload === 'object' ? payload : {};
+    const { data } = await post(`/orders/${idOrNumber}/deliver`, body);
     clearRequestCache('orders');
+    clearRequestCache('order-delivery');
     return mapBackendOrder(data);
   },
 
