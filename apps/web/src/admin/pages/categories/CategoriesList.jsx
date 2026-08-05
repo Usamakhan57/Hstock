@@ -222,7 +222,11 @@ const CategoriesList = () => {
     const payload = { ...form, slug: form.slug || slugify(form.name) };
     try {
       if (editing) {
-        await updateCategory(editing.id, payload);
+        // Pass previous image URLs so unchanged fields are not re-uploaded
+        // and data-URLs from the media library are uploaded before PATCH.
+        await updateCategory(editing.id, payload, {
+          previous: { image: editing.image || '', ogImage: editing.ogImage || '' },
+        });
       } else {
         const siblingCount = categories.filter((c) => (c.parentId || null) === (payload.parentId || null)).length;
         await createCategory({ ...payload, displayOrder: siblingCount });

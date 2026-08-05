@@ -16,12 +16,23 @@ function blankToUndefined(value) {
 }
 
 /**
- * Accept absolute/relative/data URLs or media paths.
+ * Category image / OG image: URL or site path only — never embedded data URIs.
  * Blank / whitespace strings become null so edit forms can omit images.
  */
-const optionalImageRef = z.preprocess(
+const optionalCategoryImageRef = z.preprocess(
   blankToNull,
-  z.union([z.string().min(1).max(4000), z.null()]).optional(),
+  z.union([
+    z.string()
+      .min(1)
+      .max(4000)
+      .refine((value) => !String(value).trim().toLowerCase().startsWith('data:'), {
+        message: 'Image must be a URL, not an embedded data URI',
+      })
+      .refine((value) => /^(https?:\/\/|\/)/i.test(String(value).trim()), {
+        message: 'Image must be an http(s) URL or a site path starting with /',
+      }),
+    z.null(),
+  ]).optional(),
 );
 
 const optionalIconRef = z.preprocess(
@@ -105,7 +116,7 @@ export const categoryBodySchema = {
     name: z.string().min(2).max(160),
     slug: optionalSlug,
     description: optionalDescription,
-    image: optionalImageRef,
+    image: optionalCategoryImageRef,
     icon: optionalIconRef,
     parent: optionalParentRef,
     displayOrder: optionalDisplayOrder,
@@ -115,7 +126,7 @@ export const categoryBodySchema = {
     showOnHomepage: optionalBoolean,
     seoTitle: optionalSeoString(200),
     seoDescription: optionalSeoString(500),
-    ogImage: optionalImageRef,
+    ogImage: optionalCategoryImageRef,
     deletedAt: z.preprocess(
       blankToNull,
       z.union([z.string().datetime(), z.null()]).optional(),

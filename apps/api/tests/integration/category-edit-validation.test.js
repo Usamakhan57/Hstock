@@ -172,3 +172,65 @@ test('validation errors include field paths in message', async () => {
   assert.ok(Array.isArray(bad.body.errors));
   assert.ok(bad.body.errors.some((e) => e.path === 'name'));
 });
+
+test('category image rejects data URIs and oversized embedded strings', () => {
+  const dataUri = `data:image/png;base64,${'A'.repeat(4200)}`;
+  const rejected = categoryUpdateSchema.body.safeParse({
+    description: 'desc only',
+    image: dataUri,
+  });
+  assert.equal(rejected.success, false);
+  assert.ok(
+    rejected.error.issues.some((issue) => issue.path.includes('image')),
+    JSON.stringify(rejected.error?.issues),
+  );
+
+  const okUrl = categoryUpdateSchema.body.safeParse({
+    image: 'https://placehold.co/600x400/png',
+  });
+  assert.equal(okUrl.success, true, JSON.stringify(okUrl.error?.issues));
+  assert.equal(okUrl.data.image, 'https://placehold.co/600x400/png');
+
+  const okPath = categoryUpdateSchema.body.safeParse({
+    image: '/uploads/categories/facebook.png',
+  });
+  assert.equal(okPath.success, true, JSON.stringify(okPath.error?.issues));
+});
+
+test('PATCH category accepts existing image URL while editing description', async () => {
+  const adminToken = await createAdminToken();
+  const created = await request(app)
+    .post('/api/v1/categories')
+    .set('Authorization', `Bearer ${adminToken}`)
+    .send({
+      name: 'With Image',
+      slug: 'with-image',
+      description: 'Original',
+      image: 'https://placehold.co/600x400/png',
+    });
+  assert.equal(created.status, 201, JSON.stringify(created.body));
+  const id = created.body.data._id;
+
+  const updated = await request(app)
+    .patch(`/api/v1/categories/${id}`)
+    .set('Authorization', `Bearer ${adminToken}`)
+    .send({
+      name: 'With Image',
+      slug: 'with-image',
+      description: 'Updated description only',
+      image: 'https://placehold.co/600x400/png',
+      icon: 'Sparkles',
+      ogImage: '',
+    });
+  assert.equal(updated.status, 200, JSON.stringify(updated.body));
+  assert.equal(updated.body.data.description, 'Updated description only');
+  assert.equal(updated.body.data.image, 'https://placehold.co/600x400/png');
+
+  const rejectDataUri = await request(app)
+    .patch(`/api/v1/categories/${id}`)
+    .set('Authorization', `Bearer ${adminToken}`)
+    .send({ image: `data:image/png;base64,${'B'.repeat(4200)}` });
+  assert.equal(rejectDataUri.status, 400);
+  assert.equal(rejectDataUri.body.code, 'VALIDATION_ERROR');
+  assert.match(String(rejectDataUri.body.message || ''), /image/i);
+});
