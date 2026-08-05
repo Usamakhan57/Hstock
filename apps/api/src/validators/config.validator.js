@@ -24,6 +24,9 @@ export const updatePlatformConfigSchema = {
     storePromotionEnabled: z.boolean().optional(),
     storePromotionPriceUsd: z.number().min(0).max(100000).optional(),
     storePromotionDurationHours: z.number().min(1).max(8760).optional(),
+    sellerVerificationEnabled: z.boolean().optional(),
+    sellerVerificationFeeUsd: z.number().min(0).max(100000).optional(),
+    allowManualSellerVerification: z.boolean().optional(),
   }),
 };
 

@@ -74,6 +74,20 @@ const platformConfigSchema = new mongoose.Schema(
       max: 8760,
       default: 72,
     },
+    /** Permanent seller verification (wallet fee) */
+    sellerVerificationEnabled: {
+      type: Boolean,
+      default: true,
+    },
+    sellerVerificationFeeUsd: {
+      type: Number,
+      min: 0,
+      default: 10,
+    },
+    allowManualSellerVerification: {
+      type: Boolean,
+      default: true,
+    },
     updatedBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',

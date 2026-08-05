@@ -61,6 +61,11 @@ function serializeSeller(seller) {
     approvedBy,
     commissionRate,
     commission: commissionRate,
+    verified: obj.verified === true,
+    sellerVerified: obj.verified === true,
+    verifiedAt: obj.verifiedAt || null,
+    verificationFeePaid: obj.verificationFeePaid ?? null,
+    verificationSource: obj.verificationSource || null,
   };
 }
 
@@ -133,7 +138,18 @@ export async function updateSellerProfile(userId, payload) {
     throw new AppError('Seller profile not found', 404, { code: 'SELLER_NOT_FOUND' });
   }
 
-  const blocked = ['status', 'verified', 'verificationStatus', 'metrics', 'user', 'slug'];
+  const blocked = [
+    'status',
+    'verified',
+    'verificationStatus',
+    'verifiedAt',
+    'verificationFeePaid',
+    'verificationSource',
+    'verifiedBy',
+    'metrics',
+    'user',
+    'slug',
+  ];
   for (const key of Object.keys(payload)) {
     if (!blocked.includes(key)) {
       profile[key] = payload[key];
@@ -448,22 +464,36 @@ export async function adminUpdateSellerStatus(sellerOrUserId, payload, actorId) 
   const becomingApproved = seller.status === SellerStatusEnum.Approved
     && previousStatus !== SellerStatusEnum.Approved;
 
-  if (becomingApproved || (payload.verified === true && seller.status === SellerStatusEnum.Approved)) {
-    seller.verified = true;
-    if (!seller.verificationStatus || seller.verificationStatus === VerificationStatusEnum.Unverified) {
-      seller.verificationStatus = VerificationStatusEnum.Verified;
-    }
+  if (becomingApproved) {
+    // Approval unlocks selling — permanent Verified badge is purchased separately.
     seller.approvedAt = seller.approvedAt || new Date();
     seller.approvedBy = actorId || seller.approvedBy;
+  }
+
+  // Explicit admin verification overrides (also used by Seller Verification page).
+  if (payload.verified === true) {
+    seller.verified = true;
+    seller.verificationStatus = VerificationStatusEnum.Verified;
+    seller.verifiedAt = seller.verifiedAt || new Date();
+    seller.verificationSource = seller.verificationSource || 'admin';
+    seller.verifiedBy = actorId || seller.verifiedBy;
+  } else if (payload.verified === false) {
+    seller.verified = false;
+    seller.verificationStatus = VerificationStatusEnum.Unverified;
+    seller.verifiedAt = null;
+    seller.verificationSource = null;
+    seller.verifiedBy = null;
+    seller.verificationFeePaid = null;
   }
 
   if (
     payload.status
     && [SellerStatusEnum.Rejected, SellerStatusEnum.Suspended, SellerStatusEnum.Pending].includes(payload.status)
   ) {
-    // Keep historical approvedAt for audit; only clear active verification flags when rejected/suspended.
-    if (payload.status !== SellerStatusEnum.Pending) {
-      seller.verified = false;
+    // Keep permanent verification history on pending; clear active badge when rejected/suspended.
+    if (payload.status !== SellerStatusEnum.Pending && payload.verified !== true) {
+      // Do not wipe paid verification metadata unless explicitly unverifying.
+      // Suspended stores simply won't appear publicly (status filter).
     }
   }
 

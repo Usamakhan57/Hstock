@@ -83,7 +83,6 @@ export function mapBackendProduct(product) {
   const cat = nameOf(category, product.cat || 'Digital Assets');
   const catSlug = slugOf(category) || product.catSlug || null;
   const sellerVerified = seller?.verified === true
-    || seller?.status === 'approved'
     || !!product.verifiedSeller;
   const storePromoted = seller?.storePromotionActive === true
     && seller?.storePromotedUntil
@@ -140,7 +139,13 @@ export function mapBackendProduct(product) {
       verified: sellerVerified,
       storePromoted: !!storePromoted,
       storePromotedUntil: seller?.storePromotedUntil || null,
+      logo: seller?.logo || seller?.avatar || null,
+      avatar: seller?.avatar || seller?.logo || null,
+      banner: seller?.banner || null,
+      bio: seller?.bio || '',
+      specialty: seller?.specialty || '',
     },
+    sellerRaw: seller || null,
     artistSlug: seller?.storeSlug || slugOf(seller) || slugOf(brand) || null,
     sellerSlug: seller?.storeSlug || slugOf(seller) || null,
     sellerId: idOf(seller),
@@ -189,6 +194,7 @@ export function mapBackendProduct(product) {
 export function mapBackendSeller(seller) {
   if (!seller) return null;
   const metrics = seller.metrics || {};
+  const verified = seller.verified === true || seller.sellerVerified === true;
   return {
     id: idOf(seller),
     _id: idOf(seller),
@@ -198,7 +204,9 @@ export function mapBackendSeller(seller) {
     avatar: seller.avatar || seller.logo || null,
     logo: seller.logo || seller.avatar || null,
     banner: seller.banner || null,
-    verified: seller.verified === true || seller.status === 'approved',
+    verified,
+    sellerVerified: verified,
+    verifiedAt: seller.verifiedAt || null,
     storePromoted: seller.storePromotionActive === true
       && seller.storePromotedUntil
       && new Date(seller.storePromotedUntil).getTime() > Date.now(),

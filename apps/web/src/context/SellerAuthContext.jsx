@@ -34,14 +34,19 @@ export const SellerAuthProvider = ({ children }) => {
       approvedAt: profile?.approvedAt || null,
       approvedBy: profile?.approvedBy || null,
       verified: !!profile?.verified,
+      sellerVerified: !!profile?.verified,
+      verifiedAt: profile?.verifiedAt || null,
       bio: profile?.bio || '',
       phone: profile?.phone || user.phone || '',
       logo: profile?.logo || '',
+      avatar: profile?.avatar || profile?.logo || '',
       banner: profile?.banner || '',
       storePromotionActive: !!profile?.storePromotionActive,
       storePromotedUntil: profile?.storePromotedUntil || null,
     };
   }, [user, profiles]);
+
+  const refreshSeller = async () => refreshProfile().catch(() => null);
 
   const register = async ({ storeName, name, email, password }) => {
     try {
@@ -93,6 +98,7 @@ export const SellerAuthProvider = ({ children }) => {
     register,
     login: sellerLogin,
     logout,
+    refreshSeller,
   };
 
   return (

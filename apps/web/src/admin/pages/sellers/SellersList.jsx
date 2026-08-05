@@ -109,7 +109,7 @@ const SellersList = () => {
         phone: form.phone || '',
         commissionRate: Number(form.commissionRate || 15),
         status: form.status,
-        verified: form.status === 'approved',
+        // Permanent Verified badge is payment-based — do not tie to approval status.
       };
       await updateSeller(editing.sellerProfileId || editing.id || editing.userId, payload);
       toast({

@@ -30,6 +30,7 @@ export const adminNavSections = [
       { label: 'Orders', to: '/admin/orders', icon: ShoppingCart },
       { label: 'Customers', to: '/admin/customers', icon: Users },
       { label: 'Sellers', to: '/admin/sellers', icon: Store },
+      { label: 'Seller Verification', to: '/admin/seller-verification', icon: ShieldCheck },
       { label: 'Store Promotions', to: '/admin/promotions', icon: Megaphone },
       { label: 'Coupons', to: '/admin/coupons', icon: TicketPercent },
     ],

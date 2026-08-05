@@ -41,7 +41,23 @@ describe('catalogMappers', () => {
 
   it('maps categories and sellers', () => {
     expect(mapBackendCategory({ _id: 'c1', name: 'Domains', slug: 'domains' }).slug).toBe('domains');
-    expect(mapBackendSeller({ _id: 's1', storeName: 'Acme', storeSlug: 'acme', status: 'approved' }).verified).toBe(true);
+    expect(mapBackendSeller({ _id: 's1', storeName: 'Acme', storeSlug: 'acme', status: 'approved' }).verified).toBe(false);
+    expect(mapBackendSeller({
+      _id: 's2',
+      storeName: 'Verified Co',
+      storeSlug: 'verified-co',
+      status: 'approved',
+      verified: true,
+      logo: 'https://cdn.example/logo.png',
+      banner: 'https://cdn.example/banner.png',
+      bio: 'Trusted digital assets',
+    })).toMatchObject({
+      verified: true,
+      sellerVerified: true,
+      logo: 'https://cdn.example/logo.png',
+      banner: 'https://cdn.example/banner.png',
+      bio: 'Trusted digital assets',
+    });
   });
 
   it('does not treat Lucide icon names as category image URLs', () => {

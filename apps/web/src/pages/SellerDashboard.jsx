@@ -24,6 +24,7 @@ import {
 import Seo from '../components/Seo';
 import Logo from '../components/Logo';
 import PromoteStoreModal from '../components/PromoteStoreModal';
+import VerifySellerModal from '../components/VerifySellerModal';
 import { getSellerProducts } from './seller/api/sellerProducts';
 import { useSellerAuth } from '../context/SellerAuthContext';
 import { useDashboardBack } from '../hooks/useDashboardBack';
@@ -115,7 +116,7 @@ const menuGroups = [
 ];
 
 const SellerDashboard = () => {
-  const { seller, logout } = useSellerAuth();
+  const { seller, logout, refreshSeller } = useSellerAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const handleDashboardBack = useDashboardBack('/');
@@ -126,6 +127,7 @@ const SellerDashboard = () => {
   const [tab, setTab] = useState(currentTab);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [promoteOpen, setPromoteOpen] = useState(false);
+  const [verifyOpen, setVerifyOpen] = useState(false);
 
   const [sellerProducts, setSellerProducts] = useState([]);
   const [dataLoading, setDataLoading] = useState(true);
@@ -455,6 +457,7 @@ const SellerDashboard = () => {
                     actionRequired={analytics.actionRequired}
                     joinedDate={joinedDate}
                     onPromote={() => setPromoteOpen(true)}
+                    onVerify={() => setVerifyOpen(true)}
                   />
                 )}
                 {tab === 'products' && <SellerProductsTab />}
@@ -537,6 +540,14 @@ const SellerDashboard = () => {
         open={promoteOpen}
         onOpenChange={setPromoteOpen}
         onSuccess={() => refreshCommerce({ force: true })}
+      />
+      <VerifySellerModal
+        open={verifyOpen}
+        onOpenChange={setVerifyOpen}
+        onSuccess={() => {
+          refreshCommerce({ force: true });
+          refreshSeller?.().catch(() => null);
+        }}
       />
     </div>
   );

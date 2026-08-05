@@ -26,6 +26,9 @@ const PLATFORM_DEFAULTS = Object.freeze({
   storePromotionEnabled: true,
   storePromotionPriceUsd: 10,
   storePromotionDurationHours: 72,
+  sellerVerificationEnabled: true,
+  sellerVerificationFeeUsd: 10,
+  allowManualSellerVerification: true,
 });
 
 const COMMISSION_DEFAULTS = Object.freeze({

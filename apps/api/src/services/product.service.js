@@ -174,7 +174,7 @@ export async function listProducts(query = {}, actor = null) {
       .populate('category', 'name slug')
       .populate('brand', 'name slug')
       .populate('tags', 'name slug')
-      .populate('seller', 'storeName slug status verified storePromotionActive storePromotedUntil')
+      .populate('seller', 'storeName slug status verified verifiedAt logo banner avatar bio specialty storePromotionActive storePromotedUntil metrics')
       .lean();
     const ranked = sortProductsBySearchRelevance(matched, searchTokens);
     const total = ranked.length;
@@ -190,7 +190,7 @@ export async function listProducts(query = {}, actor = null) {
       .populate('category', 'name slug')
       .populate('brand', 'name slug')
       .populate('tags', 'name slug')
-      .populate('seller', 'storeName slug status verified storePromotionActive storePromotedUntil')
+      .populate('seller', 'storeName slug status verified verifiedAt logo banner avatar bio specialty storePromotionActive storePromotedUntil metrics')
       .sort({ createdAt: -1 })
       .limit(fetchLimit)
       .lean(),
@@ -213,7 +213,7 @@ async function loadProductDocument(idOrSlug) {
     .populate('category', 'name slug')
     .populate('brand', 'name slug')
     .populate('tags', 'name slug')
-    .populate('seller', 'storeName slug status verified user storePromotionActive storePromotedUntil')
+    .populate('seller', 'storeName slug status verified verifiedAt logo banner avatar bio specialty user storePromotionActive storePromotedUntil metrics')
     .lean();
 }
 

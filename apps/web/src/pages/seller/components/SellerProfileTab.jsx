@@ -5,9 +5,12 @@ import { inputClass, textareaClass } from '../../../admin/components/FormSheet';
 import TelegramConnectSection from '../../../components/telegram/TelegramConnectSection';
 import { useToast } from '../../../hooks/use-toast';
 import { usersApi } from '../../../services/usersApi';
+import { invalidateSellerCatalog } from '../../../services/catalogCache';
+import { useSellerAuth } from '../../../context/SellerAuthContext';
 
 const SellerProfileTab = ({ seller, productsCount, joinedDate }) => {
   const { toast } = useToast();
+  const { refreshSeller } = useSellerAuth();
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
     avatar: seller?.avatar || '',
@@ -33,6 +36,10 @@ const SellerProfileTab = ({ seller, productsCount, joinedDate }) => {
         payload.banner = form.cover;
       }
       await usersApi.updateSellerProfile(payload);
+      await Promise.all([
+        refreshSeller?.().catch(() => null),
+        invalidateSellerCatalog().catch(() => null),
+      ]);
       toast({ title: 'Profile saved', description: 'Your public seller profile was updated.' });
     } catch (err) {
       toast({ title: 'Could not save profile', description: err.message, variant: 'destructive' });

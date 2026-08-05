@@ -20,6 +20,8 @@ import adminRoutes from './admin.routes.js';
 import uploadsRoutes from './uploads.routes.js';
 import cmsRoutes from './cms.routes.js';
 import storePromotionsRoutes from './storePromotions.routes.js';
+import sellerVerificationRoutes from './sellerVerification.routes.js';
+import sellersRoutes from './sellers.routes.js';
 
 const router = Router();
 
@@ -41,6 +43,7 @@ router.get('/', (_req, res) => {
         'brands',
         'tags',
         'products',
+        'sellers',
         'orders',
         'payments',
         'escrow',
@@ -54,6 +57,7 @@ router.get('/', (_req, res) => {
         'admin',
         'uploads',
         'store-promotions',
+        'seller-verification',
       ],
       health: '/health',
       socket: '/socket.io',
@@ -70,6 +74,7 @@ router.use('/brands', brandsRoutes);
 router.use('/tags', tagsRoutes);
 router.use('/uploads', uploadsRoutes);
 router.use('/products', productsRoutes);
+router.use('/sellers', sellersRoutes);
 router.use('/orders', ordersRoutes);
 router.use('/payments', paymentsRoutes);
 router.use('/escrow', escrowRoutes);
@@ -81,5 +86,6 @@ router.use('/notifications', notificationsRoutes);
 router.use('/telegram', telegramRoutes);
 router.use('/admin', adminRoutes);
 router.use('/store-promotions', storePromotionsRoutes);
+router.use('/seller-verification', sellerVerificationRoutes);
 
 export default router;

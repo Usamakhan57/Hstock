@@ -7,6 +7,8 @@ import { Switch } from '../../../components/ui/switch';
 import TelegramConnectSection from '../../../components/telegram/TelegramConnectSection';
 import { useToast } from '../../../hooks/use-toast';
 import { usersApi } from '../../../services/usersApi';
+import { invalidateSellerCatalog } from '../../../services/catalogCache';
+import { useSellerAuth } from '../../../context/SellerAuthContext';
 
 const NOTIFICATION_TOGGLES = [
   { key: 'newOrders', label: 'New order emails', hint: 'Get notified whenever a customer buys one of your products.' },
@@ -17,6 +19,7 @@ const NOTIFICATION_TOGGLES = [
 
 const SellerStoreSettingsTab = ({ seller, canManagePayouts = true }) => {
   const { toast } = useToast();
+  const { refreshSeller } = useSellerAuth();
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
     logo: seller?.logo || '',
@@ -61,6 +64,10 @@ const SellerStoreSettingsTab = ({ seller, canManagePayouts = true }) => {
       if (form.logo && (form.logo.startsWith('http') || form.logo.startsWith('data:'))) payload.logo = form.logo;
       if (form.banner && (form.banner.startsWith('http') || form.banner.startsWith('data:'))) payload.banner = form.banner;
       await usersApi.updateSellerProfile(payload);
+      await Promise.all([
+        refreshSeller?.().catch(() => null),
+        invalidateSellerCatalog().catch(() => null),
+      ]);
       toast({ title: 'Store settings saved', description: 'Your storefront settings were updated.' });
     } catch (err) {
       toast({ title: 'Could not save settings', description: err.message, variant: 'destructive' });

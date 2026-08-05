@@ -1,8 +1,11 @@
 /**
- * Storefront sellers repository — derived from backend product sellers.
+ * Storefront sellers repository — public /sellers API + catalog cache.
  */
-import { getCachedSellers, hydrateCatalog } from './catalogCache';
+import { get } from '../lib/apiClient';
+import { getCachedSellers, hydrateCatalog, invalidateSellerCatalog } from './catalogCache';
 import { fetchProducts, productsApi } from './catalogApi';
+import { mapBackendSeller } from '../lib/mappers/catalogMappers';
+import { clearRequestCache, cacheKey, cachedRequest } from '../lib/requestCache';
 
 function initialsFor(name) {
   return (name || '')
@@ -14,16 +17,23 @@ function initialsFor(name) {
 }
 
 function decorate(seller) {
+  if (!seller) return null;
+  const verified = seller.verified === true || seller.sellerVerified === true;
   return {
     ...seller,
     id: seller.id || seller._id,
     initials: initialsFor(seller.name),
-    verified: seller.verified !== false,
+    verified,
+    sellerVerified: verified,
+    logo: seller.logo || seller.avatar || null,
+    avatar: seller.avatar || seller.logo || null,
+    banner: seller.banner || null,
+    bio: seller.bio || '',
   };
 }
 
 export function getStorefrontSellers() {
-  return getCachedSellers().map(decorate);
+  return getCachedSellers().map(decorate).filter(Boolean);
 }
 
 export function getSellerBySlug(slug) {
@@ -35,9 +45,25 @@ export function resolveSellerVerified(artistName) {
   return seller ? !!seller.verified : false;
 }
 
-export async function loadSellers() {
-  await hydrateCatalog();
+export async function loadSellers({ force = false } = {}) {
+  await hydrateCatalog({ force });
   return getStorefrontSellers();
+}
+
+export async function fetchSellerBySlug(slug, { force = false } = {}) {
+  if (!slug) return null;
+  const key = cacheKey('sellers', { slug });
+  if (force) clearRequestCache(key);
+  try {
+    const seller = await cachedRequest(key, async () => {
+      const { data } = await get(`/sellers/${encodeURIComponent(slug)}`);
+      return mapBackendSeller(data);
+    }, 5_000);
+    return decorate(seller);
+  } catch {
+    await hydrateCatalog({ force });
+    return getSellerBySlug(slug);
+  }
 }
 
 export async function getSellerProducts(slugOrName) {
@@ -76,11 +102,15 @@ export function enrichSellerFromProducts(seller, products = []) {
   };
 }
 
+export { invalidateSellerCatalog };
+
 export default {
   getStorefrontSellers,
   getSellerBySlug,
   resolveSellerVerified,
   loadSellers,
+  fetchSellerBySlug,
   getSellerProducts,
   enrichSellerFromProducts,
+  invalidateSellerCatalog,
 };
