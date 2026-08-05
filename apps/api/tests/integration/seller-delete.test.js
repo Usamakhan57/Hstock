@@ -156,7 +156,7 @@ test('admin can soft-delete a normal seller and hide from public catalog', async
   assert.equal(ledgerCount, 1);
 });
 
-test('admin delete is blocked when escrow exists', async (t) => {
+test('admin delete is blocked by open escrow order + locked escrow with detailed reasons', async (t) => {
   await setupTestDb();
   t.after(async () => {
     await resetDb();
@@ -198,12 +198,155 @@ test('admin delete is blocked when escrow exists', async (t) => {
     .send({ confirm: 'DELETE' });
   assert.equal(res.status, 409, JSON.stringify(res.body));
   assert.equal(res.body.code, 'SELLER_DELETE_BLOCKED');
+  // Order in escrow status + locked escrow → both are legitimate blockers.
+  assert.equal(res.body.errors.blockedBy, 'Open Orders');
+  assert.equal(res.body.errors.count, 1);
+  assert.deepEqual(
+    res.body.errors.blockers.map((b) => ({ blockedBy: b.blockedBy, count: b.count })),
+    [
+      { blockedBy: 'Open Orders', count: 1 },
+      { blockedBy: 'Active Escrow', count: 1 },
+    ],
+  );
+  assert.match(res.body.message, /Open Orders/);
+  assert.match(res.body.message, /Active Escrow/);
 
   const seller = await SellerProfile.findById(sellerId).lean();
   assert.notEqual(seller.deleted, true);
 });
 
-test('admin delete is blocked when dispute exists', async (t) => {
+test('locked escrow alone blocks delete with Active Escrow reason', async (t) => {
+  await setupTestDb();
+  t.after(async () => {
+    await resetDb();
+    await teardownTestDb();
+  });
+
+  const adminToken = await createAdminToken('escrow-only-admin@example.com');
+  const { sellerId, userId } = await createApprovedSeller('escrow-only-seller@example.com');
+  const buyerId = new mongoose.Types.ObjectId();
+
+  // Order already completed (not an open-order blocker), but escrow still locked.
+  await Escrow.collection.insertOne({
+    order: new mongoose.Types.ObjectId(),
+    payment: new mongoose.Types.ObjectId(),
+    buyer: buyerId,
+    seller: new mongoose.Types.ObjectId(sellerId),
+    sellerUser: new mongoose.Types.ObjectId(userId),
+    amount: 10,
+    status: 'locked',
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  });
+
+  const res = await request(app)
+    .delete(`/api/v1/admin/sellers/${sellerId}`)
+    .set('Authorization', `Bearer ${adminToken}`)
+    .send({ confirm: 'DELETE' });
+  assert.equal(res.status, 409, JSON.stringify(res.body));
+  assert.equal(res.body.code, 'SELLER_DELETE_BLOCKED');
+  assert.equal(res.body.errors.blockedBy, 'Active Escrow');
+  assert.equal(res.body.errors.count, 1);
+  assert.match(res.body.message, /Active Escrow \(1\)/);
+});
+
+test('stale pending escrow on cancelled/expired order does NOT block delete', async (t) => {
+  await setupTestDb();
+  t.after(async () => {
+    await resetDb();
+    await teardownTestDb();
+  });
+
+  const adminToken = await createAdminToken('stale-escrow-admin@example.com');
+  const { sellerId, userId } = await createApprovedSeller('stale-escrow-seller@example.com');
+  const buyerId = new mongoose.Types.ObjectId();
+  const cancelledOrderId = new mongoose.Types.ObjectId();
+  const expiredOrderId = new mongoose.Types.ObjectId();
+
+  await Order.collection.insertMany([
+    {
+      _id: cancelledOrderId,
+      orderNumber: `ORD-CANCEL-${Date.now()}`,
+      buyer: buyerId,
+      seller: new mongoose.Types.ObjectId(sellerId),
+      sellerUser: new mongoose.Types.ObjectId(userId),
+      product: new mongoose.Types.ObjectId(),
+      status: 'cancelled',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+    {
+      _id: expiredOrderId,
+      orderNumber: `ORD-EXPIRE-${Date.now()}`,
+      buyer: buyerId,
+      seller: new mongoose.Types.ObjectId(sellerId),
+      sellerUser: new mongoose.Types.ObjectId(userId),
+      product: new mongoose.Types.ObjectId(),
+      status: 'expired',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+  ]);
+
+  await Escrow.collection.insertMany([
+    {
+      order: cancelledOrderId,
+      payment: new mongoose.Types.ObjectId(),
+      buyer: buyerId,
+      seller: new mongoose.Types.ObjectId(sellerId),
+      sellerUser: new mongoose.Types.ObjectId(userId),
+      amount: 12,
+      status: 'pending',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+    {
+      order: expiredOrderId,
+      payment: new mongoose.Types.ObjectId(),
+      buyer: buyerId,
+      seller: new mongoose.Types.ObjectId(sellerId),
+      sellerUser: new mongoose.Types.ObjectId(userId),
+      amount: 15,
+      status: 'pending',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+    {
+      order: new mongoose.Types.ObjectId(),
+      payment: new mongoose.Types.ObjectId(),
+      buyer: buyerId,
+      seller: new mongoose.Types.ObjectId(sellerId),
+      sellerUser: new mongoose.Types.ObjectId(userId),
+      amount: 20,
+      status: 'released',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+    {
+      order: new mongoose.Types.ObjectId(),
+      payment: new mongoose.Types.ObjectId(),
+      buyer: buyerId,
+      seller: new mongoose.Types.ObjectId(sellerId),
+      sellerUser: new mongoose.Types.ObjectId(userId),
+      amount: 8,
+      status: 'refunded',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+  ]);
+
+  const res = await request(app)
+    .delete(`/api/v1/admin/sellers/${sellerId}`)
+    .set('Authorization', `Bearer ${adminToken}`)
+    .send({ confirm: 'DELETE' });
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  assert.equal(res.body.data.seller.deleted, true);
+
+  const seller = await SellerProfile.findById(sellerId).lean();
+  assert.equal(seller.deleted, true);
+});
+
+test('admin delete is blocked when dispute exists and returns Active Dispute', async (t) => {
   await setupTestDb();
   t.after(async () => {
     await resetDb();
@@ -236,4 +379,78 @@ test('admin delete is blocked when dispute exists', async (t) => {
     .send({ confirm: 'DELETE' });
   assert.equal(res.status, 409, JSON.stringify(res.body));
   assert.equal(res.body.code, 'SELLER_DELETE_BLOCKED');
+  assert.equal(res.body.errors.blockedBy, 'Active Dispute');
+  assert.equal(res.body.errors.count, 1);
+  assert.match(res.body.message, /Active Dispute/);
+});
+
+test('resolved/closed disputes and completed orders do NOT block delete', async (t) => {
+  await setupTestDb();
+  t.after(async () => {
+    await resetDb();
+    await teardownTestDb();
+  });
+
+  const adminToken = await createAdminToken('terminal-ok-admin@example.com');
+  const { sellerId, userId } = await createApprovedSeller('terminal-ok-seller@example.com');
+  const buyerId = new mongoose.Types.ObjectId();
+
+  await Order.collection.insertMany([
+    {
+      orderNumber: `ORD-DONE-${Date.now()}`,
+      buyer: buyerId,
+      seller: new mongoose.Types.ObjectId(sellerId),
+      sellerUser: new mongoose.Types.ObjectId(userId),
+      product: new mongoose.Types.ObjectId(),
+      status: 'completed',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+    {
+      orderNumber: `ORD-REF-${Date.now()}`,
+      buyer: buyerId,
+      seller: new mongoose.Types.ObjectId(sellerId),
+      sellerUser: new mongoose.Types.ObjectId(userId),
+      product: new mongoose.Types.ObjectId(),
+      status: 'refunded',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+  ]);
+
+  await Dispute.collection.insertMany([
+    {
+      disputeNumber: `DSP-RES-${Date.now()}`,
+      order: new mongoose.Types.ObjectId(),
+      escrow: new mongoose.Types.ObjectId(),
+      buyer: buyerId,
+      seller: new mongoose.Types.ObjectId(sellerId),
+      sellerUser: new mongoose.Types.ObjectId(userId),
+      reason: 'resolved case',
+      description: 'Should not block',
+      status: 'resolved',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+    {
+      disputeNumber: `DSP-CL-${Date.now()}`,
+      order: new mongoose.Types.ObjectId(),
+      escrow: new mongoose.Types.ObjectId(),
+      buyer: buyerId,
+      seller: new mongoose.Types.ObjectId(sellerId),
+      sellerUser: new mongoose.Types.ObjectId(userId),
+      reason: 'closed case',
+      description: 'Should not block',
+      status: 'closed',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+  ]);
+
+  const res = await request(app)
+    .delete(`/api/v1/admin/sellers/${sellerId}`)
+    .set('Authorization', `Bearer ${adminToken}`)
+    .send({ confirm: 'DELETE' });
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  assert.equal(res.body.data.seller.deleted, true);
 });

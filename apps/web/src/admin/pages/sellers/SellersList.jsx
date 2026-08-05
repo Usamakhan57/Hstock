@@ -168,9 +168,14 @@ const SellersList = () => {
       setDeleteConfirm('');
       await load();
     } catch (error) {
+      const blockedBy = error?.errors?.blockedBy;
+      const count = error?.errors?.count;
+      const blockerHint = blockedBy
+        ? `${blockedBy}${count != null ? ` (${count})` : ''}`
+        : null;
       toast({
         title: 'Delete failed',
-        description: error?.message || 'Please try again.',
+        description: blockerHint || error?.message || 'Please try again.',
         variant: 'destructive',
       });
     } finally {
