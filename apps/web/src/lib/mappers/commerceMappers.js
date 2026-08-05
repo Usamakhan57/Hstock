@@ -57,15 +57,28 @@ export function mapBackendOrder(order) {
     || order.escrowedAt
     || ['escrow', 'delivered', 'completed', 'disputed'].includes(status),
   );
-  const canDeliver = Boolean(
+  const computedCanDeliver = Boolean(
     (deliveryType === 'manual' || deliveryType === 'handover')
     && paymentCompleted
     && escrowCreated
     && deliveryStatus !== 'delivered'
-    && !['cancelled', 'expired', 'refunded', 'completed'].includes(status)
+    && !['cancelled', 'expired', 'refunded', 'completed', 'delivered'].includes(status)
     && status !== 'disputed'
     && ['escrow', 'paid'].includes(status),
   );
+  // Prefer backend canDeliver / availableActions.deliver when present.
+  let canDeliver = computedCanDeliver;
+  if (typeof order.canDeliver === 'boolean') {
+    canDeliver = order.canDeliver;
+  } else if (typeof order.availableActions?.deliver === 'boolean') {
+    canDeliver = order.availableActions.deliver;
+  }
+  const availableActions = {
+    ...(order.availableActions && typeof order.availableActions === 'object'
+      ? order.availableActions
+      : {}),
+    deliver: canDeliver,
+  };
 
   return {
     id: order.orderNumber || idOf(order),
@@ -97,6 +110,7 @@ export function mapBackendOrder(order) {
     deliveryStatus,
     deliveryStatusLabel: DELIVERY_STATUS_LABEL[deliveryStatus] || deliveryStatus,
     canDeliver,
+    availableActions,
     disputeOpen: status === 'disputed' || !!order.dispute,
     disputeId: idOf(order.dispute) || null,
     accounts: Array.isArray(order.accounts)

@@ -42,24 +42,31 @@ describe('sellerDelivery', () => {
     expect(canSellerDeliverOrder({
       status: 'escrow',
       deliveryStatus: 'awaiting_delivery',
+      paymentStatus: 'paid',
+      escrowStatus: 'locked',
       product: { deliveryType: 'manual' },
     })).toBe(true);
 
     expect(canSellerDeliverOrder({
       status: 'escrow',
       deliveryStatus: 'awaiting_delivery',
+      paymentStatus: 'paid',
+      escrowStatus: 'locked',
       product: { deliveryType: 'automatic' },
     })).toBe(false);
 
     expect(canSellerDeliverOrder({
       status: 'escrow',
       deliveryStatus: 'delivered',
+      paymentStatus: 'paid',
+      escrowStatus: 'locked',
       product: { deliveryType: 'manual' },
     })).toBe(false);
 
     expect(canSellerDeliverOrder({
       status: 'cancelled',
       deliveryStatus: 'awaiting_delivery',
+      paymentStatus: 'paid',
       product: { deliveryType: 'manual' },
     })).toBe(false);
 
@@ -68,5 +75,20 @@ describe('sellerDelivery', () => {
       status: 'pending_payment',
       product: { deliveryType: 'automatic' },
     })).toBe(true);
+
+    expect(canSellerDeliverOrder({
+      availableActions: { deliver: true },
+      status: 'escrow',
+      product: { deliveryType: 'automatic' },
+    })).toBe(true);
+
+    expect(canSellerDeliverOrder({
+      canDeliver: false,
+      status: 'escrow',
+      deliveryStatus: 'awaiting_delivery',
+      paymentStatus: 'paid',
+      escrowStatus: 'locked',
+      product: { deliveryType: 'manual' },
+    })).toBe(false);
   });
 });

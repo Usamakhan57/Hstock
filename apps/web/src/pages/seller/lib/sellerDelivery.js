@@ -36,25 +36,50 @@ export function getDeliveryLabel(deliveryType) {
 }
 
 /**
- * Seller may deliver when the order is a paid/escrowed MANUAL product
- * that has not been delivered, cancelled, refunded, or completed.
+ * Seller may deliver when ALL are true:
+ * - product.deliveryType == manual (or handover)
+ * - paymentStatus == paid (or paidAt / paid-equivalent status)
+ * - escrow exists
+ * - order not delivered / completed / cancelled / refunded
+ * - seller owns order (enforced by seller-scoped list + backend flag)
+ *
+ * Prefer backend canDeliver / availableActions.deliver when present.
  */
 export function canSellerDeliverOrder(order) {
   if (!order) return false;
-  if (order.canDeliver === true) return true;
-  if (order.canDeliver === false) return false;
+
+  if (order.canDeliver === true || order.availableActions?.deliver === true) {
+    return true;
+  }
+  if (order.canDeliver === false || order.availableActions?.deliver === false) {
+    return false;
+  }
 
   const deliveryType = order.product?.deliveryType || order.deliveryType;
   if (!isManualDelivery(deliveryType)) return false;
 
   const status = String(order.status || '').toLowerCase();
-  if (['cancelled', 'expired', 'refunded', 'completed', 'disputed'].includes(status)) {
+  if (['cancelled', 'expired', 'refunded', 'completed', 'disputed', 'delivered'].includes(status)) {
     return false;
   }
   if (!['escrow', 'paid'].includes(status)) return false;
 
   const deliveryStatus = String(order.deliveryStatus || '').toLowerCase();
   if (deliveryStatus === 'delivered') return false;
+
+  const paymentStatus = String(order.paymentStatus || '').toLowerCase();
+  const paymentPaid = paymentStatus === 'paid'
+    || Boolean(order.paidAt)
+    || ['paid', 'escrow', 'delivered', 'completed'].includes(status);
+  if (!paymentPaid) return false;
+
+  const escrowExists = Boolean(
+    order.escrowId
+    || order.escrowStatus
+    || order.escrowedAt
+    || ['escrow', 'delivered', 'completed', 'disputed'].includes(status),
+  );
+  if (!escrowExists) return false;
 
   return true;
 }

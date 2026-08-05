@@ -25,19 +25,12 @@ const ORDER_TABS = [
   { key: 'disputed', label: 'Disputed' },
 ];
 
-const EMPTY_CREDENTIALS = {
-  email: '',
-  username: '',
-  password: '',
-  note: '',
-};
-
 const SellerOrdersTab = ({ orders = [], onRefresh }) => {
   const { toast } = useToast();
   const [tab, setTab] = useState('all');
   const [query, setQuery] = useState('');
   const [deliverOrder, setDeliverOrder] = useState(null);
-  const [credentials, setCredentials] = useState(EMPTY_CREDENTIALS);
+  const [accountDetails, setAccountDetails] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   const filtered = useMemo(() => {
@@ -57,26 +50,24 @@ const SellerOrdersTab = ({ orders = [], onRefresh }) => {
 
   const openDeliverModal = (order) => {
     setDeliverOrder(order);
-    setCredentials(EMPTY_CREDENTIALS);
+    setAccountDetails('');
   };
 
   const closeDeliverModal = () => {
     if (submitting) return;
     setDeliverOrder(null);
-    setCredentials(EMPTY_CREDENTIALS);
+    setAccountDetails('');
   };
 
   const handleDeliverSubmit = async (event) => {
     event.preventDefault();
     if (!deliverOrder) return;
 
-    const fields = Object.fromEntries(
-      Object.entries(credentials).filter(([, value]) => String(value || '').trim()),
-    );
-    if (!Object.keys(fields).length) {
+    const details = String(accountDetails || '').trim();
+    if (!details) {
       toast({
         title: 'Account details required',
-        description: 'Enter at least one credential field for the buyer.',
+        description: 'Paste the complete account details for the buyer.',
         variant: 'destructive',
       });
       return;
@@ -86,15 +77,15 @@ const SellerOrdersTab = ({ orders = [], onRefresh }) => {
     setSubmitting(true);
     try {
       await ordersApi.deliver(orderRef, {
-        accounts: [{ fields }],
-        message: fields.note || undefined,
+        message: details,
+        credentials: { note: details },
       });
       toast({
         title: 'Order delivered',
         description: `${deliverOrder.id || 'Order'} marked delivered. Buyer inspection window started.`,
       });
       setDeliverOrder(null);
-      setCredentials(EMPTY_CREDENTIALS);
+      setAccountDetails('');
       if (typeof onRefresh === 'function') {
         await onRefresh({ force: true });
       }
@@ -231,51 +222,22 @@ const SellerOrdersTab = ({ orders = [], onRefresh }) => {
           <DialogHeader>
             <DialogTitle>Deliver Order</DialogTitle>
             <DialogDescription>
-              Send account details for {deliverOrder?.id || 'this order'}. The buyer will see them immediately and the 24-hour inspection timer will start.
+              Paste the complete account details for {deliverOrder?.id || 'this order'}. The buyer will see them immediately and the 24-hour inspection timer will start.
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleDeliverSubmit} className="space-y-4">
-            <div className="grid gap-3 sm:grid-cols-2">
-              <label className="block text-sm font-medium sm:col-span-2">
-                Email / login
-                <input
-                  value={credentials.email}
-                  onChange={(e) => setCredentials((prev) => ({ ...prev, email: e.target.value }))}
-                  className="mt-1.5 w-full rounded-2xl border border-border bg-white px-3 py-2.5 text-sm outline-none focus:border-primary"
-                  placeholder="buyer@example.com"
-                  autoComplete="off"
-                />
-              </label>
-              <label className="block text-sm font-medium">
-                Username
-                <input
-                  value={credentials.username}
-                  onChange={(e) => setCredentials((prev) => ({ ...prev, username: e.target.value }))}
-                  className="mt-1.5 w-full rounded-2xl border border-border bg-white px-3 py-2.5 text-sm outline-none focus:border-primary"
-                  placeholder="optional"
-                  autoComplete="off"
-                />
-              </label>
-              <label className="block text-sm font-medium">
-                Password
-                <input
-                  value={credentials.password}
-                  onChange={(e) => setCredentials((prev) => ({ ...prev, password: e.target.value }))}
-                  className="mt-1.5 w-full rounded-2xl border border-border bg-white px-3 py-2.5 text-sm outline-none focus:border-primary"
-                  placeholder="••••••••"
-                  autoComplete="off"
-                />
-              </label>
-              <label className="block text-sm font-medium sm:col-span-2">
-                Notes / extra details
-                <textarea
-                  value={credentials.note}
-                  onChange={(e) => setCredentials((prev) => ({ ...prev, note: e.target.value }))}
-                  className="mt-1.5 min-h-[88px] w-full rounded-2xl border border-border bg-white px-3 py-2.5 text-sm outline-none focus:border-primary"
-                  placeholder="2FA codes, recovery email, instructions…"
-                />
-              </label>
-            </div>
+            <label className="block text-sm font-medium">
+              Complete account details
+              <textarea
+                value={accountDetails}
+                onChange={(e) => setAccountDetails(e.target.value)}
+                className="mt-1.5 min-h-[160px] w-full rounded-2xl border border-border bg-white px-3 py-2.5 font-mono text-sm outline-none focus:border-primary"
+                placeholder={'Email: account@example.com\nPassword: ••••••••\n2FA / recovery / notes…'}
+                autoComplete="off"
+                data-testid="seller-deliver-account-details"
+                required
+              />
+            </label>
             <DialogFooter>
               <button
                 type="button"
