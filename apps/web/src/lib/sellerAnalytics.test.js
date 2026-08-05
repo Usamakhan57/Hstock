@@ -101,10 +101,22 @@ describe('sellerAnalytics', () => {
       orders,
       disputes: [{ id: 'd1', status: 'open' }],
       seller: { telegramConnected: false },
+      telegramStatus: { connected: false },
     });
     expect(actions.some((a) => a.id === 'out-of-stock')).toBe(true);
     expect(actions.some((a) => a.id === 'disputes')).toBe(true);
     expect(actions.some((a) => a.id === 'telegram')).toBe(true);
+  });
+
+  it('hides telegram action when shared telegramStatus reports connected', () => {
+    const actions = buildActionRequired({
+      products: [],
+      orders: [],
+      disputes: [],
+      seller: { telegramConnected: false },
+      telegramStatus: { connected: true, username: 'sellerbot' },
+    });
+    expect(actions.some((a) => a.id === 'telegram')).toBe(false);
   });
 
   it('summarizes dashboard KPIs', () => {
@@ -118,6 +130,8 @@ describe('sellerAnalytics', () => {
     expect(stats.completedOrders).toBe(1);
     expect(stats.disputedOrders).toBe(1);
     expect(stats.revenue).toBe(36);
+    expect(stats.totalSales).toBe(60);
+    expect(stats.grossSales).toBe(60);
     expect(stats.activeListings).toBe(1);
     expect(stats.pendingWithdrawals).toBe(1);
     expect(stats.outOfStock).toBe(1);

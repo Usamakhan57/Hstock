@@ -21,6 +21,30 @@ function isActiveSale(order) {
   return !['cancelled', 'expired'].includes(order.status);
 }
 
+/**
+ * Total Sales — same rules as API `sellerStatistics.service` / Seller Dashboard KPI.
+ * Sum of gross amount for every order that is not cancelled or expired.
+ */
+export function computeTotalSales(orders = []) {
+  const sum = (orders || [])
+    .filter(isActiveSale)
+    .reduce((s, o) => s + Number(o.amount ?? o.totalAmount ?? 0), 0);
+  return Number(sum.toFixed(2));
+}
+
+/**
+ * Shared Telegram connection check — mirrors API `getTelegramConnectionStatus`
+ * / `publicTelegramStatus` (User.telegramConnected).
+ */
+export function isTelegramConnected(statusOrSeller) {
+  if (!statusOrSeller) return false;
+  return Boolean(
+    statusOrSeller.connected
+    || statusOrSeller.telegramConnected
+    || statusOrSeller.telegram?.connected,
+  );
+}
+
 function inLastDays(iso, days) {
   if (!iso) return false;
   const ts = new Date(iso).getTime();
@@ -189,6 +213,7 @@ export function buildActionRequired({
   orders = [],
   disputes = [],
   seller = null,
+  telegramStatus = null,
 } = {}) {
   const actions = [];
   const outOfStock = products.filter((p) => (
@@ -292,11 +317,11 @@ export function buildActionRequired({
     });
   }
 
-  const telegramConnected = Boolean(
-    seller?.telegramConnected
-    || seller?.telegram?.connected
-    || seller?.telegramChatId,
-  );
+  // Prefer explicit telegramStatus from the shared dashboard fetch (/telegram/me).
+  // Fall back to seller.telegram* from auth — never invent a second connection rule.
+  const telegramConnected = telegramStatus !== undefined && telegramStatus !== null
+    ? isTelegramConnected(telegramStatus)
+    : isTelegramConnected(seller);
   if (seller && !telegramConnected) {
     actions.push({
       id: 'telegram',
@@ -346,9 +371,8 @@ export function summarizeSellerStats({
   const disputed = orders.filter((o) => o.status === 'disputed' || o.disputeOpen);
   const refunded = orders.filter((o) => o.status === 'refunded');
   const revenue = completed.reduce((s, o) => s + orderAmount(o), 0);
-  const grossSales = orders
-    .filter(isActiveSale)
-    .reduce((s, o) => s + Number(o.amount || 0), 0);
+  const grossSales = computeTotalSales(orders);
+  const totalSales = grossSales;
   const productsSold = orders
     .filter(isActiveSale)
     .reduce((s, o) => s + Number(o.quantity || 1), 0);
@@ -413,6 +437,7 @@ export function summarizeSellerStats({
     openDisputes,
     revenue: Number(revenue.toFixed(2)),
     grossSales: Number(grossSales.toFixed(2)),
+    totalSales: Number(totalSales.toFixed(2)),
     netProfit,
     refundedAmount: Number(refundedAmount.toFixed(2)),
     productsSold,
@@ -442,4 +467,6 @@ export default {
   buildDownloadsFromOrders,
   buildActionRequired,
   summarizeSellerStats,
+  computeTotalSales,
+  isTelegramConnected,
 };

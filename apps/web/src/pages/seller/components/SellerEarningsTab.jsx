@@ -31,6 +31,7 @@ const SellerEarningsTab = ({
   onRefresh,
   canWithdraw = true,
   stats = null,
+  onTelegramStatusChange,
 }) => {
   const { toast } = useToast();
   const [withdrawals, setWithdrawals] = useState(initialWithdrawals);
@@ -282,6 +283,7 @@ const SellerEarningsTab = ({
         pollUntilConnected
         title="Telegram Connection"
         description="Connect Telegram to receive order and payout alerts."
+        onStatusChange={onTelegramStatusChange}
       />
 
       {/* 2. Wallet Balance */}

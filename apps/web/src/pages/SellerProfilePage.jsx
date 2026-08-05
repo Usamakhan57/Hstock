@@ -176,7 +176,14 @@ const SellerProfilePage = () => {
           </div>
           <div className="bg-white rounded-2xl border border-border soft-shadow hover:soft-shadow-lg transition-shadow p-5 text-center">
             <span className="grid place-items-center w-9 h-9 rounded-xl bg-primary/10 text-primary mx-auto mb-2"><DollarSign className="w-4.5 h-4.5" /></span>
-            <p className="text-lg font-black">{Math.round(artist.totalSalesAmount || 0).toLocaleString()}</p>
+            <p className="text-lg font-black">
+              {Number(artist.totalSalesAmount || 0).toLocaleString(undefined, {
+                style: 'currency',
+                currency: 'USD',
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })}
+            </p>
             <p className="text-xs text-muted-foreground mt-0.5">Total Sales</p>
           </div>
           <div className="bg-white rounded-2xl border border-border soft-shadow hover:soft-shadow-lg transition-shadow p-5 text-center">

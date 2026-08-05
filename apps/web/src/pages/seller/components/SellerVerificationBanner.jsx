@@ -2,11 +2,17 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { ExternalLink, Link2, Ban, Loader2, Send } from 'lucide-react';
 import { telegramApi } from '../../../services/telegramApi';
 import { useToast } from '../../../hooks/use-toast';
+import { isTelegramConnected } from '../../../lib/sellerAnalytics';
 
 /**
  * Prominent seller approval status card shown at the top of the seller dashboard.
+ * Telegram Connected badge uses the same status object as Action Required.
  */
-const SellerVerificationBanner = ({ seller }) => {
+const SellerVerificationBanner = ({
+  seller,
+  telegramStatus: telegramStatusProp = null,
+  onTelegramStatusChange,
+}) => {
   const { toast } = useToast();
   const status = String(seller?.status || 'pending').toLowerCase();
   const storeSlug = seller?.slug
@@ -23,31 +29,49 @@ const SellerVerificationBanner = ({ seller }) => {
   const isRejected = status === 'rejected';
   const isSuspended = status === 'suspended';
 
-  const [telegramLoading, setTelegramLoading] = useState(isApproved);
+  const controlled = telegramStatusProp != null;
+  const [localLoading, setLocalLoading] = useState(isApproved && !controlled);
   const [telegramBusy, setTelegramBusy] = useState(false);
-  const [telegramConnected, setTelegramConnected] = useState(false);
-  const [telegramUsername, setTelegramUsername] = useState(null);
-
-  const refreshTelegram = useCallback(async () => {
-    if (!isApproved) return;
-    setTelegramLoading(true);
-    try {
-      const next = await telegramApi.status();
-      setTelegramConnected(Boolean(next.connected));
-      setTelegramUsername(next.username || null);
-    } catch {
-      setTelegramConnected(false);
-    } finally {
-      setTelegramLoading(false);
-    }
-  }, [isApproved]);
+  const [localStatus, setLocalStatus] = useState(telegramStatusProp);
 
   useEffect(() => {
+    if (controlled) setLocalStatus(telegramStatusProp);
+  }, [controlled, telegramStatusProp]);
+
+  const refreshTelegram = useCallback(async () => {
+    if (!isApproved) return null;
+    if (!controlled) setLocalLoading(true);
+    try {
+      const next = await telegramApi.status();
+      setLocalStatus(next);
+      onTelegramStatusChange?.(next);
+      return next;
+    } catch {
+      const disconnected = {
+        connected: false,
+        username: null,
+        telegramUserId: null,
+        connectedAt: null,
+        notificationsEnabled: true,
+      };
+      setLocalStatus(disconnected);
+      onTelegramStatusChange?.(disconnected);
+      return disconnected;
+    } finally {
+      if (!controlled) setLocalLoading(false);
+    }
+  }, [isApproved, controlled, onTelegramStatusChange]);
+
+  useEffect(() => {
+    if (!isApproved) return undefined;
+    // Parent dashboard owns the shared fetch when telegramStatusProp is provided.
+    if (controlled) return undefined;
     refreshTelegram();
-  }, [refreshTelegram]);
+    return undefined;
+  }, [isApproved, controlled, refreshTelegram]);
 
   const handleConnectTelegram = async () => {
-    if (telegramConnected || telegramBusy) return;
+    if (isTelegramConnected(localStatus) || telegramBusy) return;
     setTelegramBusy(true);
     try {
       const result = await telegramApi.connect();
@@ -59,10 +83,9 @@ const SellerVerificationBanner = ({ seller }) => {
         });
       }
       if (result.status?.connected) {
-        setTelegramConnected(true);
-        setTelegramUsername(result.status.username || null);
+        setLocalStatus(result.status);
+        onTelegramStatusChange?.(result.status);
       } else {
-        // Soft refresh shortly after the user returns from Telegram.
         setTimeout(() => {
           refreshTelegram();
         }, 4000);
@@ -77,6 +100,13 @@ const SellerVerificationBanner = ({ seller }) => {
       setTelegramBusy(false);
     }
   };
+
+  const telegramConnected = isTelegramConnected(localStatus || telegramStatusProp || seller);
+  const telegramUsername = localStatus?.username
+    || telegramStatusProp?.username
+    || seller?.telegram?.username
+    || null;
+  const telegramLoading = !controlled && localLoading;
 
   if (isApproved) {
     return (

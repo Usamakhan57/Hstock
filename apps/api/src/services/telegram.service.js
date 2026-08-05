@@ -187,15 +187,23 @@ export async function createConnectLink(userId) {
   };
 }
 
-export async function getConnectionStatus(userId) {
+/**
+ * Official Telegram connection status for a user.
+ * Connected iff User.telegramConnected is true (set when bot link completes).
+ */
+export async function getTelegramConnectionStatus(userId) {
   const user = await User.findById(userId)
     .select('+telegramChatId')
     .lean();
   if (!user) {
     throw new AppError('User not found', 404, { code: 'USER_NOT_FOUND' });
   }
-  const status = publicTelegramStatus(user);
-  return status;
+  return publicTelegramStatus(user);
+}
+
+/** @deprecated Prefer getTelegramConnectionStatus — same implementation. */
+export async function getConnectionStatus(userId) {
+  return getTelegramConnectionStatus(userId);
 }
 
 export async function updateTelegramSettings(userId, { notificationsEnabled } = {}) {
@@ -924,6 +932,7 @@ export default {
   getBotStatus,
   createConnectLink,
   getConnectionStatus,
+  getTelegramConnectionStatus,
   updateTelegramSettings,
   disconnectTelegram,
   processTelegramUpdate,
