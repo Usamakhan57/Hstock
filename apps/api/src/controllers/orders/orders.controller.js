@@ -45,6 +45,16 @@ export const cancelOrder = asyncHandler(async (req, res) => {
 });
 
 export const markDelivered = asyncHandler(async (req, res) => {
+  const body = req.body && typeof req.body === 'object' ? req.body : {};
+  const hasAccounts = Array.isArray(body.accounts) && body.accounts.length > 0;
+  const hasCredentials = body.credentials && typeof body.credentials === 'object'
+    && Object.keys(body.credentials).length > 0;
+  const hasMessage = Boolean(String(body.message || '').trim());
+
+  if (hasAccounts || hasCredentials || hasMessage) {
+    await inventoryService.fulfillManualDeliveryOrder(req.params.id, req.user, body);
+  }
+
   const data = await escrowService.markOrderDelivered(req.params.id, req.user);
   return sendSuccess(res, { message: 'Order marked delivered', data });
 });

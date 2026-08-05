@@ -1,8 +1,14 @@
 import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Eye, Download, ShoppingCart, Search } from 'lucide-react';
+import { Eye, Download, ShoppingCart, Search, Truck, Loader2 } from 'lucide-react';
 import StatusBadge from '../../../admin/components/StatusBadge';
 import EmptyState from '../../../admin/components/EmptyState';
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
+} from '../../../components/ui/dialog';
+import { useToast } from '../../../hooks/use-toast';
+import { ordersApi } from '../../../services/ordersApi';
+import { canSellerDeliverOrder, getDeliveryLabel } from '../lib/sellerDelivery';
 
 const money = (value) => `$${Number(value || 0).toFixed(2)}`;
 const fmtDate = (iso) => (iso
@@ -19,9 +25,13 @@ const ORDER_TABS = [
   { key: 'disputed', label: 'Disputed' },
 ];
 
-const SellerOrdersTab = ({ orders = [] }) => {
+const SellerOrdersTab = ({ orders = [], onRefresh }) => {
+  const { toast } = useToast();
   const [tab, setTab] = useState('all');
   const [query, setQuery] = useState('');
+  const [deliverOrder, setDeliverOrder] = useState(null);
+  const [accountDetails, setAccountDetails] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   const filtered = useMemo(() => {
     let rows = tab === 'all' ? orders : orders.filter((o) => o.status === tab);
@@ -37,6 +47,58 @@ const SellerOrdersTab = ({ orders = [] }) => {
     }
     return rows;
   }, [orders, tab, query]);
+
+  const openDeliverModal = (order) => {
+    setDeliverOrder(order);
+    setAccountDetails('');
+  };
+
+  const closeDeliverModal = () => {
+    if (submitting) return;
+    setDeliverOrder(null);
+    setAccountDetails('');
+  };
+
+  const handleDeliverSubmit = async (event) => {
+    event.preventDefault();
+    if (!deliverOrder) return;
+
+    const details = String(accountDetails || '').trim();
+    if (!details) {
+      toast({
+        title: 'Account details required',
+        description: 'Paste the complete account details for the buyer.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const orderRef = deliverOrder._id || deliverOrder.id;
+    setSubmitting(true);
+    try {
+      await ordersApi.deliver(orderRef, {
+        message: details,
+        credentials: { note: details },
+      });
+      toast({
+        title: 'Order delivered',
+        description: `${deliverOrder.id || 'Order'} marked delivered. Buyer inspection window started.`,
+      });
+      setDeliverOrder(null);
+      setAccountDetails('');
+      if (typeof onRefresh === 'function') {
+        await onRefresh({ force: true });
+      }
+    } catch (err) {
+      toast({
+        title: 'Could not deliver order',
+        description: err.message || 'Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
     <div>
@@ -93,50 +155,110 @@ const SellerOrdersTab = ({ orders = [] }) => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {filtered.map((o) => (
-                  <tr key={o.id} className="hover:bg-secondary/30">
-                    <td className="px-5 py-3.5">
-                      <p className="font-semibold text-primary">{o.id}</p>
-                      <p className="mt-0.5 max-w-[180px] truncate text-xs text-muted-foreground">{o.product?.title}</p>
-                    </td>
-                    <td className="px-5 py-3.5 text-muted-foreground">
-                      {o.buyer?.email || o.buyer?.name || 'Buyer'}
-                    </td>
-                    <td className="px-5 py-3.5 font-black">{money(o.amount)}</td>
-                    <td className="px-5 py-3.5 text-muted-foreground">{fmtDate(o.date)}</td>
-                    <td className="px-5 py-3.5"><StatusBadge status={o.status} /></td>
-                    <td className="px-5 py-3.5 text-muted-foreground">
-                      {o.deliveryStatusLabel || o.deliveryStatus || (o.product?.deliveryType === 'manual' ? 'Manual' : 'Instant')}
-                    </td>
-                    <td className="px-5 py-3.5 text-muted-foreground">{o.paymentStatusLabel || '—'}</td>
-                    <td className="px-5 py-3.5 text-muted-foreground">{o.escrowStatusLabel || '—'}</td>
-                    <td className="px-5 py-3.5">
-                      <div className="flex items-center justify-end gap-2">
-                        <Link
-                          to={`/seller/orders`}
-                          className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border hover:bg-secondary"
-                          title="View order"
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Link>
-                        {['completed', 'escrow', 'delivered', 'disputed'].includes(o.status) ? (
+                {filtered.map((o) => {
+                  const showDeliver = canSellerDeliverOrder(o);
+                  return (
+                    <tr key={o.id} className="hover:bg-secondary/30">
+                      <td className="px-5 py-3.5">
+                        <p className="font-semibold text-primary">{o.id}</p>
+                        <p className="mt-0.5 max-w-[180px] truncate text-xs text-muted-foreground">{o.product?.title}</p>
+                      </td>
+                      <td className="px-5 py-3.5 text-muted-foreground">
+                        {o.buyer?.email || o.buyer?.name || 'Buyer'}
+                      </td>
+                      <td className="px-5 py-3.5 font-black">{money(o.amount)}</td>
+                      <td className="px-5 py-3.5 text-muted-foreground">{fmtDate(o.date)}</td>
+                      <td className="px-5 py-3.5"><StatusBadge status={o.status} /></td>
+                      <td className="px-5 py-3.5 text-muted-foreground">
+                        {o.deliveryStatusLabel
+                          || o.deliveryStatus
+                          || getDeliveryLabel(o.product?.deliveryType || o.deliveryType)}
+                      </td>
+                      <td className="px-5 py-3.5 text-muted-foreground">{o.paymentStatusLabel || '—'}</td>
+                      <td className="px-5 py-3.5 text-muted-foreground">{o.escrowStatusLabel || '—'}</td>
+                      <td className="px-5 py-3.5">
+                        <div className="flex flex-wrap items-center justify-end gap-2">
+                          {showDeliver ? (
+                            <button
+                              type="button"
+                              onClick={() => openDeliverModal(o)}
+                              className="inline-flex h-9 items-center justify-center gap-1.5 rounded-full bg-emerald-600 px-3 text-xs font-bold text-white shadow-sm hover:bg-emerald-700"
+                              data-testid="seller-deliver-order"
+                              title="Deliver Order"
+                            >
+                              <Truck className="h-3.5 w-3.5" />
+                              Deliver Order
+                            </button>
+                          ) : null}
                           <Link
                             to={`/orders/${o.id}`}
                             className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border hover:bg-secondary"
-                            title="Download / delivery"
+                            title="View order"
                           >
-                            <Download className="h-4 w-4" />
+                            <Eye className="h-4 w-4" />
                           </Link>
-                        ) : null}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                          {['completed', 'escrow', 'delivered', 'disputed'].includes(o.status) ? (
+                            <Link
+                              to={`/orders/${o.id}`}
+                              className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border hover:bg-secondary"
+                              title="Download / delivery"
+                            >
+                              <Download className="h-4 w-4" />
+                            </Link>
+                          ) : null}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
         )}
       </div>
+
+      <Dialog open={Boolean(deliverOrder)} onOpenChange={(open) => (!open ? closeDeliverModal() : null)}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Deliver Order</DialogTitle>
+            <DialogDescription>
+              Paste the complete account details for {deliverOrder?.id || 'this order'}. The buyer will see them immediately and the 24-hour inspection timer will start.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleDeliverSubmit} className="space-y-4">
+            <label className="block text-sm font-medium">
+              Complete account details
+              <textarea
+                value={accountDetails}
+                onChange={(e) => setAccountDetails(e.target.value)}
+                className="mt-1.5 min-h-[160px] w-full rounded-2xl border border-border bg-white px-3 py-2.5 font-mono text-sm outline-none focus:border-primary"
+                placeholder={'Email: account@example.com\nPassword: ••••••••\n2FA / recovery / notes…'}
+                autoComplete="off"
+                data-testid="seller-deliver-account-details"
+                required
+              />
+            </label>
+            <DialogFooter>
+              <button
+                type="button"
+                onClick={closeDeliverModal}
+                disabled={submitting}
+                className="inline-flex items-center justify-center rounded-full border border-border px-4 py-2 text-sm font-semibold hover:bg-secondary disabled:opacity-60"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={submitting}
+                className="inline-flex items-center justify-center gap-2 rounded-full bg-emerald-600 px-5 py-2 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-60"
+              >
+                {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Truck className="h-4 w-4" />}
+                Submit delivery
+              </button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

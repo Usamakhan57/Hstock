@@ -45,6 +45,7 @@ import { emitDomainEvent } from '../events/bus.js';
 import { DOMAIN_EVENTS } from '../constants/events.js';
 import { sha256Hex } from '../utils/crypto.js';
 import { logger } from '../config/logger.js';
+import { enrichOrderWithDeliveryActions } from '../helpers/orderDeliveryActions.helper.js';
 
 const CHECKOUT_CREATE_ATTEMPTS = 3;
 const INVOICE_WAIT_TIMEOUT_MS = 25_000;
@@ -827,7 +828,7 @@ export async function getOrder(idOrNumber, actor) {
       .populate('payment')
       .populate('escrow')
       .populate('dispute')
-      .populate('product', 'title slug thumbnail price status')
+      .populate('product', 'title slug thumbnail price status deliveryType')
       .lean();
   }
   if (!order) {
@@ -835,7 +836,7 @@ export async function getOrder(idOrNumber, actor) {
       .populate('payment')
       .populate('escrow')
       .populate('dispute')
-      .populate('product', 'title slug thumbnail price status')
+      .populate('product', 'title slug thumbnail price status deliveryType')
       .lean();
   }
   if (!order) {
@@ -843,7 +844,7 @@ export async function getOrder(idOrNumber, actor) {
   }
 
   assertOrderAccess(order, actor);
-  return order;
+  return enrichOrderWithDeliveryActions(order, actor);
 }
 
 function assertOrderAccess(order, actor) {
@@ -888,11 +889,14 @@ export async function listOrders(query = {}, actor) {
     populate: [
       { path: 'payment', select: 'status invoiceUrl providerStatus paidAt cryptomusUuid' },
       { path: 'escrow', select: 'status releaseAt lockedAt releasedAt' },
-      { path: 'product', select: 'title slug thumbnail' },
+      { path: 'product', select: 'title slug thumbnail deliveryType' },
     ],
   });
 
-  return { items, meta: buildPaginationMeta({ ...pagination, total }) };
+  return {
+    items: items.map((order) => enrichOrderWithDeliveryActions(order, actor)),
+    meta: buildPaginationMeta({ ...pagination, total }),
+  };
 }
 
 export async function cancelOrder(orderId, actor, reason = 'Cancelled by user') {

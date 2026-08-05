@@ -5,6 +5,7 @@ import {
   isInstantAccess,
   isInventoryRequired,
   isManualDelivery,
+  canSellerDeliverOrder,
 } from './sellerDelivery';
 
 describe('sellerDelivery', () => {
@@ -35,5 +36,59 @@ describe('sellerDelivery', () => {
   it('returns buyer-facing delivery labels', () => {
     expect(getDeliveryLabel('manual')).toBe('Manual Delivery');
     expect(getDeliveryLabel('automatic')).toBe('Instant Access');
+  });
+
+  it('exposes Deliver Order only for unpaid-safe manual escrow orders', () => {
+    expect(canSellerDeliverOrder({
+      status: 'escrow',
+      deliveryStatus: 'awaiting_delivery',
+      paymentStatus: 'paid',
+      escrowStatus: 'locked',
+      product: { deliveryType: 'manual' },
+    })).toBe(true);
+
+    expect(canSellerDeliverOrder({
+      status: 'escrow',
+      deliveryStatus: 'awaiting_delivery',
+      paymentStatus: 'paid',
+      escrowStatus: 'locked',
+      product: { deliveryType: 'automatic' },
+    })).toBe(false);
+
+    expect(canSellerDeliverOrder({
+      status: 'escrow',
+      deliveryStatus: 'delivered',
+      paymentStatus: 'paid',
+      escrowStatus: 'locked',
+      product: { deliveryType: 'manual' },
+    })).toBe(false);
+
+    expect(canSellerDeliverOrder({
+      status: 'cancelled',
+      deliveryStatus: 'awaiting_delivery',
+      paymentStatus: 'paid',
+      product: { deliveryType: 'manual' },
+    })).toBe(false);
+
+    expect(canSellerDeliverOrder({
+      canDeliver: true,
+      status: 'pending_payment',
+      product: { deliveryType: 'automatic' },
+    })).toBe(true);
+
+    expect(canSellerDeliverOrder({
+      availableActions: { deliver: true },
+      status: 'escrow',
+      product: { deliveryType: 'automatic' },
+    })).toBe(true);
+
+    expect(canSellerDeliverOrder({
+      canDeliver: false,
+      status: 'escrow',
+      deliveryStatus: 'awaiting_delivery',
+      paymentStatus: 'paid',
+      escrowStatus: 'locked',
+      product: { deliveryType: 'manual' },
+    })).toBe(false);
   });
 });

@@ -15,6 +15,7 @@ function idOf(value) {
 function snapshotProduct(order) {
   const snap = order.productSnapshot || {};
   const product = typeof order.product === 'object' && order.product ? order.product : null;
+  const deliveryType = snap.deliveryType || product?.deliveryType || order.deliveryType || null;
   return {
     id: idOf(product) || idOf(order.product) || null,
     title: snap.title || product?.title || 'Product',
@@ -25,8 +26,16 @@ function snapshotProduct(order) {
     quantity: order.quantity ?? 1,
     productType: snap.productType || product?.productType || 'digital',
     slug: snap.slug || product?.slug || null,
+    deliveryType,
   };
 }
+
+const DELIVERY_STATUS_LABEL = Object.freeze({
+  pending: 'Pending',
+  awaiting_delivery: 'Awaiting Delivery',
+  delivered: 'Delivered',
+  failed: 'Failed',
+});
 
 export function mapBackendOrder(order) {
   if (!order) return null;
@@ -35,6 +44,41 @@ export function mapBackendOrder(order) {
   const status = order.status || 'pending_payment';
   const paymentStatus = payment?.status || null;
   const escrowStatusRaw = escrow?.status || null;
+  const product = snapshotProduct(order);
+  const deliveryStatus = order.deliveryStatus || 'pending';
+  const deliveryType = product.deliveryType || order.deliveryType || null;
+  const paymentCompleted = Boolean(
+    order.paidAt
+    || paymentStatus === 'paid'
+    || ['paid', 'escrow', 'delivered', 'completed', 'disputed'].includes(status),
+  );
+  const escrowCreated = Boolean(
+    escrow
+    || order.escrowedAt
+    || ['escrow', 'delivered', 'completed', 'disputed'].includes(status),
+  );
+  const computedCanDeliver = Boolean(
+    (deliveryType === 'manual' || deliveryType === 'handover')
+    && paymentCompleted
+    && escrowCreated
+    && deliveryStatus !== 'delivered'
+    && !['cancelled', 'expired', 'refunded', 'completed', 'delivered'].includes(status)
+    && status !== 'disputed'
+    && ['escrow', 'paid'].includes(status),
+  );
+  // Prefer backend canDeliver / availableActions.deliver when present.
+  let canDeliver = computedCanDeliver;
+  if (typeof order.canDeliver === 'boolean') {
+    canDeliver = order.canDeliver;
+  } else if (typeof order.availableActions?.deliver === 'boolean') {
+    canDeliver = order.availableActions.deliver;
+  }
+  const availableActions = {
+    ...(order.availableActions && typeof order.availableActions === 'object'
+      ? order.availableActions
+      : {}),
+    deliver: canDeliver,
+  };
 
   return {
     id: order.orderNumber || idOf(order),
@@ -47,7 +91,8 @@ export function mapBackendOrder(order) {
     completedAt: order.completedAt || escrow?.releasedAt || null,
     cancelledAt: order.cancelledAt || null,
     expiresAt: order.expiresAt || payment?.expiresAt || null,
-    product: snapshotProduct(order),
+    product,
+    deliveryType,
     quantity: order.quantity ?? 1,
     unitPrice: formatMoney(order.unitPrice),
     subtotal: formatMoney(order.subtotal ?? order.totalAmount),
@@ -62,7 +107,10 @@ export function mapBackendOrder(order) {
     paymentStatusLabel: paymentStatus ? (PAYMENT_STATUS_LABEL[paymentStatus] || paymentStatus) : '—',
     escrowStatus: escrowStatusRaw,
     escrowStatusLabel: escrowStatusRaw ? (ESCROW_STATUS_LABEL[escrowStatusRaw] || escrowStatusRaw) : '—',
-    deliveryStatus: order.deliveryStatus || 'pending',
+    deliveryStatus,
+    deliveryStatusLabel: DELIVERY_STATUS_LABEL[deliveryStatus] || deliveryStatus,
+    canDeliver,
+    availableActions,
     disputeOpen: status === 'disputed' || !!order.dispute,
     disputeId: idOf(order.dispute) || null,
     accounts: Array.isArray(order.accounts)

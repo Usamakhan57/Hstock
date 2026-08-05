@@ -25,7 +25,13 @@ describe('commerceMappers', () => {
       createdAt: '2026-07-01T00:00:00.000Z',
       paidAt: '2026-07-01T00:05:00.000Z',
       escrowedAt: '2026-07-01T00:05:01.000Z',
-      productSnapshot: { title: 'Premium Account', thumbnail: '/a.jpg', productType: 'account' },
+      productSnapshot: {
+        title: 'Premium Account',
+        thumbnail: '/a.jpg',
+        productType: 'account',
+        deliveryType: 'manual',
+      },
+      deliveryStatus: 'awaiting_delivery',
       seller: { storeName: 'Acme Shop', slug: 'acme' },
       payment: {
         _id: 'pay1',
@@ -47,8 +53,43 @@ describe('commerceMappers', () => {
     expect(order.escrowStatus).toBe('locked');
     expect(order.product.title).toBe('Premium Account');
     expect(order.product.artist).toBe('Acme Shop');
+    expect(order.product.deliveryType).toBe('manual');
+    expect(order.deliveryType).toBe('manual');
+    expect(order.deliveryStatus).toBe('awaiting_delivery');
+    expect(order.deliveryStatusLabel).toBe('Awaiting Delivery');
+    expect(order.canDeliver).toBe(true);
+    expect(order.availableActions.deliver).toBe(true);
     expect(order.timeline.some((step) => step.key === 'payment_verified' && step.done)).toBe(true);
     expect(order.timeline.some((step) => step.key === 'escrow_created' && step.done)).toBe(true);
+  });
+
+  it('prefers backend canDeliver / availableActions.deliver flags', () => {
+    const forcedTrue = mapBackendOrder({
+      _id: 'o2',
+      orderNumber: 'HS-2001',
+      status: 'escrow',
+      deliveryStatus: 'awaiting_delivery',
+      productSnapshot: { title: 'X', deliveryType: 'automatic' },
+      payment: { status: 'paid' },
+      escrow: { status: 'locked' },
+      canDeliver: true,
+      availableActions: { deliver: true },
+    });
+    expect(forcedTrue.canDeliver).toBe(true);
+    expect(forcedTrue.availableActions.deliver).toBe(true);
+
+    const forcedFalse = mapBackendOrder({
+      _id: 'o3',
+      orderNumber: 'HS-2002',
+      status: 'escrow',
+      deliveryStatus: 'awaiting_delivery',
+      productSnapshot: { title: 'Y', deliveryType: 'manual' },
+      payment: { status: 'paid' },
+      escrow: { status: 'locked' },
+      canDeliver: false,
+    });
+    expect(forcedFalse.canDeliver).toBe(false);
+    expect(forcedFalse.availableActions.deliver).toBe(false);
   });
 
   it('maps wallet, payment, escrow, and withdrawal records', () => {

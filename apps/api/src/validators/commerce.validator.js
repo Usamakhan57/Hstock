@@ -391,6 +391,14 @@ export const adjustWalletSchema = {
 
 export const deliverOrderSchema = {
   params: z.object({ id: objectIdSchema }),
+  body: z.object({
+    message: z.string().trim().max(5000).optional(),
+    credentials: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])).optional(),
+    accounts: z.array(z.object({
+      label: z.string().trim().max(200).optional(),
+      fields: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])).optional(),
+    }).passthrough()).max(50).optional(),
+  }).passthrough().optional().default({}),
 };
 
 export default {

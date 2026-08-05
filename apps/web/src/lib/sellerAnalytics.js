@@ -271,9 +271,13 @@ export function buildActionRequired({
   }
 
   const manualPending = orders.filter((o) => (
-    ['escrow', 'paid', 'delivered'].includes(o.status)
-    && (o.product?.deliveryType === 'manual' || o.deliveryType === 'manual')
-    && o.deliveryStatus !== 'delivered'
+    o.canDeliver === true
+    || o.availableActions?.deliver === true
+    || (
+      ['escrow', 'paid'].includes(o.status)
+      && (o.product?.deliveryType === 'manual' || o.deliveryType === 'manual' || o.product?.deliveryType === 'handover')
+      && o.deliveryStatus !== 'delivered'
+    )
   ));
   if (manualPending.length) {
     actions.push({
