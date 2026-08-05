@@ -52,6 +52,7 @@ function serializeSeller(seller) {
   } else if (approvedBy) {
     approvedBy = String(approvedBy);
   }
+  const deleted = obj.deleted === true;
   return {
     ...obj,
     id: String(obj._id || obj.id),
@@ -61,13 +62,18 @@ function serializeSeller(seller) {
     approvedBy,
     commissionRate,
     commission: commissionRate,
-    verified: obj.verified === true,
-    sellerVerified: obj.verified === true,
+    verified: !deleted && obj.verified === true,
+    sellerVerified: !deleted && obj.verified === true,
     verifiedAt: obj.verifiedAt || null,
     verificationFeePaid: obj.verificationFeePaid ?? null,
     verificationSource: obj.verificationSource || null,
+    deleted,
+    deletedAt: obj.deletedAt || null,
+    storeName: deleted ? (obj.storeName || 'Deleted Seller') : obj.storeName,
   };
 }
+
+export { serializeSeller };
 
 /**
  * Resolve a seller profile by SellerProfile _id OR owning User _id.
@@ -370,6 +376,11 @@ export async function adminInviteUser(payload, actorId) {
 export async function adminListSellers(query = {}) {
   const { page, limit, skip } = parsePagination(query);
   const filter = {};
+  if (query.includeDeleted === 'true' || query.includeDeleted === true) {
+    // include soft-deleted sellers
+  } else {
+    filter.deleted = { $ne: true };
+  }
   if (query.status) filter.status = query.status;
   if (query.search) {
     filter.$or = [
@@ -448,6 +459,11 @@ export async function adminUpdateSellerStatus(sellerOrUserId, payload, actorId) 
   const seller = await findSellerProfileByIdOrUserId(sellerOrUserId);
   if (!seller) {
     throw new AppError('Seller not found', 404, { code: 'SELLER_NOT_FOUND' });
+  }
+  if (seller.deleted === true) {
+    throw new AppError('Seller account has been deleted', 400, {
+      code: 'SELLER_DELETED',
+    });
   }
 
   const previousStatus = seller.status;

@@ -22,6 +22,7 @@ import { paginationSchema } from '../../validators/common.validator.js';
 import { z } from 'zod';
 import { SellerStatusEnum } from '../../constants/enums.js';
 import * as usersController from '../../controllers/users/users.controller.js';
+import * as sellerDeleteController from '../../controllers/admin/sellerDelete.controller.js';
 
 const router = Router();
 
@@ -69,6 +70,7 @@ const listSellersSchema = {
   query: paginationSchema.extend({
     status: z.enum(Object.values(SellerStatusEnum)).optional(),
     search: z.string().trim().optional(),
+    includeDeleted: z.enum(['true', 'false']).optional(),
   }),
 };
 
@@ -90,6 +92,17 @@ router.patch(
   ...adminSellerGuards,
   validate(adminUpdateSellerSchema),
   usersController.adminUpdateSeller,
+);
+router.delete(
+  '/sellers/:id',
+  ...adminSellerGuards,
+  validate({
+    params: adminSellerIdSchema.params,
+    body: z.object({
+      confirm: z.string().trim().optional(),
+    }).optional(),
+  }),
+  sellerDeleteController.adminDeleteSeller,
 );
 // Singular aliases used by some admin clients / network traces.
 router.get(

@@ -270,16 +270,21 @@ const SellerOverviewTab = ({
             <div className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-500/15 text-emerald-700">
               <Shield className="h-5 w-5" />
             </div>
-            <h3 className="mt-3 text-lg font-black text-foreground">Verified Seller</h3>
+            <h3 className="mt-3 text-lg font-black text-foreground">
+              {isVerified ? 'Verified Seller' : 'Become a Verified Seller'}
+            </h3>
             <p className="mt-1 text-sm text-muted-foreground">
               Status: <span className="font-semibold text-foreground">{isVerified ? 'Verified' : 'Not Verified'}</span>
             </p>
             <ul className="mt-3 space-y-1.5 text-sm text-muted-foreground">
-              <li>• Permanent Verified Badge</li>
+              <li>• Verified badge</li>
               <li>• Higher buyer trust</li>
-              <li>• Badge shown marketplace-wide</li>
-              <li>• Better seller credibility</li>
+              <li>• Better marketplace visibility</li>
+              <li>• Permanent verification</li>
             </ul>
+            {!isVerified ? (
+              <p className="mt-3 text-sm font-semibold text-foreground">Fee: ${verifyFee.toFixed(0)}</p>
+            ) : null}
           </div>
           {isVerified ? (
             <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
@@ -296,7 +301,7 @@ const SellerOverviewTab = ({
               className="inline-flex items-center justify-center gap-2 rounded-full bg-emerald-600 px-6 py-3 text-sm font-bold text-white shadow-sm hover:bg-emerald-700 disabled:opacity-50"
             >
               <Shield className="h-4 w-4" />
-              Get Verified — ${verifyFee.toFixed(0)}
+              Verify Now
             </button>
           )}
         </div>

@@ -36,13 +36,20 @@ import {
 } from './assetUniqueness.service.js';
 
 async function getApprovedSellerIds() {
-  return SellerProfile.find({ status: SellerStatusEnum.Approved }).distinct('_id');
+  return SellerProfile.find({
+    status: SellerStatusEnum.Approved,
+    deleted: { $ne: true },
+  }).distinct('_id');
 }
 
 async function isApprovedSellerId(sellerId) {
   if (!sellerId) return false;
-  const seller = await SellerProfile.findById(sellerId).select('status').lean();
-  return Boolean(seller && seller.status === SellerStatusEnum.Approved);
+  const seller = await SellerProfile.findById(sellerId).select('status deleted').lean();
+  return Boolean(
+    seller
+    && seller.status === SellerStatusEnum.Approved
+    && seller.deleted !== true,
+  );
 }
 
 async function ensureUniqueProductSlug(base, excludeId = null) {
@@ -246,7 +253,8 @@ export async function getProduct(idOrSlug, actor = null, options = {}) {
       );
     }
 
-    let sellerApproved = product.seller?.status === SellerStatusEnum.Approved;
+    let sellerApproved = product.seller?.status === SellerStatusEnum.Approved
+      && product.seller?.deleted !== true;
     if (!sellerApproved && !product.seller?.status) {
       sellerApproved = await isApprovedSellerId(product.seller?._id || product.seller);
     }

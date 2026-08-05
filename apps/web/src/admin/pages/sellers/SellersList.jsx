@@ -1,5 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Pencil, Check, X, Ban, RotateCcw, Store } from 'lucide-react';
+import {
+  Pencil, Check, X, Ban, RotateCcw, Store, BadgeCheck, ShieldOff, Trash2,
+} from 'lucide-react';
 import PageHeader from '../../components/PageHeader';
 import DataTable from '../../components/DataTable';
 import StatusBadge from '../../components/StatusBadge';
@@ -7,8 +9,10 @@ import FormSheet, { inputClass } from '../../components/FormSheet';
 import {
   getSellers, getSeller, updateSeller,
   approveSeller, rejectSeller, suspendSeller, reinstateSeller,
+  verifySellerBadge, unverifySellerBadge, deleteSeller,
 } from '../../api/sellers';
 import { useToast } from '../../../hooks/use-toast';
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from '../../../components/ui/dialog';
 
 const EMPTY = {
   storeName: '',
@@ -38,6 +42,9 @@ const SellersList = () => {
   const [form, setForm] = useState(EMPTY);
   const [saving, setSaving] = useState(false);
   const [loadingSeller, setLoadingSeller] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleteConfirm, setDeleteConfirm] = useState('');
+  const [deleting, setDeleting] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -109,7 +116,6 @@ const SellersList = () => {
         phone: form.phone || '',
         commissionRate: Number(form.commissionRate || 15),
         status: form.status,
-        // Permanent Verified badge is payment-based — do not tie to approval status.
       };
       await updateSeller(editing.sellerProfileId || editing.id || editing.userId, payload);
       toast({
@@ -141,6 +147,34 @@ const SellersList = () => {
         description: error?.message || 'Please try again.',
         variant: 'destructive',
       });
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!deleteTarget || deleteConfirm !== 'DELETE' || deleting) return;
+    setDeleting(true);
+    try {
+      await deleteSeller(deleteTarget.sellerProfileId || deleteTarget.id || deleteTarget.userId, {
+        confirm: 'DELETE',
+      });
+      try {
+        const { invalidateSellerCatalog } = await import('../../../services/catalogCache');
+        await invalidateSellerCatalog();
+      } catch {
+        // storefront cache may be unavailable in admin context
+      }
+      toast({ title: 'Seller deleted', description: deleteTarget.storeName });
+      setDeleteTarget(null);
+      setDeleteConfirm('');
+      await load();
+    } catch (error) {
+      toast({
+        title: 'Delete failed',
+        description: error?.message || 'Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -182,6 +216,15 @@ const SellersList = () => {
           },
           { key: 'joinedAt', label: 'Joined', render: (row) => fmtDate(row.joinedAt) },
           {
+            key: 'verified',
+            label: 'Verified',
+            render: (row) => (
+              <span className={`text-sm font-semibold ${row.verified ? 'text-emerald-700' : 'text-muted-foreground'}`}>
+                {row.verified ? 'Yes' : 'No'}
+              </span>
+            ),
+          },
+          {
             key: 'status',
             label: 'Status',
             render: (row) => <StatusBadge status={row.status || 'pending'} />,
@@ -198,8 +241,18 @@ const SellersList = () => {
           ...(row.status === 'suspended' || row.status === 'rejected' ? [
             { label: 'Reinstate', icon: RotateCcw, onClick: () => runAction(reinstateSeller, row, 'Seller reinstated') },
           ] : []),
+          ...(row.verified ? [
+            { label: 'Unverify', icon: ShieldOff, onClick: () => runAction(unverifySellerBadge, row, 'Verification removed') },
+          ] : [
+            { label: 'Verify', icon: BadgeCheck, onClick: () => runAction(verifySellerBadge, row, 'Seller verified') },
+          ]),
           { separator: true },
           { label: 'Edit', icon: Pencil, onClick: () => openEdit(row) },
+          {
+            label: 'Delete Seller',
+            icon: Trash2,
+            onClick: () => { setDeleteTarget(row); setDeleteConfirm(''); },
+          },
         ]}
         emptyState={{ icon: Store, title: 'No sellers yet' }}
       />
@@ -217,8 +270,11 @@ const SellersList = () => {
       >
         <div className="rounded-2xl border border-border bg-secondary/40 px-4 py-3">
           <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Current status</p>
-          <div className="mt-2">
+          <div className="mt-2 flex flex-wrap items-center gap-3">
             <StatusBadge status={form.status || 'pending'} />
+            <span className={`text-sm font-semibold ${editing?.verified ? 'text-emerald-700' : 'text-muted-foreground'}`}>
+              Verified: {editing?.verified ? 'Yes' : 'No'}
+            </span>
           </div>
         </div>
 
@@ -287,10 +343,66 @@ const SellersList = () => {
             ))}
           </select>
           <p className="mt-1.5 text-xs text-muted-foreground">
-            Pending → Approved / Rejected. Approved → Suspended. Saving commission applies immediately.
+            Approval unlocks selling only. Verified badge is payment-based and separate.
           </p>
         </div>
       </FormSheet>
+
+      <Dialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => {
+          if (deleting) return;
+          if (!open) {
+            setDeleteTarget(null);
+            setDeleteConfirm('');
+          }
+        }}
+      >
+        <DialogContent className="max-w-[440px] rounded-[24px] border border-border bg-background p-0 overflow-hidden">
+          <div className="px-6 py-6">
+            <div className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-red-500/15 text-red-700">
+              <Trash2 className="h-5 w-5" />
+            </div>
+            <DialogTitle className="mt-4 text-xl font-bold">Delete Seller Account?</DialogTitle>
+            <DialogDescription className="mt-2 text-sm text-muted-foreground">
+              This action is permanent. Seller account, profile and marketplace data will be removed.
+              Financial history (orders, payments, escrow, ledger) is preserved.
+            </DialogDescription>
+            <p className="mt-4 text-sm font-semibold text-foreground">
+              {deleteTarget?.storeName}
+            </p>
+            <label className="mt-4 block text-sm font-medium mb-1.5">
+              Type DELETE to continue
+            </label>
+            <input
+              value={deleteConfirm}
+              onChange={(e) => setDeleteConfirm(e.target.value)}
+              className={inputClass}
+              placeholder="DELETE"
+              disabled={deleting}
+              autoComplete="off"
+            />
+            <div className="mt-5 flex gap-3 justify-end">
+              <button
+                type="button"
+                disabled={deleting}
+                onClick={() => { setDeleteTarget(null); setDeleteConfirm(''); }}
+                className="rounded-full border border-border px-4 py-2.5 text-sm font-semibold hover:bg-secondary"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={deleting || deleteConfirm !== 'DELETE'}
+                onClick={handleDelete}
+                className="rounded-full bg-red-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50"
+              >
+                {deleting ? 'Deleting…' : 'Delete Seller'}
+              </button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

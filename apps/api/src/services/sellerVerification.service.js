@@ -106,7 +106,7 @@ export async function purchaseSellerVerification(actor) {
   const amount = settings.feeUsd;
   const preview = await walletService.getWalletForSellerUser(actorId(actor));
   if (roundMoney(preview.availableBalance) + 1e-9 < amount) {
-    throw new AppError('Insufficient balance. Please top up your seller wallet.', 400, {
+    throw new AppError('Insufficient wallet balance. Please deposit funds first.', 400, {
       code: 'INSUFFICIENT_WALLET_BALANCE',
       details: {
         availableBalance: preview.availableBalance,
@@ -164,7 +164,7 @@ export async function purchaseSellerVerification(actor) {
 
 export async function listVerifiedSellers(query = {}) {
   const pagination = parsePagination(query, { page: 1, limit: 50, maxLimit: 100 });
-  const filter = {};
+  const filter = { deleted: { $ne: true } };
   if (query.verified === 'false') {
     filter.verified = { $ne: true };
   } else if (query.verified !== 'all') {

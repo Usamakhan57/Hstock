@@ -141,6 +141,27 @@ const sellerProfileSchema = new mongoose.Schema(
       ref: 'User',
       default: null,
     },
+    /** Soft-delete — financial history kept; marketplace visibility removed. */
+    deleted: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+    deletedAt: {
+      type: Date,
+      default: null,
+      index: true,
+    },
+    deletedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+    },
+    /** Preserved store name after soft-delete anonymization. */
+    storeNameBeforeDelete: {
+      type: String,
+      default: null,
+    },
     commissionRate: {
       type: Number,
       min: 0,
@@ -215,6 +236,7 @@ const sellerProfileSchema = new mongoose.Schema(
 );
 
 sellerProfileSchema.index({ status: 1, verified: 1 });
+sellerProfileSchema.index({ deleted: 1, status: 1 });
 sellerProfileSchema.index({ storePromotionActive: 1, storePromotedUntil: -1 });
 
 const SellerProfile =

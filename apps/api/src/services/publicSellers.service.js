@@ -73,7 +73,10 @@ export function serializePublicSeller(doc) {
  */
 export async function listPublicSellers(query = {}) {
   const pagination = parsePagination(query, { page: 1, limit: 24, maxLimit: 100 });
-  const filter = { status: SellerStatusEnum.Approved };
+  const filter = {
+    status: SellerStatusEnum.Approved,
+    deleted: { $ne: true },
+  };
   if (query.verified === 'true') filter.verified = true;
   if (query.promoted === 'true') {
     filter.storePromotionActive = true;
@@ -107,6 +110,7 @@ export async function getPublicSellerBySlug(slug) {
   const seller = await SellerProfile.findOne({
     slug: String(slug).toLowerCase().trim(),
     status: SellerStatusEnum.Approved,
+    deleted: { $ne: true },
   })
     .select(PUBLIC_SELLER_FIELDS)
     .lean();
