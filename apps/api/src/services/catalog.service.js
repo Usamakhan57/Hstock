@@ -93,12 +93,46 @@ export async function updateCategory(id, payload, userId) {
     throw new AppError('Category not found', 404, { code: 'NOT_FOUND' });
   }
 
-  if (payload.name || payload.slug) {
-    payload.slug = await ensureUniqueSlug(
-      Category,
-      payload.slug || payload.name || category.name,
-      category._id,
-    );
+  if (Object.prototype.hasOwnProperty.call(payload, 'parent')) {
+    const nextParent = payload.parent || null;
+    if (nextParent && String(nextParent) === String(category._id)) {
+      throw new AppError('A category cannot be its own parent', 400, {
+        code: 'INVALID_PARENT',
+        details: [{ path: 'parent', message: 'A category cannot be its own parent' }],
+      });
+    }
+    if (nextParent) {
+      // Prevent cycles: walk ancestors of the proposed parent.
+      let cursor = await Category.findById(nextParent).select('_id parent').lean();
+      const seen = new Set([String(category._id)]);
+      while (cursor) {
+        const cursorId = String(cursor._id);
+        if (seen.has(cursorId)) {
+          throw new AppError('Invalid parent category (circular relationship)', 400, {
+            code: 'INVALID_PARENT',
+            details: [{ path: 'parent', message: 'Invalid parent category (circular relationship)' }],
+          });
+        }
+        seen.add(cursorId);
+        if (!cursor.parent) break;
+        // eslint-disable-next-line no-await-in-loop
+        cursor = await Category.findById(cursor.parent).select('_id parent').lean();
+      }
+    }
+  }
+
+  if (payload.slug != null || payload.name != null) {
+    const requestedSlug = payload.slug != null ? toSlug(payload.slug) : null;
+    if (requestedSlug && requestedSlug === category.slug) {
+      // Unchanged slug — keep as-is (do not fail uniqueness against self).
+      payload.slug = category.slug;
+    } else {
+      payload.slug = await ensureUniqueSlug(
+        Category,
+        payload.slug || payload.name || category.name,
+        category._id,
+      );
+    }
   }
 
   Object.assign(category, payload, { updatedBy: userId });

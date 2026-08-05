@@ -24,12 +24,15 @@ export function errorHandler(err, req, res, _next) {
 
   if (err instanceof ZodError) {
     statusCode = 400;
-    message = 'Validation failed';
     code = 'VALIDATION_ERROR';
     details = err.issues.map((issue) => ({
       path: issue.path.join('.'),
       message: issue.message,
     }));
+    const summary = details
+      .map((issue) => (issue.path ? `${issue.path}: ${issue.message}` : issue.message))
+      .join('; ');
+    message = summary ? `Validation failed: ${summary}` : 'Validation failed';
   }
 
   if (err.name === 'CastError') {
@@ -99,6 +102,7 @@ export function errorHandler(err, req, res, _next) {
       statusCode,
       path: req.originalUrl,
       method: req.method,
+      details: details || null,
     });
   }
 

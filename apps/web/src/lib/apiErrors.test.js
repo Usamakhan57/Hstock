@@ -32,6 +32,21 @@ describe('apiErrors', () => {
     expect(error.errors).toEqual({ email: 'taken' });
   });
 
+  it('surfaces field paths when backend only says Validation failed', () => {
+    const error = normalizeApiError({
+      response: {
+        status: 400,
+        data: {
+          message: 'Validation failed',
+          code: 'VALIDATION_ERROR',
+          errors: [{ path: 'ogImage', message: 'String must contain at least 1 character(s)' }],
+        },
+      },
+    });
+    expect(error.message).toMatch(/ogImage/i);
+    expect(error.message).not.toBe('Validation failed');
+  });
+
   it('maps refresh-token required errors to a sign-in message', () => {
     const error = normalizeApiError({
       response: {

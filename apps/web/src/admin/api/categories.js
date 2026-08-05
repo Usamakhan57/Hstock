@@ -35,13 +35,21 @@ function mapCategory(category) {
 function toApiBody(item = {}) {
   const body = {};
   if (item.name !== undefined) body.name = item.name;
-  if (item.slug !== undefined) body.slug = item.slug || undefined;
-  if (item.description !== undefined) body.description = item.description || '';
+  if (item.slug !== undefined) {
+    const slug = typeof item.slug === 'string' ? item.slug.trim() : item.slug;
+    if (slug) body.slug = slug;
+  }
+  if (item.description !== undefined) {
+    body.description = item.description == null ? '' : String(item.description);
+  }
   if (item.image !== undefined) body.image = emptyToNull(item.image);
   if (item.icon !== undefined) body.icon = emptyToNull(item.icon);
   if (item.parentId !== undefined) body.parent = emptyToNull(item.parentId);
   if (item.parent !== undefined) body.parent = emptyToNull(item.parent);
-  if (item.displayOrder !== undefined) body.displayOrder = Number(item.displayOrder) || 0;
+  if (item.displayOrder !== undefined) {
+    const n = Number(item.displayOrder);
+    body.displayOrder = Number.isFinite(n) ? Math.trunc(n) : 0;
+  }
   if (item.status !== undefined) body.status = item.status || 'active';
   if (item.featured !== undefined) body.featured = !!item.featured;
   if (item.showInHeader !== undefined) body.showInHeader = !!item.showInHeader;
