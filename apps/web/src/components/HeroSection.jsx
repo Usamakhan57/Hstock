@@ -13,6 +13,7 @@ import {
 } from 'react-icons/si';
 import { useCms } from '../hooks/useCms';
 import { CMS_KEYS } from '../services/cmsApi';
+import { STOREFRONT_SEARCH_PLACEHOLDER } from '../constants/searchPlaceholder';
 
 const fadeUp = {
   hidden: { opacity: 0, y: 22 },
@@ -84,7 +85,7 @@ const HeroSearchBar = ({ className = '', size = 'lg', placeholder = '' }) => {
     <form
       onSubmit={submit}
       role="search"
-      aria-label="Search the marketplace"
+      aria-label="Search any product..."
       className={`flex items-center gap-1.5 sm:gap-2 bg-white rounded-full border border-border soft-shadow-lg ${size === 'lg' ? 'p-2 pl-5' : 'p-1.5 pl-4'} ${className}`}
     >
       <Search className="w-[1.125rem] h-[1.125rem] text-muted-foreground shrink-0" aria-hidden="true" />
@@ -307,7 +308,7 @@ const HeroSection = () => {
   const title = hero?.title || activeSlide?.title || '';
   const subtitle = hero?.subtitle || activeSlide?.subtitle || '';
   const description = hero?.description || activeSlide?.description || '';
-  const searchPlaceholder = hero?.searchPlaceholder || '';
+  const searchPlaceholder = STOREFRONT_SEARCH_PLACEHOLDER;
   const badgeText = hero?.badgeText || '';
   const primaryText = hero?.buttonText || activeSlide?.buttonText || '';
   const primaryTo = hero?.buttonUrl || activeSlide?.buttonUrl || '/shop';

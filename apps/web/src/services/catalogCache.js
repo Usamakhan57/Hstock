@@ -13,9 +13,11 @@ let categories = [];
 let products = [];
 let sellers = [];
 let hydrated = false;
+let hydratedAt = 0;
 let hydratePromise = null;
 let version = 0;
 const listeners = new Set();
+const CATALOG_TTL_MS = 10_000;
 
 function deriveSellersFromProducts(productList) {
   const map = new Map();
@@ -85,11 +87,12 @@ async function fetchAllCatalog(fetchPage, { limit = 100, maxPages = 50 } = {}) {
 }
 
 export async function hydrateCatalog({ force = false } = {}) {
-  if (hydrated && !force) return { categories, products, sellers, version };
+  const stale = hydrated && (Date.now() - hydratedAt) > CATALOG_TTL_MS;
+  if (hydrated && !force && !stale) return { categories, products, sellers, version };
   if (hydratePromise && !force) return hydratePromise;
 
   hydratePromise = (async () => {
-    if (force) {
+    if (force || stale) {
       clearRequestCache('categories');
       clearRequestCache('products');
     }
@@ -101,6 +104,7 @@ export async function hydrateCatalog({ force = false } = {}) {
     products = productItems;
     sellers = deriveSellersFromProducts(products);
     hydrated = true;
+    hydratedAt = Date.now();
     version += 1;
     notify();
     return { categories, products, sellers, version };

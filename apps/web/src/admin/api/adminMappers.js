@@ -177,9 +177,16 @@ export function mapAdminProduct(product) {
     : (Array.isArray(product.gallery) ? product.gallery : []);
   const thumbnail = product.thumbnail || images[0] || '';
 
+  // Storefront-visible ("Published") only when live + approved.
+  // Pending moderation must not look published in admin.
   let status = product.status || 'draft';
-  if (status === 'live') status = 'active';
-  if (product.approvalStatus === 'pending') status = product.status === 'live' ? 'active' : (product.status || 'draft');
+  if (product.approvalStatus === 'pending') {
+    status = 'pending';
+  } else if (status === 'live' && product.approvalStatus === 'approved') {
+    status = 'active';
+  } else if (status === 'live') {
+    status = 'active';
+  }
 
   return {
     id: idOf(product),

@@ -82,7 +82,7 @@ const SearchResultsPage = () => {
 
         <form onSubmit={submit} role="search" className="flex items-center gap-2 max-w-xl bg-white rounded-full px-4 py-3 border border-border mb-6">
           <SearchIcon className="w-4 h-4 text-muted-foreground shrink-0" />
-          <input value={value} onChange={(e) => setValue(e.target.value)} placeholder="Search accounts, domains, SaaS, source code…" aria-label="Search" className="bg-transparent outline-none text-sm w-full" />
+          <input value={value} onChange={(e) => setValue(e.target.value)} placeholder="Search any product..." aria-label="Search" className="bg-transparent outline-none text-sm w-full" />
         </form>
 
         {!q.trim() ? (

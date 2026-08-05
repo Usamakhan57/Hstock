@@ -133,9 +133,18 @@ const ProductForm = () => {
 
   const handlePublishToggle = async () => {
     if (!validate()) return;
-    const nextStatus = form.status === 'active' ? 'draft' : 'active';
+    const isPublished = form.status === 'active';
+    const nextStatus = isPublished ? 'draft' : 'active';
     setForm((f) => ({ ...f, status: nextStatus }));
-    await persist(buildPayload({ status: nextStatus }), nextStatus === 'active' ? 'Product published' : 'Product unpublished');
+    await persist(
+      buildPayload({
+        status: nextStatus,
+        ...(nextStatus === 'active'
+          ? { approvalStatus: 'approved', visibility: 'public' }
+          : {}),
+      }),
+      nextStatus === 'active' ? 'Product published' : 'Product unpublished',
+    );
   };
 
   const handleFeatureToggle = async () => {

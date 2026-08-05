@@ -157,7 +157,7 @@ const CategoryPage = () => {
                 <input
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  placeholder={`Search in ${category.name}…`}
+                  placeholder="Search any product..."
                   aria-label="Search products"
                   className="bg-transparent outline-none text-sm w-full"
                 />

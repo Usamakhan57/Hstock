@@ -17,6 +17,7 @@ import { getRolledUpCount } from '../services/categoryTree';
 import { RECENT_SEARCHES_KEY, MAX_RECENT_SEARCHES } from '../constants';
 import { useCms } from '../hooks/useCms';
 import { CMS_KEYS } from '../services/cmsApi';
+import { STOREFRONT_SEARCH_PLACEHOLDER } from '../constants/searchPlaceholder';
 
 /**
  * Header-only visibility rule, kept local to this component (the shared
@@ -318,7 +319,7 @@ const Header = () => {
     }
     return cmsPopularTags;
   }, [headerCms, cmsPopularTags]);
-  const searchPlaceholder = headerCms?.searchPlaceholder || '';
+  const searchPlaceholder = STOREFRONT_SEARCH_PLACEHOLDER;
   const announcement = headerCms?.announcementBar;
   const topBar = headerCms?.topBar;
   const becomeSeller = headerCms?.becomeSellerButton;

@@ -166,6 +166,67 @@ test('product foundation create + moderate', async () => {
   assert.equal(publicList.body.data.length, 1);
 });
 
+test('admin publish via PATCH status=live unlocks public catalog', async () => {
+  const adminToken = await createAdminToken();
+  const { token: sellerToken, seller } = await createSellerToken();
+  const sellerId = seller._id || seller.id;
+
+  const approveSeller = await request(app)
+    .patch(`/api/v1/users/sellers/${sellerId}`)
+    .set('Authorization', `Bearer ${adminToken}`)
+    .send({ status: 'approved', verified: true });
+  assert.equal(approveSeller.status, 200);
+
+  const category = await request(app)
+    .post('/api/v1/categories')
+    .set('Authorization', `Bearer ${adminToken}`)
+    .send({ name: 'Accounts' });
+
+  const created = await request(app)
+    .post('/api/v1/products')
+    .set('Authorization', `Bearer ${sellerToken}`)
+    .send({
+      title: 'Manual Pending Listing',
+      description: 'Needs admin publish',
+      shortDescription: 'Pending',
+      price: 9.99,
+      productType: 'email_accounts',
+      deliveryType: 'manual',
+      category: category.body.data._id,
+      status: 'live',
+      visibility: 'public',
+      // Sellers leave approval pending until admin publishes/approves.
+      approvalStatus: 'pending',
+    });
+
+  assert.equal(created.status, 201);
+  assert.equal(created.body.data.approvalStatus, 'pending');
+
+  const before = await request(app).get('/api/v1/products');
+  assert.equal(before.status, 200);
+  assert.equal(before.body.data.length, 0);
+
+  const published = await request(app)
+    .patch(`/api/v1/products/${created.body.data._id}`)
+    .set('Authorization', `Bearer ${adminToken}`)
+    .send({ status: 'live' });
+
+  assert.equal(published.status, 200);
+  assert.equal(published.body.data.status, 'live');
+  assert.equal(published.body.data.approvalStatus, 'approved');
+  assert.equal(published.body.data.visibility, 'public');
+  assert.ok(published.body.data.publishedAt);
+
+  const after = await request(app).get('/api/v1/products');
+  assert.equal(after.status, 200);
+  assert.equal(after.body.data.length, 1);
+  assert.equal(after.body.data[0].title, 'Manual Pending Listing');
+
+  const search = await request(app).get('/api/v1/products').query({ search: 'Manual' });
+  assert.equal(search.status, 200);
+  assert.equal(search.body.data.length, 1);
+});
+
 test('RBAC blocks buyer from creating categories', async () => {
   const register = await request(app)
     .post('/api/v1/auth/register')

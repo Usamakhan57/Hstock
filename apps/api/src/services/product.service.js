@@ -287,6 +287,21 @@ export async function createProduct(payload, actor) {
   const assetFields = prepareAssetFields(payload);
   const status = payload.status || PRODUCT_STATUS.DRAFT;
 
+  const isStaff = actor.roles?.some((role) =>
+    [USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN, USER_ROLES.EDITOR].includes(role),
+  );
+
+  // Sellers cannot self-approve — public catalog requires staff publish/approve.
+  let approvalStatus = payload.approvalStatus || APPROVAL_STATUS.PENDING;
+  let visibility = payload.visibility || PRODUCT_VISIBILITY.PUBLIC;
+  if (!isStaff) {
+    approvalStatus = APPROVAL_STATUS.PENDING;
+    if (status === PRODUCT_STATUS.LIVE) {
+      // Instant Access sellers may set live locally, but stay pending until admin publishes.
+      approvalStatus = APPROVAL_STATUS.PENDING;
+    }
+  }
+
   if (assetFields.assetIdentifierNormalized) {
     await assertAssetAvailable(assetFields.assetIdentifierNormalized);
   }
@@ -301,7 +316,8 @@ export async function createProduct(payload, actor) {
         slug,
         seller: sellerId,
         status,
-        approvalStatus: payload.approvalStatus || APPROVAL_STATUS.PENDING,
+        visibility,
+        approvalStatus,
         createdBy: actor.id,
         updatedBy: actor.id,
       };
@@ -392,6 +408,14 @@ export async function updateProduct(id, payload, actor) {
   const { digital, gallery, ...productFields } = payload;
   const assetFields = prepareAssetFields(payload, product);
 
+  // Sellers cannot self-approve or force-publish into the public catalog.
+  if (!isStaff) {
+    delete productFields.approvalStatus;
+    if (productFields.status === PRODUCT_STATUS.LIVE) {
+      productFields.approvalStatus = APPROVAL_STATUS.PENDING;
+    }
+  }
+
   const nextStatus = productFields.status ?? product.status;
   const nextNormalized = assetFields.assetIdentifierNormalized;
 
@@ -409,6 +433,25 @@ export async function updateProduct(id, payload, actor) {
   }
 
   Object.assign(product, productFields, assetFields, { updatedBy: actor.id });
+
+  // Staff "Publish" must make the listing storefront-visible immediately.
+  // Public catalog requires status=live + approvalStatus=approved + visibility=public.
+  if (isStaff) {
+    if (product.status === PRODUCT_STATUS.LIVE) {
+      product.approvalStatus = APPROVAL_STATUS.APPROVED;
+      product.visibility = PRODUCT_VISIBILITY.PUBLIC;
+      product.publishedAt = product.publishedAt || new Date();
+    } else if (
+      productFields.approvalStatus === APPROVAL_STATUS.APPROVED
+      && product.status !== PRODUCT_STATUS.REJECTED
+      && product.status !== PRODUCT_STATUS.ARCHIVED
+      && product.status !== PRODUCT_STATUS.DISABLED
+    ) {
+      product.status = PRODUCT_STATUS.LIVE;
+      product.visibility = PRODUCT_VISIBILITY.PUBLIC;
+      product.publishedAt = product.publishedAt || new Date();
+    }
+  }
 
   try {
     await withTransaction(async (session) => {
@@ -560,6 +603,7 @@ export async function moderateProduct(id, payload, actor) {
   if (payload.approvalStatus === APPROVAL_STATUS.APPROVED) {
     product.approvalStatus = APPROVAL_STATUS.APPROVED;
     product.status = PRODUCT_STATUS.LIVE;
+    product.visibility = PRODUCT_VISIBILITY.PUBLIC;
     product.publishedAt = new Date();
   } else if (payload.approvalStatus === APPROVAL_STATUS.REJECTED) {
     product.approvalStatus = APPROVAL_STATUS.REJECTED;
@@ -568,6 +612,16 @@ export async function moderateProduct(id, payload, actor) {
 
   if (payload.status) product.status = payload.status;
   if (payload.featured !== undefined) product.featured = payload.featured;
+
+  // Approving or explicitly setting live always unlocks the public catalog.
+  if (
+    product.status === PRODUCT_STATUS.LIVE
+    && product.approvalStatus !== APPROVAL_STATUS.REJECTED
+  ) {
+    product.approvalStatus = APPROVAL_STATUS.APPROVED;
+    product.visibility = PRODUCT_VISIBILITY.PUBLIC;
+    product.publishedAt = product.publishedAt || new Date();
+  }
 
   product.updatedBy = actor.id;
 
