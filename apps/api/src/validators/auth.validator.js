@@ -39,6 +39,7 @@ export const loginSchema = {
 export const registerSellerSchema = {
   body: z.object({
     name: z.string().min(2).max(120).optional(),
+    username: z.string().min(3).max(30).optional(),
     email: emailSchema,
     password: passwordSchema,
     storeName: z.string().min(2).max(160),
@@ -50,6 +51,9 @@ export const registerSellerSchema = {
     specialty: z.string().max(160).optional(),
     ownerName: z.string().max(120).optional(),
     withdrawalWallets: z.array(withdrawalWalletSchema).optional(),
+  }).refine((body) => Boolean(body.username || body.name), {
+    message: 'Username is required',
+    path: ['username'],
   }),
 };
 

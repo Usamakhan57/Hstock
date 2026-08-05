@@ -61,6 +61,14 @@ export const usersApi = {
   adminInvite(payload) {
     return post('/users/invite', payload).then(({ data }) => data);
   },
+
+  async adminDelete(id, { confirm } = {}) {
+    const { del } = await import('../lib/apiClient');
+    const { data } = await del(`/admin/users/${id}`, {
+      data: confirm ? { confirm } : undefined,
+    });
+    return data;
+  },
 };
 
 export default usersApi;

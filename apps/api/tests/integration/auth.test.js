@@ -78,6 +78,8 @@ test('seller registration is free using SystemConfig fee', async () => {
   assert.equal(register.body.data.registration.fee, 0);
   assert.equal(register.body.data.registration.paymentRequired, false);
   assert.ok(register.body.data.seller.slug);
+  assert.equal(register.body.data.seller.slug, 'seller-one');
+  assert.equal(register.body.data.user.username, 'seller-one');
   assert.equal(register.body.data.user.roles.includes('seller'), true);
 
   const login = await request(app)

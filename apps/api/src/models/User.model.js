@@ -25,6 +25,14 @@ const userSchema = new mongoose.Schema(
       trim: true,
       maxlength: 120,
     },
+    /** Seller / public handle — sparse so legacy users without username remain valid */
+    username: {
+      type: String,
+      trim: true,
+      lowercase: true,
+      maxlength: 30,
+      default: undefined,
+    },
     roles: {
       type: [
         {
@@ -59,6 +67,22 @@ const userSchema = new mongoose.Schema(
       enum: Object.values(UserStatusEnum),
       default: UserStatusEnum.Active,
       index: true,
+    },
+    /** Soft-delete flags for staff/admin user removal (audit-friendly). */
+    deleted: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+    deletedAt: {
+      type: Date,
+      default: null,
+      index: true,
+    },
+    deletedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
     },
     verificationStatus: {
       type: String,
@@ -156,7 +180,15 @@ const userSchema = new mongoose.Schema(
 
 userSchema.index({ createdAt: -1 });
 userSchema.index({ roles: 1, status: 1 });
+userSchema.index({ deleted: 1, status: 1 });
 userSchema.index({ telegramConnected: 1, telegramNotificationsEnabled: 1 });
+userSchema.index(
+  { username: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { username: { $type: 'string' } },
+  },
+);
 userSchema.index(
   { telegramUserId: 1 },
   {

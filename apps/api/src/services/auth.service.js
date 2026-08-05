@@ -17,6 +17,7 @@ import {
   hashToken,
 } from '../utils/token.js';
 import { toSlug } from '../utils/slug.js';
+import { normalizeUsername, usernameToSlug } from '../utils/username.js';
 import { withTransaction } from '../utils/transaction.js';
 import { resolvePermissions } from '../constants/permissions.js';
 import { USER_ROLES, ADMIN_LOGIN_ROLES } from '../constants/roles.js';
@@ -45,12 +46,15 @@ function publicUser(user) {
     id: user._id,
     email: user.email,
     name: user.name,
+    username: user.username || null,
     roles,
     avatar: user.avatar,
     phone: user.phone,
     country: user.country,
     timezone: user.timezone,
     status: user.status,
+    deleted: user.deleted === true,
+    deletedAt: user.deletedAt || null,
     verificationStatus: user.verificationStatus,
     emailVerified: user.emailVerified,
     lastLoginAt: user.lastLoginAt,
@@ -210,6 +214,28 @@ export async function registerSeller(payload, meta = {}) {
   // Fee is configurable in MongoDB. Payment is NOT implemented — free when fee is 0.
   const registrationFee = feeInfo.sellerRegistrationFee;
   const email = payload.email.toLowerCase();
+
+  // Prefer explicit username; derive from legacy `name` when needed.
+  let usernameRaw = payload.username || '';
+  if (!usernameRaw && payload.name) {
+    const direct = normalizeUsername(payload.name);
+    usernameRaw = direct.ok ? direct.username : toSlug(payload.name);
+  }
+  const usernameResult = normalizeUsername(usernameRaw);
+  if (!usernameResult.ok) {
+    throw new AppError(usernameResult.message, 400, { code: usernameResult.code });
+  }
+  const username = usernameResult.username;
+
+  const existingUsername = await User.findOne({ username });
+  if (existingUsername) {
+    throw new AppError('Username is already taken', 409, { code: 'USERNAME_EXISTS' });
+  }
+  const existingBuyerUsername = await BuyerProfile.findOne({ username });
+  if (existingBuyerUsername) {
+    throw new AppError('Username is already taken', 409, { code: 'USERNAME_EXISTS' });
+  }
+
   const existingUser = await User.findOne({ email }).select('+passwordHash');
 
   if (existingUser) {
@@ -231,7 +257,8 @@ export async function registerSeller(payload, meta = {}) {
         {
           email,
           passwordHash,
-          name: payload.name || payload.storeName,
+          name: username,
+          username,
           roles: [USER_ROLES.BUYER, USER_ROLES.SELLER],
           phone: payload.phone || null,
           country: payload.country || null,
@@ -246,6 +273,7 @@ export async function registerSeller(payload, meta = {}) {
         BuyerProfile,
         {
           user: userDoc._id,
+          username,
           phone: payload.phone || null,
           country: payload.country || null,
         },
@@ -254,8 +282,12 @@ export async function registerSeller(payload, meta = {}) {
     } else {
       if (!userDoc.roles.includes(USER_ROLES.SELLER)) {
         userDoc.roles = [...new Set([...userDoc.roles, USER_ROLES.SELLER])];
-        await userDoc.save(session ? { session } : undefined);
       }
+      if (!userDoc.username) {
+        userDoc.username = username;
+        userDoc.name = userDoc.name || username;
+      }
+      await userDoc.save(session ? { session } : undefined);
 
       const existingSellerQuery = SellerProfile.findOne({ user: userDoc._id });
       const existingSeller = session
@@ -266,9 +298,23 @@ export async function registerSeller(payload, meta = {}) {
           code: 'SELLER_EXISTS',
         });
       }
+
+      const buyerQuery = BuyerProfile.findOne({ user: userDoc._id });
+      const buyer = session ? await buyerQuery.session(session) : await buyerQuery;
+      if (buyer && !buyer.username) {
+        buyer.username = username;
+        await buyer.save(session ? { session } : undefined);
+      }
     }
 
-    const baseSlug = toSlug(payload.storeSlug || payload.storeName);
+    // New registrations derive store slug from username (existing sellers keep prior slugs).
+    const baseSlug = usernameToSlug(payload.storeSlug || username)
+      || toSlug(payload.storeName);
+    if (!baseSlug) {
+      throw new AppError('Username must produce a valid store URL', 400, {
+        code: 'USERNAME_INVALID',
+      });
+    }
     let slug = baseSlug;
     let attempt = 0;
     while (true) {
@@ -286,7 +332,7 @@ export async function registerSeller(payload, meta = {}) {
         user: userDoc._id,
         storeName: payload.storeName,
         slug,
-        ownerName: payload.name || payload.ownerName || '',
+        ownerName: username,
         email,
         phone: payload.phone || null,
         country: payload.country || null,
@@ -308,6 +354,7 @@ export async function registerSeller(payload, meta = {}) {
       meta: {
         sellerRegistrationFee: registrationFee,
         currency: feeInfo.currency,
+        username,
       },
       session,
     });

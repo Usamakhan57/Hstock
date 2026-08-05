@@ -18,7 +18,7 @@ const SellerRegisterPage = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const [storeName, setStoreName] = useState('');
-  const [name, setName] = useState('');
+  const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPw, setShowPw] = useState(false);
@@ -60,8 +60,12 @@ const SellerRegisterPage = () => {
   }, [isAuthenticated, accountCreated, stopPolling]);
 
   const validateForm = () => {
-    if (!storeName.trim() || !name.trim() || !email.trim() || !password.trim()) {
+    if (!storeName.trim() || !username.trim() || !email.trim() || !password.trim()) {
       setError('Please fill in all fields.');
+      return false;
+    }
+    if (!/^[a-zA-Z0-9_-]{3,30}$/.test(username.trim())) {
+      setError('Username must be 3–30 characters using letters, numbers, underscores, or hyphens.');
       return false;
     }
     if (password.length < 8) {
@@ -83,7 +87,7 @@ const SellerRegisterPage = () => {
     }
     setCreatingAccount(true);
     try {
-      const result = await register({ storeName, name, email, password });
+      const result = await register({ storeName, username, email, password });
       if (!result.ok) {
         setError(result.error);
         return { ok: false, error: result.error };
@@ -263,18 +267,22 @@ const SellerRegisterPage = () => {
                 </div>
               </div>
               <div>
-                <label htmlFor="name" className="text-sm font-medium block mb-1.5">Your name</label>
+                <label htmlFor="username" className="text-sm font-medium block mb-1.5">Username</label>
                 <div className="flex items-center gap-2 bg-secondary/60 rounded-2xl px-4 py-3 border border-transparent focus-within:border-primary transition-colors">
                   <User className="w-4 h-4 text-muted-foreground shrink-0" />
                   <input
-                    id="name"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="Jane Doe"
+                    id="username"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value.replace(/\s/g, ''))}
+                    placeholder="Choose a unique username"
                     disabled={accountCreated}
+                    autoComplete="username"
                     className="bg-transparent outline-none text-sm w-full disabled:opacity-70"
                   />
                 </div>
+                <p className="mt-1.5 text-xs text-muted-foreground">
+                  3–30 characters. Letters, numbers, underscores, and hyphens. Used for your store URL.
+                </p>
               </div>
               <div>
                 <label htmlFor="email" className="text-sm font-medium block mb-1.5">Email</label>

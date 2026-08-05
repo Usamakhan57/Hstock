@@ -15,18 +15,25 @@ const SellerProfileTab = ({ seller, productsCount, joinedDate }) => {
   const [form, setForm] = useState({
     avatar: seller?.avatar || '',
     cover: seller?.banner || seller?.cover || '',
-    name: seller?.ownerName || seller?.name || '',
+    username: seller?.username || seller?.ownerName || seller?.name || '',
     bio: seller?.bio || '',
   });
 
-  const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
-
   const handleSubmit = async (e) => {
     e.preventDefault();
+    const handle = form.username.trim();
+    if (!/^[a-zA-Z0-9_-]{3,30}$/.test(handle)) {
+      toast({
+        title: 'Invalid username',
+        description: 'Username must be 3–30 characters using letters, numbers, underscores, or hyphens.',
+        variant: 'destructive',
+      });
+      return;
+    }
     setSaving(true);
     try {
       const payload = {
-        ownerName: form.name.trim() || undefined,
+        username: handle,
         bio: form.bio,
       };
       if (form.avatar && (form.avatar.startsWith('http') || form.avatar.startsWith('data:'))) {
@@ -65,7 +72,7 @@ const SellerProfileTab = ({ seller, productsCount, joinedDate }) => {
                 <img src={form.avatar} alt="" className="w-full h-full object-cover" />
               ) : (
                 <div className="w-full h-full brand-gradient grid place-items-center text-white font-bold">
-                  {(form.name || seller?.name || 'S').slice(0, 1).toUpperCase()}
+                  {(form.username || seller?.storeName || 'S').slice(0, 1).toUpperCase()}
                 </div>
               )}
             </div>
@@ -85,8 +92,17 @@ const SellerProfileTab = ({ seller, productsCount, joinedDate }) => {
         <div className="bg-white rounded-3xl border border-border soft-shadow p-6 space-y-4">
           <h3 className="font-bold">About</h3>
           <div>
-            <label className="block text-sm font-medium mb-1.5">Name</label>
-            <input value={form.name} onChange={set('name')} className={inputClass} />
+            <label className="block text-sm font-medium mb-1.5">Username</label>
+            <input
+              value={form.username}
+              onChange={(e) => setForm((f) => ({ ...f, username: e.target.value.replace(/\s/g, '') }))}
+              className={inputClass}
+              placeholder="Choose a unique username"
+              autoComplete="username"
+            />
+            <p className="mt-1.5 text-xs text-muted-foreground">
+              Used for your identity and settings. Your public store still shows Store Name.
+            </p>
           </div>
           <div>
             <label className="block text-sm font-medium mb-1.5">Bio</label>
