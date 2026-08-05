@@ -4,7 +4,7 @@
  * hammering the API with identical concurrent requests.
  */
 
-const DEFAULT_TTL_MS = 30_000;
+const DEFAULT_TTL_MS = 5_000;
 
 const inflight = new Map();
 const cache = new Map();

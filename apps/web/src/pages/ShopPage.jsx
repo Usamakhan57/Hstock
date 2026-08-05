@@ -106,7 +106,7 @@ const ShopPage = () => {
               <input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search the marketplace…"
+                placeholder="Search any product..."
                 aria-label="Search products"
                 className="w-full bg-transparent text-sm outline-none"
               />

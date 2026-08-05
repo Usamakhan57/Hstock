@@ -32,9 +32,19 @@ const ProductsList = () => {
   const categoryName = (id) => categories.find((c) => c.id === id)?.name || '—';
 
   const togglePublish = async (row) => {
-    const next = row.status === 'active' ? 'draft' : 'active';
-    await updateProduct(row.id, { status: next });
-    toast({ title: next === 'active' ? 'Product published' : 'Product unpublished', description: row.title });
+    const isPublished = row.status === 'active' && row.approvalStatus === 'approved';
+    if (isPublished) {
+      await updateProduct(row.id, { status: 'draft' });
+      toast({ title: 'Product unpublished', description: row.title });
+    } else {
+      // Publish = live + approved + public so it appears on the storefront immediately.
+      await updateProduct(row.id, {
+        status: 'active',
+        approvalStatus: 'approved',
+        visibility: 'public',
+      });
+      toast({ title: 'Product published', description: row.title });
+    }
     load();
   };
 
@@ -79,7 +89,16 @@ const ProductsList = () => {
         data={products}
         searchKeys={['title', 'sku']}
         filters={[
-          { key: 'status', label: 'Status', options: [{ value: 'active', label: 'Published' }, { value: 'draft', label: 'Draft' }, { value: 'archived', label: 'Archived' }] },
+          {
+            key: 'status',
+            label: 'Status',
+            options: [
+              { value: 'active', label: 'Published' },
+              { value: 'pending', label: 'Pending review' },
+              { value: 'draft', label: 'Draft' },
+              { value: 'archived', label: 'Archived' },
+            ],
+          },
           { key: 'categoryId', label: 'Category', options: categories.map((c) => ({ value: c.id, label: c.name })) },
         ]}
         bulkActions={[
@@ -124,21 +143,42 @@ const ProductsList = () => {
               </span>
             ),
           },
-          { key: 'status', label: 'Status', render: (row) => <StatusBadge status={row.status === 'active' ? 'published' : row.status} /> },
+          {
+            key: 'status',
+            label: 'Status',
+            render: (row) => (
+              <StatusBadge
+                status={
+                  row.status === 'active' && row.approvalStatus === 'approved'
+                    ? 'published'
+                    : (row.status === 'pending' || row.approvalStatus === 'pending')
+                      ? 'pending'
+                      : row.status
+                }
+              />
+            ),
+          },
         ]}
-        rowActions={(row) => [
-          ...(row.approvalStatus === 'pending' ? [
-            { label: 'Approve', icon: Check, onClick: () => runModeration(approveProduct, row, 'Product approved') },
-            { label: 'Reject', icon: X, onClick: () => runModeration(rejectProduct, row, 'Product rejected') },
-          ] : []),
-          { label: 'Edit', icon: Pencil, onClick: () => navigate(`/admin/products/${row.id}/edit`) },
-          { label: 'View on Store', icon: Eye, onClick: () => window.open(`/product/${row.id}`, '_blank') },
-          { separator: true },
-          { label: row.status === 'active' ? 'Unpublish' : 'Publish', icon: row.status === 'active' ? EyeOff : UploadCloud, onClick: () => togglePublish(row) },
-          { label: row.featured ? 'Unfeature' : 'Feature', icon: Star, onClick: () => toggleFeatured(row) },
-          { separator: true },
-          { label: 'Delete', icon: Trash2, destructive: true, onClick: () => setDeleteTarget(row) },
-        ]}
+        rowActions={(row) => {
+          const isPublished = row.status === 'active' && row.approvalStatus === 'approved';
+          return [
+            ...(row.approvalStatus === 'pending' ? [
+              { label: 'Approve', icon: Check, onClick: () => runModeration(approveProduct, row, 'Product approved') },
+              { label: 'Reject', icon: X, onClick: () => runModeration(rejectProduct, row, 'Product rejected') },
+            ] : []),
+            { label: 'Edit', icon: Pencil, onClick: () => navigate(`/admin/products/${row.id}/edit`) },
+            { label: 'View on Store', icon: Eye, onClick: () => window.open(`/product/${row.id}`, '_blank') },
+            { separator: true },
+            {
+              label: isPublished ? 'Unpublish' : 'Publish',
+              icon: isPublished ? EyeOff : UploadCloud,
+              onClick: () => togglePublish(row),
+            },
+            { label: row.featured ? 'Unfeature' : 'Feature', icon: Star, onClick: () => toggleFeatured(row) },
+            { separator: true },
+            { label: 'Delete', icon: Trash2, destructive: true, onClick: () => setDeleteTarget(row) },
+          ];
+        }}
         emptyState={{ title: 'No products yet', description: 'Add your first product to start selling.' }}
       />
 

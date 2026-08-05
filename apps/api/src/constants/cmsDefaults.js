@@ -82,7 +82,7 @@ export const DEFAULT_HOMEPAGE = Object.freeze({
       buttonUrl: '/categories',
       secondaryButtonText: 'Start Selling',
       secondaryButtonUrl: '/become-a-seller',
-      searchPlaceholder: 'Search accounts, domains, SaaS, source code…',
+      searchPlaceholder: 'Search any product...',
       badgeText: 'Trusted by creators worldwide',
       trustItems: [
         { id: 't1', label: 'SSL Secured' },
@@ -174,7 +174,7 @@ export const DEFAULT_HEADER = Object.freeze({
   logo: '',
   stickyHeader: true,
   megaMenuEnabled: true,
-  searchPlaceholder: 'Search for anything…',
+  searchPlaceholder: 'Search any product...',
   brandName: '',
   topBar: { enabled: false, text: '', linkText: '', linkUrl: '' },
   announcementBar: {

@@ -620,7 +620,7 @@ export const seedHeaderCms = {
   logo: '',
   stickyHeader: true,
   megaMenuEnabled: true,
-  searchPlaceholder: 'Search for anything…',
+  searchPlaceholder: 'Search any product...',
   topBar: {
     enabled: false,
     text: 'Free instant delivery on every digital order',
