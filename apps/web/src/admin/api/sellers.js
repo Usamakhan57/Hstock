@@ -78,10 +78,14 @@ export async function unverifySellerBadge(id) {
   return updateSeller(id, { verified: false });
 }
 
-export async function deleteSeller(id, { confirm } = {}) {
+export async function deleteSeller(id, { confirm, force, acknowledge } = {}) {
   const { del } = await import('../../lib/apiClient');
+  const body = {};
+  if (confirm) body.confirm = confirm;
+  if (force) body.force = true;
+  if (acknowledge) body.acknowledge = true;
   const { data } = await del(`/admin/sellers/${id}`, {
-    data: confirm ? { confirm } : undefined,
+    data: Object.keys(body).length ? body : undefined,
   });
   return data;
 }

@@ -100,6 +100,8 @@ router.delete(
     params: adminSellerIdSchema.params,
     body: z.object({
       confirm: z.string().trim().optional(),
+      force: z.union([z.boolean(), z.string(), z.number()]).optional(),
+      acknowledge: z.union([z.boolean(), z.string(), z.number()]).optional(),
     }).optional(),
   }),
   sellerDeleteController.adminDeleteSeller,

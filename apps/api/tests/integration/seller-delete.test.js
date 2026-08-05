@@ -25,12 +25,12 @@ const {
 } = await import('../../src/constants/productTypes.js');
 const { LEDGER_ENTRY_TYPE, LEDGER_DIRECTION, LEDGER_ACCOUNT } = await import('../../src/constants/ledger.js');
 
-async function createAdminToken(email = 'delete-admin@example.com') {
+async function createStaffToken(email, roles) {
   await User.create({
     email,
     passwordHash: await hashPassword('Password123!'),
-    name: 'Delete Admin',
-    roles: [USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN],
+    name: 'Delete Staff',
+    roles,
     emailVerified: true,
   });
   const login = await request(app)
@@ -38,6 +38,14 @@ async function createAdminToken(email = 'delete-admin@example.com') {
     .send({ email, password: 'Password123!' });
   assert.equal(login.status, 200);
   return login.body.data.accessToken;
+}
+
+async function createAdminToken(email = 'delete-admin@example.com') {
+  return createStaffToken(email, [USER_ROLES.ADMIN]);
+}
+
+async function createSuperAdminToken(email = 'delete-super@example.com') {
+  return createStaffToken(email, [USER_ROLES.SUPER_ADMIN, USER_ROLES.ADMIN]);
 }
 
 async function createApprovedSeller(email = 'delete-seller@example.com', storeName = 'Delete Me Store') {
@@ -453,4 +461,134 @@ test('resolved/closed disputes and completed orders do NOT block delete', async 
     .send({ confirm: 'DELETE' });
   assert.equal(res.status, 200, JSON.stringify(res.body));
   assert.equal(res.body.data.seller.deleted, true);
+});
+
+test('normal admin force delete is forbidden', async (t) => {
+  await setupTestDb();
+  t.after(async () => {
+    await resetDb();
+    await teardownTestDb();
+  });
+
+  const adminToken = await createAdminToken('force-forbidden-admin@example.com');
+  const { sellerId, userId } = await createApprovedSeller('force-forbidden-seller@example.com');
+  await Escrow.collection.insertOne({
+    order: new mongoose.Types.ObjectId(),
+    payment: new mongoose.Types.ObjectId(),
+    buyer: new mongoose.Types.ObjectId(),
+    seller: new mongoose.Types.ObjectId(sellerId),
+    sellerUser: new mongoose.Types.ObjectId(userId),
+    amount: 10,
+    status: 'locked',
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  });
+
+  const res = await request(app)
+    .delete(`/api/v1/admin/sellers/${sellerId}`)
+    .set('Authorization', `Bearer ${adminToken}`)
+    .send({ force: true, acknowledge: true });
+  assert.equal(res.status, 403, JSON.stringify(res.body));
+  assert.equal(res.body.code, 'FORCE_DELETE_FORBIDDEN');
+
+  const seller = await SellerProfile.findById(sellerId).lean();
+  assert.notEqual(seller.deleted, true);
+  const escrow = await Escrow.findOne({ seller: sellerId }).lean();
+  assert.equal(escrow.status, 'locked');
+});
+
+test('super admin force delete succeeds with active escrow preserved', async (t) => {
+  await setupTestDb();
+  t.after(async () => {
+    await resetDb();
+    await teardownTestDb();
+  });
+
+  const superToken = await createSuperAdminToken('force-escrow-super@example.com');
+  const { sellerId, userId, slug } = await createApprovedSeller(
+    'force-escrow-seller@example.com',
+    'Force Escrow Store',
+  );
+  const escrowId = new mongoose.Types.ObjectId();
+  await Escrow.collection.insertOne({
+    _id: escrowId,
+    order: new mongoose.Types.ObjectId(),
+    payment: new mongoose.Types.ObjectId(),
+    buyer: new mongoose.Types.ObjectId(),
+    seller: new mongoose.Types.ObjectId(sellerId),
+    sellerUser: new mongoose.Types.ObjectId(userId),
+    amount: 42,
+    status: 'locked',
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  });
+
+  const blocked = await request(app)
+    .delete(`/api/v1/admin/sellers/${sellerId}`)
+    .set('Authorization', `Bearer ${superToken}`)
+    .send({ confirm: 'DELETE' });
+  assert.equal(blocked.status, 409);
+  assert.equal(blocked.body.errors.blockedBy, 'Active Escrow');
+
+  const res = await request(app)
+    .delete(`/api/v1/admin/sellers/${sellerId}`)
+    .set('Authorization', `Bearer ${superToken}`)
+    .send({ force: true, acknowledge: true });
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  assert.equal(res.body.data.seller.deleted, true);
+  assert.equal(res.body.data.seller.storeName, 'Deleted Seller');
+  assert.equal(res.body.data.forceDeleted, true);
+
+  const escrow = await Escrow.findById(escrowId).lean();
+  assert.ok(escrow);
+  assert.equal(escrow.status, 'locked');
+  assert.equal(String(escrow.seller), String(sellerId));
+
+  const publicSeller = await request(app).get(`/api/v1/sellers/${slug}`);
+  assert.equal(publicSeller.status, 404);
+});
+
+test('super admin force delete succeeds with active dispute preserved', async (t) => {
+  await setupTestDb();
+  t.after(async () => {
+    await resetDb();
+    await teardownTestDb();
+  });
+
+  const superToken = await createSuperAdminToken('force-dispute-super@example.com');
+  const { sellerId, userId, slug } = await createApprovedSeller(
+    'force-dispute-seller@example.com',
+    'Force Dispute Store',
+  );
+  const disputeId = new mongoose.Types.ObjectId();
+  await Dispute.collection.insertOne({
+    _id: disputeId,
+    disputeNumber: `DSP-FORCE-${Date.now()}`,
+    order: new mongoose.Types.ObjectId(),
+    escrow: new mongoose.Types.ObjectId(),
+    buyer: new mongoose.Types.ObjectId(),
+    seller: new mongoose.Types.ObjectId(sellerId),
+    sellerUser: new mongoose.Types.ObjectId(userId),
+    reason: 'Active dispute force delete',
+    description: 'Must survive force delete',
+    status: 'open',
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  });
+
+  const res = await request(app)
+    .delete(`/api/v1/admin/sellers/${sellerId}`)
+    .set('Authorization', `Bearer ${superToken}`)
+    .send({ force: true, acknowledge: true });
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  assert.equal(res.body.data.forceDeleted, true);
+  assert.equal(res.body.data.seller.deleted, true);
+
+  const dispute = await Dispute.findById(disputeId).lean();
+  assert.ok(dispute);
+  assert.equal(dispute.status, 'open');
+  assert.equal(String(dispute.seller), String(sellerId));
+
+  const publicSeller = await request(app).get(`/api/v1/sellers/${slug}`);
+  assert.equal(publicSeller.status, 404);
 });
