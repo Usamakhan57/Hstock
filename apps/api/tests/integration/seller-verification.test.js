@@ -83,11 +83,12 @@ test('seller profile branding updates appear on public sellers API', async () =>
       banner: 'https://cdn.example/banner.png',
     });
   assert.equal(update.status, 200, JSON.stringify(update.body));
-  assert.equal(update.body.data.storeName, 'Fresh Brand Store');
-  assert.equal(update.body.data.bio, 'Short store description for featured cards');
-  assert.equal(update.body.data.logo, 'https://cdn.example/logo.png');
-  assert.equal(update.body.data.banner, 'https://cdn.example/banner.png');
-  assert.equal(update.body.data.verified, false);
+  const updatedProfile = update.body.data.profile || update.body.data;
+  assert.equal(updatedProfile.storeName, 'Fresh Brand Store');
+  assert.equal(updatedProfile.bio, 'Short store description for featured cards');
+  assert.equal(updatedProfile.logo, 'https://cdn.example/logo.png');
+  assert.equal(updatedProfile.banner, 'https://cdn.example/banner.png');
+  assert.equal(updatedProfile.verified === true, false);
 
   const list = await request(app).get('/api/v1/sellers').query({ limit: 50 });
   assert.equal(list.status, 200, JSON.stringify(list.body));

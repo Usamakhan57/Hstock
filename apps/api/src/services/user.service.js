@@ -94,7 +94,11 @@ export async function getUserById(userId) {
 
   return {
     user: publicUser(user),
-    profiles: { buyer, seller, admin },
+    profiles: {
+      buyer,
+      seller: seller ? serializeSeller(seller) : null,
+      admin,
+    },
   };
 }
 
@@ -157,7 +161,7 @@ export async function updateSellerProfile(userId, payload) {
   }
 
   await profile.save();
-  return profile.toObject();
+  return serializeSeller(profile);
 }
 
 export async function changePassword(userId, { currentPassword, newPassword }) {
