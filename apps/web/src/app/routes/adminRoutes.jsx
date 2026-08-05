@@ -60,6 +60,7 @@ const ReplacementsList = lazy(() => import('../../admin/pages/replacements/Repla
 const SystemHealth = lazy(() => import('../../admin/pages/system/SystemHealth'));
 const TelegramAdmin = lazy(() => import('../../admin/pages/telegram/TelegramAdmin'));
 const PromotionsList = lazy(() => import('../../admin/pages/promotions/PromotionsList'));
+const SellerVerificationList = lazy(() => import('../../admin/pages/sellers/SellerVerificationList'));
 
 function LazyPage({ children }) {
   return (
@@ -91,6 +92,7 @@ export function adminRoutes() {
         <Route path="customers" element={<LazyPage><CustomersList /></LazyPage>} />
         <Route path="customers/:id" element={<LazyPage><CustomerDetail /></LazyPage>} />
         <Route path="sellers" element={<LazyPage><SellersList /></LazyPage>} />
+        <Route path="seller-verification" element={<LazyPage><SellerVerificationList /></LazyPage>} />
         <Route path="promotions" element={<LazyPage><PromotionsList /></LazyPage>} />
         <Route path="coupons" element={<LazyPage><CouponsList /></LazyPage>} />
         <Route path="payments" element={<LazyPage><PaymentsList /></LazyPage>} />

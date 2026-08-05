@@ -40,6 +40,8 @@ export const LEDGER_ENTRY_TYPE = Object.freeze({
   BUYER_BONUS: 'buyer_bonus',
   /** Seller wallet debit for paid store promotion */
   PROMOTION_FEE: 'promotion_fee',
+  /** Seller wallet debit for permanent verified badge */
+  VERIFICATION_FEE: 'verification_fee',
 });
 
 export const LEDGER_ENTRY_TYPE_VALUES = Object.freeze(Object.values(LEDGER_ENTRY_TYPE));

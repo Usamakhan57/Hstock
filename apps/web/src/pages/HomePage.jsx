@@ -231,30 +231,50 @@ const HomePage = () => {
                 <Link
                   key={seller.slug}
                   to={`/seller/${seller.slug}`}
-                  className="group block overflow-hidden rounded-[2rem] border border-border bg-white p-6 shadow-sm transition-transform duration-300 hover:-translate-y-1 hover:shadow-lg"
+                  className="group block overflow-hidden rounded-[2rem] border border-border bg-white shadow-sm transition-transform duration-300 hover:-translate-y-1 hover:shadow-lg"
                 >
-                  <div className="flex items-center justify-between gap-4">
-                    <div className="grid h-14 w-14 place-items-center rounded-3xl bg-primary/10 text-primary text-lg font-bold">{seller.initials}</div>
-                    <div className="flex flex-wrap justify-end gap-2">
-                      {seller.storePromoted ? (
-                        <div className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-800">Promoted Store</div>
-                      ) : null}
-                      {seller.verified && (
-                        <div className="rounded-full border border-primary/15 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">Featured Seller</div>
+                  <div className="relative h-28 bg-secondary overflow-hidden">
+                    {seller.banner ? (
+                      <img src={seller.banner} alt="" className="absolute inset-0 h-full w-full object-cover" />
+                    ) : (
+                      <div className="absolute inset-0 bg-gradient-to-br from-secondary via-secondary to-muted" />
+                    )}
+                  </div>
+                  <div className="relative px-6 pb-6 pt-0">
+                    <div className="-mt-8 flex items-end justify-between gap-3">
+                      {seller.logo || seller.avatar ? (
+                        <img
+                          src={seller.logo || seller.avatar}
+                          alt={seller.name}
+                          className="h-16 w-16 rounded-2xl object-cover border-4 border-white shadow-sm bg-white"
+                        />
+                      ) : (
+                        <div className="grid h-16 w-16 place-items-center rounded-2xl border-4 border-white bg-primary/10 text-primary text-lg font-bold shadow-sm">
+                          {seller.initials}
+                        </div>
                       )}
+                      <div className="mb-1 flex flex-wrap justify-end gap-2">
+                        {seller.storePromoted ? (
+                          <div className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-800">Promoted</div>
+                        ) : null}
+                        {seller.verified ? (
+                          <div className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800">
+                            <ShieldCheck className="h-3.5 w-3.5" /> Verified Seller
+                          </div>
+                        ) : null}
+                      </div>
                     </div>
-                  </div>
-                  <h3 className="mt-5 text-xl font-semibold text-foreground transition-colors group-hover:text-primary">{seller.name}</h3>
-                  <p className="mt-2 text-sm text-muted-foreground leading-relaxed line-clamp-2">{seller.specialty || seller.bio || ''}</p>
-                  <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                    <div className="rounded-2xl bg-secondary/70 px-4 py-3 text-xs font-semibold text-foreground">{seller.productCount || 0} products</div>
-                    <div className="rounded-2xl bg-secondary/70 px-4 py-3 text-xs font-semibold text-foreground">
-                      {seller.rating != null ? `${Number(seller.rating).toFixed(1)} ★ rating` : 'New seller'}
+                    <h3 className="mt-4 text-xl font-semibold text-foreground transition-colors group-hover:text-primary">{seller.name}</h3>
+                    <p className="mt-2 text-sm text-muted-foreground leading-relaxed line-clamp-2">
+                      {seller.bio || seller.specialty || ''}
+                    </p>
+                    <div className="mt-5 rounded-2xl bg-secondary/70 px-4 py-3 text-xs font-semibold text-foreground">
+                      {seller.productCount || 0} products
                     </div>
+                    <span className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-primary group-hover:gap-3 transition-all">
+                      Visit Store <ArrowRight className="w-4 h-4" aria-hidden="true" />
+                    </span>
                   </div>
-                  <span className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-primary group-hover:gap-3 transition-all">
-                    Visit store <ArrowRight className="w-4 h-4" aria-hidden="true" />
-                  </span>
                 </Link>
               ))}
             </div>

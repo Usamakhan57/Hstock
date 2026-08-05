@@ -180,6 +180,34 @@ const Settings = () => {
             </div>
 
             <div className="bg-white rounded-2xl border border-border p-5 space-y-4">
+              <h3 className="font-semibold text-sm">Seller Verification</h3>
+              <ToggleRow
+                label="Verification Enabled"
+                description="Allow sellers to purchase a permanent Verified Seller badge from their wallet."
+                checked={!!form.sellerVerificationEnabled}
+                onChange={(v) => setForm((f) => ({ ...f, sellerVerificationEnabled: v }))}
+              />
+              <ToggleRow
+                label="Allow Manual Verification"
+                description="Let admins grant or remove verification without a wallet payment."
+                checked={!!form.allowManualSellerVerification}
+                onChange={(v) => setForm((f) => ({ ...f, allowManualSellerVerification: v }))}
+              />
+              <div>
+                <label className="block text-sm font-medium mb-1.5">Verification Fee ($)</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={form.sellerVerificationFeeUsd ?? 10}
+                  onChange={set('sellerVerificationFeeUsd')}
+                  className={inputClass}
+                />
+                <p className="text-xs text-muted-foreground mt-1">Default $10. One-time, never expires.</p>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-2xl border border-border p-5 space-y-4">
               <h3 className="font-semibold text-sm">General</h3>
               <div className="grid sm:grid-cols-2 gap-4">
                 <div>

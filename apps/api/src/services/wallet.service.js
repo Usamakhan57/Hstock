@@ -617,6 +617,90 @@ export async function debitForStorePromotion({
   return withTransaction(run);
 }
 
+/**
+ * Debit seller available balance for permanent verified-seller badge.
+ * Creates balanced verification_fee ledger entries.
+ */
+export async function debitForSellerVerification({
+  sellerId,
+  sellerUserId,
+  amount,
+  transferId,
+  description = 'Seller verification fee',
+  actor = null,
+  session = null,
+} = {}) {
+  const value = roundMoney(amount);
+  if (!(value > 0)) {
+    throw new AppError('Verification amount must be positive', 400, { code: 'INVALID_AMOUNT' });
+  }
+
+  const tid = transferId || `verify_${sellerId}_${Date.now()}`;
+
+  const run = async (activeSession) => {
+    const wallet = await getOrCreateSellerWallet(sellerId, sellerUserId, activeSession);
+    if (wallet.availableBalance + 1e-9 < value) {
+      throw new AppError(
+        `Insufficient wallet balance. Available $${roundMoney(wallet.availableBalance).toFixed(2)}, required $${value.toFixed(2)}.`,
+        400,
+        {
+          code: 'INSUFFICIENT_WALLET_BALANCE',
+          details: {
+            availableBalance: wallet.availableBalance,
+            required: value,
+            walletPath: '/seller/earnings',
+          },
+        },
+      );
+    }
+
+    wallet.availableBalance = roundMoney(wallet.availableBalance - value);
+    wallet.withdrawableBalance = computeWithdrawable(
+      wallet.availableBalance,
+      wallet.reservedBalance,
+    );
+    wallet.lastTransactionAt = new Date();
+    wallet.version = (wallet.version || 0) + 1;
+    await walletRepository.saveWallet(wallet, activeSession);
+
+    await ledgerService.recordTransfer({
+      session: activeSession,
+      transferId: tid,
+      createdBy: actor?.id || sellerUserId || null,
+      context: {
+        seller: sellerId,
+        sellerUser: sellerUserId,
+        wallet: wallet._id,
+      },
+      lines: [
+        {
+          direction: LEDGER_DIRECTION.DEBIT,
+          account: LEDGER_ACCOUNT.SELLER_AVAILABLE,
+          amount: value,
+          entryType: LEDGER_ENTRY_TYPE.VERIFICATION_FEE,
+          balanceAfter: wallet.availableBalance,
+          description,
+          meta: { reference: String(sellerId), feeType: 'seller_verification' },
+        },
+        {
+          direction: LEDGER_DIRECTION.CREDIT,
+          account: LEDGER_ACCOUNT.COMMISSION_REVENUE,
+          amount: value,
+          entryType: LEDGER_ENTRY_TYPE.VERIFICATION_FEE,
+          description,
+          meta: { reference: String(sellerId), feeType: 'seller_verification' },
+        },
+      ],
+    });
+
+    return { wallet, transferId: tid, amount: value };
+  };
+
+  if (session) return run(session);
+  const { withTransaction } = await import('../utils/transaction.js');
+  return withTransaction(run);
+}
+
 export async function listWalletTransactions(sellerUserId, query = {}) {
   const seller = await SellerProfile.findOne({ user: sellerUserId }).lean();
   if (!seller) {
@@ -646,5 +730,6 @@ export default {
   finalizeWithdrawalPayment,
   adminAdjustWallet,
   debitForStorePromotion,
+  debitForSellerVerification,
   listWalletTransactions,
 };

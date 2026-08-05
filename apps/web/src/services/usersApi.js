@@ -14,7 +14,19 @@ export const usersApi = {
   },
 
   updateSellerProfile(payload) {
-    return patch('/users/me/seller-profile', payload).then(({ data }) => data);
+    return patch('/users/me/seller-profile', payload).then(async ({ data }) => {
+      const { clearRequestCache } = await import('../lib/requestCache');
+      clearRequestCache('sellers');
+      clearRequestCache('products');
+      clearRequestCache('product');
+      try {
+        const { invalidateSellerCatalog } = await import('./catalogCache');
+        await invalidateSellerCatalog();
+      } catch {
+        // catalog may not be hydrated yet
+      }
+      return data;
+    });
   },
 
   changePassword({ currentPassword, newPassword }) {

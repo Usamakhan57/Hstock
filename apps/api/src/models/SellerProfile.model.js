@@ -119,6 +119,27 @@ const sellerProfileSchema = new mongoose.Schema(
     verified: {
       type: Boolean,
       default: false,
+      index: true,
+    },
+    /** Alias-friendly permanent verification metadata (non-breaking). */
+    verifiedAt: {
+      type: Date,
+      default: null,
+    },
+    verificationFeePaid: {
+      type: Number,
+      default: null,
+      min: 0,
+    },
+    verificationSource: {
+      type: String,
+      enum: ['wallet', 'admin', null],
+      default: null,
+    },
+    verifiedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
     },
     commissionRate: {
       type: Number,

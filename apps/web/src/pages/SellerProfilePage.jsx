@@ -14,6 +14,7 @@ import {
   getSellerBySlug,
   getSellerProducts,
   loadSellers,
+  fetchSellerBySlug,
   enrichSellerFromProducts,
 } from '../services/sellerRepository';
 import { isFollowingSeller, toggleFollowSeller } from '../services/buyerDashboard';
@@ -37,9 +38,12 @@ const SellerProfilePage = () => {
     setError(null);
     (async () => {
       try {
-        await loadSellers();
+        await loadSellers({ force: false });
         if (!alive) return;
-        const seller = getSellerBySlug(slug);
+        let seller = getSellerBySlug(slug);
+        if (!seller) {
+          seller = await fetchSellerBySlug(slug, { force: true });
+        }
         if (!seller) {
           if (alive) {
             setArtist(null);
@@ -116,43 +120,30 @@ const SellerProfilePage = () => {
       <div className="mx-auto max-w-[90rem] px-5 lg:px-8 pt-10 pb-24">
         <Breadcrumbs items={[{ name: 'Sellers', to: '/shop' }, { name: artist.name }]} />
 
-        {/* Store banner + logo */}
-        <div className="rounded-3xl overflow-hidden border border-border soft-shadow">
-          <div className="relative h-32 sm:h-40 brand-gradient overflow-hidden" aria-hidden="true">
-            {artist.banner ? (
-              <img src={artist.banner} alt="" className="absolute inset-0 h-full w-full object-cover" />
-            ) : (
-              <>
-                <div className="absolute inset-0 opacity-25" style={{ background: 'radial-gradient(circle at 15% 30%, #fff, transparent 55%)' }} />
-                <div className="absolute inset-0 opacity-20" style={{ background: 'radial-gradient(circle at 85% 80%, #fff, transparent 45%)' }} />
-              </>
-            )}
-          </div>
-          <div className="bg-white p-6 sm:p-8 pt-0">
-            <div className="flex flex-col sm:flex-row items-start sm:items-end gap-5 -mt-10">
+        {/* Store header — logo, name, description, badges (no purple hero) */}
+        <div className="rounded-3xl overflow-hidden border border-border soft-shadow bg-white">
+          <div className="p-6 sm:p-8">
+            <div className="flex flex-col sm:flex-row items-start gap-5">
               {artist.avatar || artist.logo ? (
                 <img
                   src={artist.avatar || artist.logo}
                   alt={artist.name}
-                  className="w-20 h-20 rounded-2xl object-cover shrink-0 border-4 border-white soft-shadow"
+                  className="w-20 h-20 rounded-2xl object-cover shrink-0 border border-border soft-shadow"
                 />
               ) : (
-                <span className="w-20 h-20 rounded-2xl brand-gradient text-white grid place-items-center text-2xl font-bold shrink-0 border-4 border-white soft-shadow">{artist.initials}</span>
+                <span className="w-20 h-20 rounded-2xl bg-secondary text-primary grid place-items-center text-2xl font-bold shrink-0 border border-border">{artist.initials}</span>
               )}
-              <div className="flex-1 pt-2 sm:pt-0">
+              <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
                   <h1 className="text-2xl font-black tracking-tight">{artist.name}</h1>
                   {artist.verified && (
                     <span className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full bg-secondary text-secondary-foreground"><ShieldCheck className="w-3.5 h-3.5 text-primary" /> Verified Seller</span>
                   )}
                   {artist.storePromoted && (
-                    <span className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-50 text-amber-800 border border-amber-200">Featured Seller</span>
-                  )}
-                  {artist.storePromoted && (
-                    <span className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full bg-orange-50 text-orange-800 border border-orange-200">Promoted Store</span>
+                    <span className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-50 text-amber-800 border border-amber-200">Promoted Store</span>
                   )}
                 </div>
-                <p className="text-sm text-muted-foreground mt-2 max-w-xl leading-relaxed">{artist.bio || artist.specialty || 'Digital products from a trusted ApnaStore seller.'}</p>
+                <p className="text-sm text-muted-foreground mt-2 max-w-xl leading-relaxed">{artist.bio || artist.specialty || ''}</p>
               </div>
               <div className="flex items-center gap-2 shrink-0">
                 <button

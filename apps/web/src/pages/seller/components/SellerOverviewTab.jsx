@@ -106,9 +106,11 @@ const SellerOverviewTab = ({
   actionRequired = [],
   joinedDate,
   onPromote,
+  onVerify,
 }) => {
   const [chartRange, setChartRange] = React.useState('7');
   const [promoStatus, setPromoStatus] = React.useState(null);
+  const [verifyStatus, setVerifyStatus] = React.useState(null);
   const [nowTick, setNowTick] = React.useState(Date.now());
   const chartData = chartRange === '7' ? salesChart7 : salesChart30;
   const storeSlug = seller?.slug
@@ -124,8 +126,12 @@ const SellerOverviewTab = ({
       .then(({ storePromotionApi }) => storePromotionApi.getStatus())
       .then((data) => { if (!cancelled) setPromoStatus(data); })
       .catch(() => { if (!cancelled) setPromoStatus(null); });
+    import('../../../services/sellerVerificationApi')
+      .then(({ sellerVerificationApi }) => sellerVerificationApi.getStatus())
+      .then((data) => { if (!cancelled) setVerifyStatus(data); })
+      .catch(() => { if (!cancelled) setVerifyStatus(null); });
     return () => { cancelled = true; };
-  }, [seller?.id, seller?.storePromotedUntil]);
+  }, [seller?.id, seller?.storePromotedUntil, seller?.verified]);
 
   React.useEffect(() => {
     if (!promoStatus?.activePromotion?.expiresAt) return undefined;
@@ -142,6 +148,10 @@ const SellerOverviewTab = ({
   const promoCountdown = promoActive
     ? formatPromotionCountdown(activePromo.expiresAt)
     : null;
+  const isVerified = verifyStatus?.verified === true
+    || verifyStatus?.sellerVerified === true
+    || seller?.verified === true;
+  const verifyFee = Number(verifyStatus?.settings?.feeUsd ?? 10);
 
   return (
     <div className="flex w-full min-w-0 flex-col gap-5 sm:gap-6" data-testid="seller-overview-stack">
@@ -165,6 +175,12 @@ const SellerOverviewTab = ({
                     <BadgeCheck className="h-3.5 w-3.5" />
                     {approved ? 'Approved store' : `Status: ${seller?.status || 'pending'}`}
                   </span>
+                  {isVerified ? (
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-600 px-3 py-1 text-xs font-semibold text-white">
+                      <Shield className="h-3.5 w-3.5" />
+                      Verified Seller
+                    </span>
+                  ) : null}
                   <span className="inline-flex items-center gap-1.5 rounded-full bg-secondary px-3 py-1 text-xs font-semibold text-muted-foreground">
                     <Calendar className="h-3.5 w-3.5" />
                     Joined {joinedDate || 'Recently'}
@@ -243,6 +259,45 @@ const SellerOverviewTab = ({
             <div className="min-w-0 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
               Public store unlocks after approval.
             </div>
+          )}
+        </div>
+      </section>
+
+      {/* Permanent Verified Seller */}
+      <section className="relative z-0 w-full min-w-0 overflow-hidden rounded-[1.75rem] border border-border bg-white p-5 shadow-sm sm:p-6">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="min-w-0">
+            <div className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-500/15 text-emerald-700">
+              <Shield className="h-5 w-5" />
+            </div>
+            <h3 className="mt-3 text-lg font-black text-foreground">Verified Seller</h3>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Status: <span className="font-semibold text-foreground">{isVerified ? 'Verified' : 'Not Verified'}</span>
+            </p>
+            <ul className="mt-3 space-y-1.5 text-sm text-muted-foreground">
+              <li>• Permanent Verified Badge</li>
+              <li>• Higher buyer trust</li>
+              <li>• Badge shown marketplace-wide</li>
+              <li>• Better seller credibility</li>
+            </ul>
+          </div>
+          {isVerified ? (
+            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
+              Permanent verification active
+              {verifyStatus?.verifiedAt
+                ? ` · since ${new Date(verifyStatus.verifiedAt).toLocaleDateString()}`
+                : ''}
+            </div>
+          ) : (
+            <button
+              type="button"
+              disabled={!approved}
+              onClick={() => (typeof onVerify === 'function' ? onVerify() : null)}
+              className="inline-flex items-center justify-center gap-2 rounded-full bg-emerald-600 px-6 py-3 text-sm font-bold text-white shadow-sm hover:bg-emerald-700 disabled:opacity-50"
+            >
+              <Shield className="h-4 w-4" />
+              Get Verified — ${verifyFee.toFixed(0)}
+            </button>
           )}
         </div>
       </section>
