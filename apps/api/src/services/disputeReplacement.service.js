@@ -65,20 +65,70 @@ function serializeReplacement(doc, { includeMasked = true } = {}) {
   };
 }
 
+const DEFAULT_MAX_REPLACEMENT_ATTEMPTS = 3;
+
+function isStaffActor(actor) {
+  return actor?.roles?.some((r) => [
+    USER_ROLES.ADMIN,
+    USER_ROLES.SUPER_ADMIN,
+    USER_ROLES.SUPPORT,
+  ].includes(r));
+}
+
+function maxAttemptsFor(dispute) {
+  const configured = Number(dispute.maxReplacementAttempts);
+  return Number.isFinite(configured) && configured >= 1
+    ? configured
+    : DEFAULT_MAX_REPLACEMENT_ATTEMPTS;
+}
+
+function attemptsUsed(dispute) {
+  return Math.max(
+    Number(dispute.replacementAttempts) || 0,
+    Number(dispute.latestReplacementVersion) || 0,
+  );
+}
+
 /**
  * Seller submits a replacement.
  * Prefer a single credentialBlob (exact text). Never auto-closes the dispute.
  * Status → waiting_for_buyer_confirmation.
+ * Sellers are capped at maxReplacementAttempts (default 3). Admins may bypass.
  */
 export async function sendReplacement(disputeId, payload, actor, requestMeta = {}) {
   const dispute = await Dispute.findById(disputeId);
   if (!dispute) throw new AppError('Dispute not found', 404, { code: 'DISPUTE_NOT_FOUND' });
 
-  if (String(dispute.sellerUser) !== String(actorId(actor)) && !isSuperAdmin(actor)) {
+  const staffBypass = isStaffActor(actor);
+  if (String(dispute.sellerUser) !== String(actorId(actor)) && !staffBypass) {
     throw new AppError('Only the seller can send replacements', 403, { code: 'FORBIDDEN' });
   }
   if ([DISPUTE_STATUS.RESOLVED, DISPUTE_STATUS.CLOSED].includes(dispute.status)) {
     throw new AppError('Dispute is closed', 400, { code: 'DISPUTE_CLOSED' });
+  }
+
+  if (
+    dispute.status === DISPUTE_STATUS.WAITING_FOR_BUYER_CONFIRMATION
+    && !staffBypass
+  ) {
+    throw new AppError('Waiting for buyer confirmation on the current replacement', 400, {
+      code: 'WAITING_FOR_BUYER',
+    });
+  }
+
+  const maxAttempts = maxAttemptsFor(dispute);
+  const used = attemptsUsed(dispute);
+  const atLimit = used >= maxAttempts
+    || dispute.status === DISPUTE_STATUS.MAXIMUM_REPLACEMENTS_REACHED;
+
+  if (atLimit && !staffBypass) {
+    throw new AppError('Maximum replacement attempts reached', 400, {
+      code: 'MAX_REPLACEMENTS_REACHED',
+      details: {
+        replacementAttempts: used,
+        maxReplacementAttempts: maxAttempts,
+      },
+    });
   }
 
   const chat = await disputeChatService.getChatByDisputeId(disputeId);
@@ -130,6 +180,11 @@ export async function sendReplacement(disputeId, payload, actor, requestMeta = {
 
   const version = (dispute.latestReplacementVersion || 0) + 1;
 
+  // Admin override past the cap: raise the stored max so subsequent seller attempts stay consistent.
+  if (staffBypass && version > maxAttempts) {
+    dispute.maxReplacementAttempts = version;
+  }
+
   await DisputeReplacement.updateMany(
     { dispute: dispute._id, status: REPLACEMENT_STATUS.PENDING },
     { $set: { status: REPLACEMENT_STATUS.SUPERSEDED } },
@@ -152,6 +207,7 @@ export async function sendReplacement(disputeId, payload, actor, requestMeta = {
 
   // NEVER auto-close. Only wait for buyer confirmation.
   dispute.latestReplacementVersion = version;
+  dispute.replacementAttempts = version;
   dispute.replacementQuantity = accountCount;
   dispute.status = DISPUTE_STATUS.WAITING_FOR_BUYER_CONFIRMATION;
   if (!dispute.firstReplacementAt) {
@@ -264,8 +320,26 @@ export async function respondToReplacement(
     replacement.responseNote = payload.note || null;
     await replacement.save();
 
-    // Return dispute to OPEN so seller can send another replacement.
-    dispute.status = DISPUTE_STATUS.OPEN;
+    const maxAttempts = maxAttemptsFor(dispute);
+    const attemptNumber = Math.max(
+      Number(replacement.version) || 0,
+      attemptsUsed(dispute),
+    );
+    dispute.replacementAttempts = attemptNumber;
+    dispute.latestReplacementVersion = Math.max(
+      dispute.latestReplacementVersion || 0,
+      attemptNumber,
+    );
+
+    const limitReached = attemptNumber >= maxAttempts;
+    if (limitReached) {
+      // No 4th replacement — start final 24h timer for automatic buyer refund.
+      dispute.status = DISPUTE_STATUS.MAXIMUM_REPLACEMENTS_REACHED;
+      dispute.sellerResponseDeadline = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    } else {
+      // Seller may submit another replacement.
+      dispute.status = DISPUTE_STATUS.OPEN;
+    }
     await dispute.save();
 
     await disputeTimelineService.appendTimelineEvent({
@@ -275,7 +349,12 @@ export async function respondToReplacement(
       actor,
       role: 'buyer',
       message: `Buyer rejected replacement v${replacement.version}`,
-      meta: { version: replacement.version, replacementId },
+      meta: {
+        version: replacement.version,
+        replacementId,
+        replacementAttempts: attemptNumber,
+        maxReplacementAttempts: maxAttempts,
+      },
     });
     await disputeTimelineService.appendTimelineEvent({
       disputeId: dispute._id,
@@ -283,8 +362,17 @@ export async function respondToReplacement(
       event: DISPUTE_TIMELINE_EVENTS.REPLACEMENT_REJECTED,
       actor,
       role: 'buyer',
-      message: `Replacement v${replacement.version} rejected — dispute reopened`,
-      meta: { version: replacement.version, replacementId },
+      message: limitReached
+        ? `Replacement v${replacement.version} rejected — maximum attempts reached`
+        : `Replacement v${replacement.version} rejected — dispute reopened`,
+      meta: {
+        version: replacement.version,
+        replacementId,
+        replacementAttempts: attemptNumber,
+        maxReplacementAttempts: maxAttempts,
+        maximumReplacementsReached: limitReached,
+        sellerResponseDeadline: dispute.sellerResponseDeadline,
+      },
     });
 
     const serialized = serializeReplacement(replacement);

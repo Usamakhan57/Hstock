@@ -644,15 +644,20 @@ export const seedHeaderCms = {
   ],
 };
 
-// Footer CMS — the parts of the Footer component that are copy/branding
-// rather than link structure. Link columns themselves (Marketplace,
-// Company, Support, Legal) are managed as Navigation Menus and referenced
-// here by menu key, so the same menu builder powers header and footer.
+// Footer CMS — branding, newsletter, link columns, and bottom badges.
+// Storefront Footer reads this document directly (no hardcoded copy).
 export const seedFooterCms = {
+  footerContentVersion: 2,
   logo: '',
-  description: 'A secure marketplace for digital accounts, domains, websites, SaaS, source code, and tools — with escrow protection and verified sellers.',
-  tagline: 'Secure payments · Instant delivery · 30-day guarantee',
-  copyrightText: '© {year} ApnaStore. All rights reserved.',
+  description:
+    'ApnaStore is a secure digital marketplace for buying and selling social accounts, domains, SaaS, source code, websites and digital assets using Escrow Protection.',
+  tagline: '',
+  copyrightText: '© {year} ApnaStore.\nAll rights reserved.',
+  bottomBadges: [
+    { id: 'badge-secure', label: 'Secure Payments' },
+    { id: 'badge-instant', label: 'Instant Delivery' },
+    { id: 'badge-escrow', label: 'Escrow Protected' },
+  ],
   socialLinks: [
     { id: 'soc-1', platform: 'Instagram', url: '#' },
     { id: 'soc-2', platform: 'Twitter', url: '#' },
@@ -669,16 +674,43 @@ export const seedFooterCms = {
   newsletter: {
     enabled: true,
     title: 'Newsletter',
-    description: 'New drops, deals, and creator spotlights — no spam.',
-    placeholder: 'Your email',
+    description: 'Receive product updates, new listings and marketplace announcements.',
+    placeholder: 'Enter your email',
     buttonLabel: 'Subscribe',
   },
-  columnMenuKeys: {
-    marketplace: 'footer-marketplace',
-    company: 'footer-company',
-    support: 'footer-support',
-    legal: 'footer-legal',
-  },
+  columns: [
+    {
+      title: 'Marketplace',
+      links: [
+        { name: 'Home', to: '/' },
+        { name: 'Shop', to: '/shop' },
+        { name: 'Categories', to: '/categories' },
+        { name: 'Best Sellers', to: '/shop?sort=top-rated' },
+        { name: 'Become a Seller', to: '/become-a-seller' },
+      ],
+    },
+    {
+      title: 'Resources',
+      links: [
+        { name: 'Blog', to: '/blog' },
+        { name: 'Buyer Guide', to: '/buyer-guide' },
+        { name: 'Seller Guide', to: '/seller-guide' },
+        { name: 'Help Center', to: '/support' },
+        { name: 'Support', to: '/support' },
+        { name: 'Contact', to: '/contact' },
+      ],
+    },
+    {
+      title: 'Legal',
+      links: [
+        { name: 'Terms', to: '/terms' },
+        { name: 'Privacy Policy', to: '/privacy' },
+        { name: 'Refund Policy', to: '/refund-policy' },
+        { name: 'Cookie Policy', to: '/cookie-policy' },
+        { name: 'Escrow Protection', to: '/escrow-protection' },
+      ],
+    },
+  ],
 };
 
 // Navigation Menus — the Menu Builder's data. Each menu is a flat list of

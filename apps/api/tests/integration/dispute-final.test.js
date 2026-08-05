@@ -17,6 +17,7 @@ const {
   DisputeTimeline,
   Order,
   Wallet,
+  BuyerWallet,
 } = await import('../../src/models/index.js');
 const { hashPassword } = await import('../../src/utils/password.js');
 const { USER_ROLES } = await import('../../src/constants/roles.js');
@@ -631,4 +632,86 @@ test('credential expiry clears encrypted blobs and keeps audits', async () => {
     action: 'credential_expired',
   }).lean();
   assert.ok(audits.length >= 1);
+});
+
+test('maximum 3 replacements then auto-refund after final 24h timer', async () => {
+  const adminToken = await createAdminToken('maxrep-admin@example.com');
+  const { token: sellerToken } = await createSeller('maxrep-seller@example.com');
+  const { token: buyerToken, userId: buyerUserId } = await createBuyer('maxrep-buyer@example.com');
+  const product = await createLiveProduct(adminToken, sellerToken, { stock: 5, price: 25 });
+  const paid = await buyAndPay({ buyerToken, productId: product._id, quantity: 1, buyerUserId });
+
+  const dispute = await request(app)
+    .post('/api/v1/disputes')
+    .set('Authorization', `Bearer ${buyerToken}`)
+    .send({
+      orderId: paid.order._id,
+      reason: 'Account broken',
+      description: 'Login fails after delivery — need replacement coverage for max attempts.',
+    });
+  assert.equal(dispute.status, 201, JSON.stringify(dispute.body));
+  const disputeId = dispute.body.data._id;
+
+  const buyerWalletBefore = await BuyerWallet.findOne({ buyer: buyerUserId }).lean();
+  const balanceBefore = buyerWalletBefore?.availableBalance ?? 0;
+
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    const sent = await request(app)
+      .post(`/api/v1/disputes/${disputeId}/replacements`)
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ credentialBlob: `acc${attempt}@mail.com\npass${attempt}` });
+    assert.equal(sent.status, 201, JSON.stringify(sent.body));
+    assert.equal(sent.body.data.version, attempt);
+
+    const reject = await request(app)
+      .post(`/api/v1/disputes/${disputeId}/replacements/${sent.body.data._id}/respond`)
+      .set('Authorization', `Bearer ${buyerToken}`)
+      .send({ decision: 'rejected', note: `Reject #${attempt}` });
+    assert.equal(reject.status, 200, JSON.stringify(reject.body));
+    assert.equal(reject.body.data.status, 'rejected');
+
+    const after = await Dispute.findById(disputeId).lean();
+    assert.equal(after.replacementAttempts, attempt);
+    assert.equal(after.maxReplacementAttempts, 3);
+
+    if (attempt < 3) {
+      assert.equal(after.status, 'open');
+    } else {
+      assert.equal(after.status, 'maximum_replacements_reached');
+      assert.ok(after.sellerResponseDeadline);
+    }
+  }
+
+  const fourth = await request(app)
+    .post(`/api/v1/disputes/${disputeId}/replacements`)
+    .set('Authorization', `Bearer ${sellerToken}`)
+    .send({ credentialBlob: 'fourth@mail.com\npass' });
+  assert.equal(fourth.status, 400, JSON.stringify(fourth.body));
+  assert.equal(fourth.body.code, 'MAX_REPLACEMENTS_REACHED');
+
+  // Final timer not elapsed yet — no auto-refund.
+  const { processUnansweredDisputeAutoRefunds } = await import('../../src/services/dispute.service.js');
+  await processUnansweredDisputeAutoRefunds({ limit: 20 });
+  let current = await Dispute.findById(disputeId).lean();
+  assert.equal(current.status, 'maximum_replacements_reached');
+  assert.equal(current.autoRefundedAt, null);
+
+  await Dispute.findByIdAndUpdate(disputeId, {
+    sellerResponseDeadline: new Date(Date.now() - 60_000),
+  });
+
+  const results = await processUnansweredDisputeAutoRefunds({ limit: 20 });
+  assert.ok(results.succeeded >= 1, JSON.stringify(results));
+
+  current = await Dispute.findById(disputeId).lean();
+  assert.equal(current.status, 'resolved');
+  assert.equal(current.resolution, 'buyer_wins');
+  assert.ok(current.autoRefundedAt);
+
+  const escrow = await Escrow.findById(paid.escrow._id).lean();
+  assert.equal(escrow.heldAmount, 0);
+  assert.ok((escrow.refundedAmount || 0) >= 25);
+
+  const buyerWalletAfter = await BuyerWallet.findOne({ buyer: buyerUserId }).lean();
+  assert.ok((buyerWalletAfter?.availableBalance ?? 0) >= balanceBefore + 25);
 });

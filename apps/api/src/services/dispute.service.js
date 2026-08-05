@@ -187,6 +187,8 @@ export async function openDispute(payload, actor, requestMeta = {}) {
         credentialsExpireAt: expireAt,
         openedAt: new Date(),
         sellerResponseDeadline: new Date(Date.now() + 24 * 60 * 60 * 1000),
+        replacementAttempts: 0,
+        maxReplacementAttempts: 3,
         messages: [
           {
             author: actor.id,
@@ -405,6 +407,16 @@ async function buildDashboard(dispute) {
     },
     ocrFlagCount: dispute.ocrFlagCount || 0,
     violationCount: violation?.count || dispute.violationCountSnapshot || 0,
+    replacementAttempts: dispute.replacementAttempts ?? dispute.latestReplacementVersion ?? 0,
+    maxReplacementAttempts: dispute.maxReplacementAttempts ?? 3,
+    canReplace: (dispute.replacementAttempts ?? dispute.latestReplacementVersion ?? 0)
+      < (dispute.maxReplacementAttempts ?? 3)
+      && ![
+        DISPUTE_STATUS.MAXIMUM_REPLACEMENTS_REACHED,
+        DISPUTE_STATUS.RESOLVED,
+        DISPUTE_STATUS.CLOSED,
+        DISPUTE_STATUS.WAITING_FOR_BUYER_CONFIRMATION,
+      ].includes(dispute.status),
     replacementHistory: replacements.map((r) => ({
       id: r._id,
       version: r.version,
@@ -661,13 +673,21 @@ export async function resolveDispute(id, payload, actor) {
 }
 
 /**
- * 24h rule: auto-refund ONLY when seller never submitted any replacement.
- * Once a replacement exists (latestReplacementVersion > 0 / firstReplacementAt set),
- * never auto-refund or auto-close.
+ * 24h auto-refund jobs:
+ * 1) Seller never submitted any replacement (open + no replacements).
+ * 2) Buyer rejected all 3 replacements (maximum_replacements_reached + deadline).
+ * Once a replacement exists, case (1) never auto-refunds.
  */
 export async function processUnansweredDisputeAutoRefunds({ limit = 50 } = {}) {
   const now = new Date();
-  const candidates = await Dispute.find({
+  const results = {
+    processed: 0,
+    succeeded: 0,
+    failed: 0,
+    errors: [],
+  };
+
+  const noReplacementCandidates = await Dispute.find({
     status: DISPUTE_STATUS.OPEN,
     latestReplacementVersion: { $lte: 0 },
     firstReplacementAt: null,
@@ -677,21 +697,19 @@ export async function processUnansweredDisputeAutoRefunds({ limit = 50 } = {}) {
     .sort({ sellerResponseDeadline: 1 })
     .limit(limit);
 
-  const results = {
-    processed: 0,
-    succeeded: 0,
-    failed: 0,
-    errors: [],
-  };
-
-  for (const dispute of candidates) {
+  for (const dispute of noReplacementCandidates) {
     results.processed += 1;
     try {
-      // Skip if a replacement appeared between query and process.
       if ((dispute.latestReplacementVersion || 0) > 0 || dispute.firstReplacementAt) {
         continue;
       }
-      await autoRefundDisputeForNoReplacement(dispute._id);
+      await autoRefundDisputeForBuyer({
+        disputeId: dispute._id,
+        expectedStatus: DISPUTE_STATUS.OPEN,
+        requireNoReplacement: true,
+        reason: 'Auto-refund: seller did not submit a replacement within 24 hours',
+        timelineReason: 'no_replacement_within_24h',
+      });
       results.succeeded += 1;
     } catch (error) {
       results.failed += 1;
@@ -702,10 +720,47 @@ export async function processUnansweredDisputeAutoRefunds({ limit = 50 } = {}) {
     }
   }
 
+  const remaining = Math.max(0, limit - results.processed);
+  if (remaining > 0) {
+    const maxReachedCandidates = await Dispute.find({
+      status: DISPUTE_STATUS.MAXIMUM_REPLACEMENTS_REACHED,
+      autoRefundedAt: null,
+      sellerResponseDeadline: { $lte: now },
+    })
+      .sort({ sellerResponseDeadline: 1 })
+      .limit(remaining);
+
+    for (const dispute of maxReachedCandidates) {
+      results.processed += 1;
+      try {
+        await autoRefundDisputeForBuyer({
+          disputeId: dispute._id,
+          expectedStatus: DISPUTE_STATUS.MAXIMUM_REPLACEMENTS_REACHED,
+          requireNoReplacement: false,
+          reason: 'Auto-refund: maximum replacement attempts reached',
+          timelineReason: 'maximum_replacements_reached',
+        });
+        results.succeeded += 1;
+      } catch (error) {
+        results.failed += 1;
+        results.errors.push({
+          disputeId: String(dispute._id),
+          message: error.message,
+        });
+      }
+    }
+  }
+
   return results;
 }
 
-async function autoRefundDisputeForNoReplacement(disputeId) {
+async function autoRefundDisputeForBuyer({
+  disputeId,
+  expectedStatus,
+  requireNoReplacement,
+  reason,
+  timelineReason,
+}) {
   const systemActor = {
     id: null,
     _id: null,
@@ -717,13 +772,19 @@ async function autoRefundDisputeForNoReplacement(disputeId) {
     if (!dispute) {
       throw new AppError('Dispute not found', 404, { code: 'DISPUTE_NOT_FOUND' });
     }
-    if (dispute.status !== DISPUTE_STATUS.OPEN) {
-      throw new AppError('Dispute is not open for auto-refund', 400, { code: 'DISPUTE_NOT_OPEN' });
+    if (dispute.status !== expectedStatus) {
+      throw new AppError('Dispute is not eligible for auto-refund', 400, {
+        code: 'DISPUTE_NOT_ELIGIBLE',
+      });
     }
-    if ((dispute.latestReplacementVersion || 0) > 0 || dispute.firstReplacementAt) {
+    if (requireNoReplacement
+      && ((dispute.latestReplacementVersion || 0) > 0 || dispute.firstReplacementAt)) {
       throw new AppError('Replacement already submitted — auto-refund blocked', 400, {
         code: 'REPLACEMENT_EXISTS',
       });
+    }
+    if (dispute.autoRefundedAt) {
+      throw new AppError('Dispute already auto-refunded', 400, { code: 'ALREADY_AUTO_REFUNDED' });
     }
 
     const escrow = await escrowRepository.findEscrowById(dispute.escrow, { session });
@@ -753,7 +814,7 @@ async function autoRefundDisputeForNoReplacement(disputeId) {
       dispute,
       amount: refundAmount,
       type: refundType,
-      reason: 'Auto-refund: seller did not submit a replacement within 24 hours',
+      reason,
       actor: systemActor,
       session,
     });
@@ -785,7 +846,7 @@ async function autoRefundDisputeForNoReplacement(disputeId) {
     dispute.resolvedQuantity = dispute.disputedQuantity;
     dispute.status = DISPUTE_STATUS.RESOLVED;
     dispute.resolution = DISPUTE_RESOLUTION.BUYER_WINS;
-    dispute.resolutionNote = 'Auto-refund: no seller replacement within 24 hours';
+    dispute.resolutionNote = reason;
     dispute.resolvedAt = new Date();
     dispute.autoRefundedAt = new Date();
     if (session) await dispute.save({ session });
@@ -800,7 +861,7 @@ async function autoRefundDisputeForNoReplacement(disputeId) {
       actor: systemActor,
       role: 'system',
       message: `Auto-refund issued: ${refundAmount}`,
-      meta: { refundAmount, reason: 'no_replacement_within_24h' },
+      meta: { refundAmount, reason: timelineReason },
       session,
     });
     await disputeTimelineService.appendTimelineEvent({

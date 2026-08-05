@@ -55,6 +55,7 @@ export const DISPUTE_STATUS = Object.freeze({
   OPEN: 'open',
   UNDER_REVIEW: 'under_review',
   WAITING_FOR_BUYER_CONFIRMATION: 'waiting_for_buyer_confirmation',
+  MAXIMUM_REPLACEMENTS_REACHED: 'maximum_replacements_reached',
   RESOLVED: 'resolved',
   CLOSED: 'closed',
 });

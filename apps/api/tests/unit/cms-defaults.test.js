@@ -8,6 +8,8 @@ import {
   ADMIN_ONLY_CMS_KEYS,
   DEFAULT_POPULAR_TAGS,
   DEFAULT_CONTACT,
+  DEFAULT_FOOTER,
+  FOOTER_CONTENT_VERSION,
 } from '../../src/constants/cmsDefaults.js';
 import { sanitizeCmsDataForPublic } from '../../src/services/cms.sanitize.js';
 
@@ -65,6 +67,24 @@ describe('cms defaults', () => {
     assert.equal(PUBLIC_CMS_KEYS.includes(CMS_KEYS.EMAIL_TEMPLATES), false);
     assert.ok(PUBLIC_CMS_KEYS.includes(CMS_KEYS.HOMEPAGE));
     assert.ok(PUBLIC_CMS_KEYS.includes(CMS_KEYS.BANNERS));
+  });
+
+  it('defines production footer CMS copy and three link columns', () => {
+    assert.equal(FOOTER_CONTENT_VERSION, 2);
+    assert.ok(DEFAULT_FOOTER.description.includes('Escrow Protection'));
+    assert.equal(DEFAULT_FOOTER.newsletter.title, 'Newsletter');
+    assert.equal(DEFAULT_FOOTER.newsletter.placeholder, 'Enter your email');
+    assert.equal(DEFAULT_FOOTER.newsletter.buttonLabel, 'Subscribe');
+    assert.equal(DEFAULT_FOOTER.columns.length, 3);
+    assert.deepEqual(
+      DEFAULT_FOOTER.columns.map((c) => c.title),
+      ['Marketplace', 'Resources', 'Legal'],
+    );
+    assert.equal(DEFAULT_FOOTER.bottomBadges.length, 3);
+    assert.deepEqual(
+      DEFAULT_FOOTER.bottomBadges.map((b) => b.label),
+      ['Secure Payments', 'Instant Delivery', 'Escrow Protected'],
+    );
   });
 });
 
