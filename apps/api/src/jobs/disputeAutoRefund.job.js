@@ -3,8 +3,9 @@ import { JobRun } from '../models/index.js';
 import * as disputeService from '../services/dispute.service.js';
 
 /**
- * Auto-refund open disputes where the seller never submitted a replacement
- * within the 24-hour sellerResponseDeadline.
+ * Auto-refund open disputes where:
+ * - seller never submitted a replacement within 24h, OR
+ * - buyer rejected all replacement attempts (maximum_replacements_reached) and the final 24h timer elapsed.
  */
 export async function runDisputeAutoRefund() {
   const run = await JobRun.create({

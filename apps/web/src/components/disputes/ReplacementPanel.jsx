@@ -10,6 +10,10 @@ const ReplacementPanel = ({
   role = 'buyer',
   readOnly = false,
   onChanged,
+  replacementAttempts = 0,
+  maxReplacementAttempts = 3,
+  canReplace,
+  disputeStatus = '',
 }) => {
   const { toast } = useToast();
   const [credentialBlob, setCredentialBlob] = useState('');
@@ -20,6 +24,21 @@ const ReplacementPanel = ({
 
   const sorted = [...replacements].sort((a, b) => (b.version || 0) - (a.version || 0));
   const pending = sorted.find((rep) => rep.status === 'pending');
+  const attempts = Math.max(
+    Number(replacementAttempts) || 0,
+    ...sorted.map((r) => Number(r.version) || 0),
+    0,
+  );
+  const maxAttempts = Number(maxReplacementAttempts) || 3;
+  const maxReached = disputeStatus === 'maximum_replacements_reached'
+    || attempts >= maxAttempts;
+  const sellerCanReplace = role === 'seller'
+    && !readOnly
+    && !pending
+    && (canReplace !== false)
+    && !maxReached
+    && disputeStatus !== 'waiting_for_buyer_confirmation'
+    && !['resolved', 'closed'].includes(disputeStatus);
 
   useEffect(() => {
     if (role !== 'buyer' || !pending?.id || revealed[pending.id]) return undefined;
@@ -45,7 +64,7 @@ const ReplacementPanel = ({
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (role !== 'seller' || readOnly || submitting) return;
+    if (!sellerCanReplace || submitting) return;
     if (!credentialBlob.trim()) {
       toast({
         title: 'Paste replacement account',
@@ -80,7 +99,7 @@ const ReplacementPanel = ({
         title: decision === 'accepted' ? 'Dispute closed' : 'Replacement rejected',
         description: decision === 'accepted'
           ? 'Account works — escrow will release normally.'
-          : 'Dispute reopened. Seller can send another replacement.',
+          : 'Dispute updated. Seller may send another replacement if attempts remain.',
       });
       onChanged?.();
     } catch (err) {
@@ -120,8 +139,23 @@ const ReplacementPanel = ({
         <h3 className="font-bold">Replacement</h3>
         <p className="mt-1 text-sm text-muted-foreground">
           Seller pastes the complete replacement account as-is. Submitting a replacement never auto-closes the dispute.
+          {' '}
+          Attempts: {attempts}/{maxAttempts}
         </p>
       </div>
+
+      {maxReached && role === 'seller' && (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          Maximum replacement attempts reached.
+        </div>
+      )}
+
+      {maxReached && role === 'buyer' && (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          Maximum replacement limit reached.
+          Refund will be processed automatically within 24 hours unless resolved by admin.
+        </div>
+      )}
 
       {sorted.length === 0 ? (
         <p className="text-sm text-muted-foreground">No replacements submitted yet.</p>
@@ -200,7 +234,7 @@ const ReplacementPanel = ({
         </ul>
       )}
 
-      {role === 'seller' && !readOnly && (
+      {role === 'seller' && sellerCanReplace && (
         <form onSubmit={handleSubmit} className="space-y-3 rounded-2xl border border-border p-4">
           <div className="flex items-center gap-2 font-bold text-sm">
             <PackagePlus className="h-4 w-4 text-primary" /> Send Replacement
@@ -225,6 +259,17 @@ const ReplacementPanel = ({
             Submit replacement
           </button>
         </form>
+      )}
+
+      {role === 'seller' && !readOnly && maxReached && (
+        <button
+          type="button"
+          disabled
+          className="inline-flex items-center gap-2 rounded-full border border-border px-5 py-2.5 text-sm font-semibold text-muted-foreground opacity-60 cursor-not-allowed"
+        >
+          <PackagePlus className="h-4 w-4" />
+          Replace
+        </button>
       )}
     </div>
   );

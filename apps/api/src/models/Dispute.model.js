@@ -182,6 +182,18 @@ const disputeSchema = new mongoose.Schema(
       default: 0,
       min: 0,
     },
+    /** Count of replacement submissions (attempt #). Caps at maxReplacementAttempts for sellers. */
+    replacementAttempts: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    /** Maximum seller replacement attempts before final 24h auto-refund timer. */
+    maxReplacementAttempts: {
+      type: Number,
+      default: 3,
+      min: 1,
+    },
     ocrFlagCount: {
       type: Number,
       default: 0,

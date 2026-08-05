@@ -15,7 +15,7 @@ export async function appendTimelineEvent({
     dispute: disputeId,
     order: orderId,
     event,
-    actor: actor?.id || actor?._id || actor || null,
+    actor: actor?.id || actor?._id || null,
     role,
     message,
     meta: redactForLogs(meta) || {},

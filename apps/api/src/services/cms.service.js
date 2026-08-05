@@ -6,6 +6,7 @@ import {
   PUBLIC_CMS_KEYS,
   ADMIN_ONLY_CMS_KEYS,
   CMS_KEYS,
+  FOOTER_CONTENT_VERSION,
 } from '../constants/cmsDefaults.js';
 import { sanitizeCmsDataForPublic } from './cms.sanitize.js';
 import { getIO } from '../realtime/socket.server.js';
@@ -118,12 +119,53 @@ export async function ensureCmsDocument(key, session = null) {
   assertKey(key);
   const opts = session ? { session } : {};
   const defaults = clone(CMS_DEFAULTS[key]);
-  const doc = await CmsContent.findOneAndUpdate(
+  let doc = await CmsContent.findOneAndUpdate(
     { key },
     { $setOnInsert: { key, data: defaults, version: 1 } },
     { upsert: true, new: true, ...opts },
   );
+
+  if (key === CMS_KEYS.FOOTER) {
+    doc = await upgradeFooterCmsIfNeeded(doc, session);
+  }
+
   return doc;
+}
+
+/**
+ * One-time upgrade of stored footer CMS to production copy/structure.
+ * Preserves custom logo + social links. Admin can still edit afterward.
+ */
+async function upgradeFooterCmsIfNeeded(doc, session = null) {
+  if (!doc) return doc;
+  const data = doc.data && typeof doc.data === 'object' ? doc.data : {};
+  const currentVersion = Number(data.footerContentVersion) || 0;
+  if (currentVersion >= FOOTER_CONTENT_VERSION) return doc;
+
+  const defaults = clone(CMS_DEFAULTS[CMS_KEYS.FOOTER]);
+  const next = {
+    ...defaults,
+    logo: data.logo || defaults.logo,
+    socialLinks: Array.isArray(data.socialLinks) && data.socialLinks.length
+      ? data.socialLinks
+      : defaults.socialLinks,
+    paymentIcons: Array.isArray(data.paymentIcons) && data.paymentIcons.length
+      ? data.paymentIcons
+      : defaults.paymentIcons,
+    footerContentVersion: FOOTER_CONTENT_VERSION,
+  };
+
+  const opts = session ? { session } : {};
+  const updated = await CmsContent.findOneAndUpdate(
+    { key: CMS_KEYS.FOOTER },
+    {
+      $set: { data: next },
+      $inc: { version: 1 },
+    },
+    { new: true, ...opts },
+  );
+  invalidateCmsCache(CMS_KEYS.FOOTER);
+  return updated || doc;
 }
 
 export async function getCmsDocument(key, { bypassCache = false, publicOnly = false } = {}) {

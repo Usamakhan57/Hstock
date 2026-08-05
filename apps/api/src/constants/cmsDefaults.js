@@ -189,55 +189,59 @@ export const DEFAULT_HEADER = Object.freeze({
   popularSearches: [],
 });
 
+export const FOOTER_CONTENT_VERSION = 2;
+
 export const DEFAULT_FOOTER = Object.freeze({
+  footerContentVersion: FOOTER_CONTENT_VERSION,
   logo: '',
-  description: 'A secure marketplace for digital accounts, domains, websites, SaaS, source code, and tools — with escrow protection and verified sellers.',
-  tagline: 'Secure payments · Instant delivery · Escrow protection',
-  copyrightText: '© {year} ApnaStore. All rights reserved.',
+  description:
+    'ApnaStore is a secure digital marketplace for buying and selling social accounts, domains, SaaS, source code, websites and digital assets using Escrow Protection.',
+  tagline: '',
+  copyrightText: '© {year} ApnaStore.\nAll rights reserved.',
+  bottomBadges: [
+    { id: 'badge-secure', label: 'Secure Payments' },
+    { id: 'badge-instant', label: 'Instant Delivery' },
+    { id: 'badge-escrow', label: 'Escrow Protected' },
+  ],
   socialLinks: [],
   paymentIcons: [],
   newsletter: {
     enabled: true,
     title: 'Newsletter',
-    description: 'New drops, deals, and creator spotlights — no spam.',
-    placeholder: 'Your email',
+    description: 'Receive product updates, new listings and marketplace announcements.',
+    placeholder: 'Enter your email',
     buttonLabel: 'Subscribe',
   },
   columns: [
     {
       title: 'Marketplace',
       links: [
-        { name: 'Shop All', to: '/shop' },
+        { name: 'Home', to: '/' },
+        { name: 'Shop', to: '/shop' },
         { name: 'Categories', to: '/categories' },
-        { name: 'Best Sellers', to: '/shop?sort=Most%20Popular' },
+        { name: 'Best Sellers', to: '/shop?sort=top-rated' },
         { name: 'Become a Seller', to: '/become-a-seller' },
       ],
     },
     {
-      title: 'Company',
+      title: 'Resources',
       links: [
-        { name: 'About', to: '/about' },
         { name: 'Blog', to: '/blog' },
-        { name: 'Contact', to: '/contact' },
-        { name: 'Seller Hub', to: '/seller' },
-      ],
-    },
-    {
-      title: 'Support',
-      links: [
-        { name: 'FAQ', to: '/faq' },
         { name: 'Buyer Guide', to: '/buyer-guide' },
         { name: 'Seller Guide', to: '/seller-guide' },
         { name: 'Help Center', to: '/support' },
+        { name: 'Support', to: '/support' },
+        { name: 'Contact', to: '/contact' },
       ],
     },
     {
       title: 'Legal',
       links: [
+        { name: 'Terms', to: '/terms' },
         { name: 'Privacy Policy', to: '/privacy' },
-        { name: 'Terms & Conditions', to: '/terms' },
         { name: 'Refund Policy', to: '/refund-policy' },
         { name: 'Cookie Policy', to: '/cookie-policy' },
+        { name: 'Escrow Protection', to: '/escrow-protection' },
       ],
     },
   ],

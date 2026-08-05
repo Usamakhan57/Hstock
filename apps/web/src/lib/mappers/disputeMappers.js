@@ -10,6 +10,7 @@ export const DISPUTE_STATUS_LABEL = {
   open: 'Open',
   under_review: 'Under Review',
   waiting_for_buyer_confirmation: 'Waiting for Buyer Confirmation',
+  maximum_replacements_reached: 'Maximum Replacements Reached',
   resolved: 'Resolved',
   closed: 'Closed',
 };
@@ -81,6 +82,9 @@ export function mapBackendDispute(dispute) {
       || status === 'resolved'
       || status === 'closed',
     resolution: dispute.resolution || null,
+    replacementAttempts: dispute.replacementAttempts ?? dispute.latestReplacementVersion ?? 0,
+    maxReplacementAttempts: dispute.maxReplacementAttempts ?? 3,
+    sellerResponseDeadline: dispute.sellerResponseDeadline || null,
     createdAt: dispute.createdAt || null,
     updatedAt: dispute.updatedAt || null,
     resolvedAt: dispute.resolvedAt || null,
@@ -113,6 +117,10 @@ export function mapDisputeDashboard(dashboard) {
     },
     ocrFlags: dashboard.ocrFlags ?? dashboard.ocrFlagCount ?? 0,
     violationCount: dashboard.violationCount ?? 0,
+    replacementAttempts: dashboard.replacementAttempts ?? 0,
+    maxReplacementAttempts: dashboard.maxReplacementAttempts ?? 3,
+    canReplace: dashboard.canReplace !== undefined ? Boolean(dashboard.canReplace) : true,
+    sellerResponseDeadline: dashboard.timers?.sellerResponseDeadline || null,
     replacementHistory: Array.isArray(dashboard.replacementHistory)
       ? dashboard.replacementHistory.map(mapReplacement)
       : [],

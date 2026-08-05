@@ -177,6 +177,10 @@ const DisputeDetailPage = () => {
               role="buyer"
               readOnly={readOnly}
               onChanged={load}
+              replacementAttempts={dashboard?.replacementAttempts ?? dispute.replacementAttempts}
+              maxReplacementAttempts={dashboard?.maxReplacementAttempts ?? dispute.maxReplacementAttempts}
+              canReplace={dashboard?.canReplace}
+              disputeStatus={dispute.status}
             />
           </div>
         )}

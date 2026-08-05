@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Instagram, Twitter, Github, Youtube, Facebook, Linkedin, ArrowRight, Check } from 'lucide-react';
+import { Instagram, Twitter, Github, Youtube, Facebook, Linkedin, Check } from 'lucide-react';
 import Logo from './Logo';
 import { newsletterApi } from '../services/api';
 import { useCms } from '../hooks/useCms';
@@ -29,8 +29,8 @@ const PLATFORM_MAP = [
   { key: 'pinterest', platform: 'Pinterest' },
 ];
 
-/** Inline newsletter signup — wired to the newsletterApi service. */
-const NewsletterForm = ({ placeholder = 'Your email' }) => {
+/** Inline newsletter signup — copy and labels come from Footer CMS. */
+const NewsletterForm = ({ placeholder = '', buttonLabel = '' }) => {
   const [email, setEmail] = useState('');
   const [status, setStatus] = useState('idle');
 
@@ -52,23 +52,22 @@ const NewsletterForm = ({ placeholder = 'Your email' }) => {
   }
 
   return (
-    <form onSubmit={submit} className="mt-5 flex items-center gap-1.5 max-w-xs bg-secondary/70 rounded-full pl-4 pr-1.5 py-1.5 border border-border focus-within:border-primary/40 transition-colors">
+    <form onSubmit={submit} className="mt-5 flex items-center gap-1.5 max-w-md bg-secondary/70 rounded-full pl-4 pr-1.5 py-1.5 border border-border focus-within:border-primary/40 transition-colors">
       <input
         type="email"
         required
         value={email}
         onChange={(e) => setEmail(e.target.value)}
         placeholder={placeholder}
-        aria-label="Email address for newsletter"
+        aria-label={placeholder || 'Email'}
         className="bg-transparent outline-none text-sm w-full placeholder:text-muted-foreground py-1.5"
       />
       <button
         type="submit"
-        disabled={status === 'loading'}
-        aria-label="Subscribe to newsletter"
-        className="shrink-0 grid place-items-center w-9 h-9 rounded-full brand-gradient text-white hover:opacity-95 active:scale-95 transition-all disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+        disabled={status === 'loading' || !buttonLabel}
+        className="shrink-0 px-4 h-9 rounded-full brand-gradient text-white text-xs font-semibold hover:opacity-95 active:scale-95 transition-all disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
       >
-        <ArrowRight className="w-4 h-4" />
+        {buttonLabel}
       </button>
     </form>
   );
@@ -81,6 +80,21 @@ const Footer = () => {
   const columns = Array.isArray(footer?.columns) && footer.columns.length
     ? footer.columns
     : [];
+
+  const bottomBadges = useMemo(() => {
+    if (Array.isArray(footer?.bottomBadges) && footer.bottomBadges.length) {
+      return footer.bottomBadges.filter((b) => b?.label);
+    }
+    // Legacy CMS: single tagline string → badge list
+    if (footer?.tagline) {
+      return String(footer.tagline)
+        .split(/[·|•]/)
+        .map((label) => label.trim())
+        .filter(Boolean)
+        .map((label, i) => ({ id: `legacy-${i}`, label }));
+    }
+    return [];
+  }, [footer]);
 
   const socialLinks = useMemo(() => {
     // Prefer dedicated Social CMS (not embedded in footer).
@@ -98,13 +112,15 @@ const Footer = () => {
       : [];
   }, [social, footer]);
 
-  const copyright = String(footer?.copyrightText || '© {year}')
+  const copyright = String(footer?.copyrightText || '')
     .replace('{year}', String(new Date().getFullYear()));
+
+  const newsletter = footer?.newsletter || {};
 
   return (
     <footer className="mt-24 border-t border-border bg-white">
       <div className="mx-auto max-w-[90rem] px-5 lg:px-8 py-16">
-        <div className="grid gap-12 lg:grid-cols-[1.4fr_repeat(4,1fr)]">
+        <div className="grid gap-12 lg:grid-cols-[1.4fr_repeat(3,1fr)]">
           <div>
             <Logo to="/" size="footer" className="mb-4" />
             <p className="text-sm text-muted-foreground max-w-xs leading-relaxed">
@@ -131,15 +147,18 @@ const Footer = () => {
                 })}
               </div>
             )}
-            {footer?.newsletter?.enabled !== false && (
+            {newsletter.enabled !== false && (
               <>
                 <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mt-8 mb-1">
-                  {footer?.newsletter?.title || 'Newsletter'}
+                  {newsletter.title || ''}
                 </p>
                 <p className="text-xs text-muted-foreground max-w-xs">
-                  {footer?.newsletter?.description || ''}
+                  {newsletter.description || ''}
                 </p>
-                <NewsletterForm placeholder={footer?.newsletter?.placeholder || 'Your email'} />
+                <NewsletterForm
+                  placeholder={newsletter.placeholder || ''}
+                  buttonLabel={newsletter.buttonLabel || ''}
+                />
               </>
             )}
           </div>
@@ -148,7 +167,7 @@ const Footer = () => {
               <h4 className="text-sm font-semibold mb-4">{c.title}</h4>
               <ul className="space-y-2.5">
                 {(c.links || []).map((l) => (
-                  <li key={l.name}>
+                  <li key={`${c.title}-${l.name}-${l.to || l.url}`}>
                     <Link to={l.to || l.url || '/'} className="text-sm text-muted-foreground hover:text-primary transition-colors">
                       {l.name}
                     </Link>
@@ -159,8 +178,18 @@ const Footer = () => {
           ))}
         </div>
         <div className="mt-14 pt-8 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p className="text-xs text-muted-foreground">{copyright}</p>
-          <p className="text-xs text-muted-foreground">{footer?.tagline || ''}</p>
+          <p className="text-xs text-muted-foreground whitespace-pre-line text-center sm:text-left">
+            {copyright}
+          </p>
+          {bottomBadges.length > 0 && (
+            <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1">
+              {bottomBadges.map((badge) => (
+                <span key={badge.id || badge.label} className="text-xs text-muted-foreground">
+                  {badge.label}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </footer>
