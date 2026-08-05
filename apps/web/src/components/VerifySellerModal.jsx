@@ -77,7 +77,7 @@ const VerifySellerModal = ({ open, onOpenChange, onSuccess }) => {
           <div className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-500/15 text-emerald-700">
             <ShieldCheck className="h-5 w-5" />
           </div>
-          <DialogTitle className="mt-4 text-xl font-bold">Get Verified</DialogTitle>
+          <DialogTitle className="mt-4 text-xl font-bold">Verify Now</DialogTitle>
           <DialogDescription className="mt-1 text-sm text-muted-foreground">
             Pay ${fee.toFixed(2)} once from your seller wallet for a permanent Verified Seller badge.
           </DialogDescription>
@@ -127,7 +127,7 @@ const VerifySellerModal = ({ open, onOpenChange, onSuccess }) => {
               ) : !canAfford ? (
                 <div className="mt-5 space-y-3">
                   <p className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-                    Insufficient balance. Please top up your seller wallet.
+                    Insufficient wallet balance. Please deposit funds first.
                   </p>
                   <Link
                     to="/seller/earnings"

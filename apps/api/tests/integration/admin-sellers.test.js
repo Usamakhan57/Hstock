@@ -85,12 +85,12 @@ test('admin seller get/update accepts SellerProfile id or User id', async (t) =>
   const approveByUserId = await request(app)
     .patch(`/api/v1/users/sellers/${userId}`)
     .set('Authorization', `Bearer ${adminToken}`)
-    .send({ status: 'approved', verified: true, commissionRate: 12 });
+    .send({ status: 'approved', commissionRate: 12 });
 
   assert.equal(approveByUserId.status, 200, JSON.stringify(approveByUserId.body));
   const updated = approveByUserId.body.data.seller;
   assert.equal(updated.status, 'approved');
-  assert.equal(updated.verified, true);
+  assert.equal(updated.verified, false, 'approval must not grant verified badge');
   assert.equal(updated.commissionRate, 12);
   assert.ok(updated.approvedAt);
   assert.ok(updated.approvedBy);
@@ -144,9 +144,10 @@ test('pending seller products stay hidden until seller is approved', async (t) =
   const approve = await request(app)
     .patch(`/api/v1/users/sellers/${sellerId}`)
     .set('Authorization', `Bearer ${adminToken}`)
-    .send({ status: 'approved', verified: true, commissionRate: 10 });
+    .send({ status: 'approved', commissionRate: 10 });
   assert.equal(approve.status, 200);
   assert.equal(approve.body.data.seller.status, 'approved');
+  assert.equal(approve.body.data.seller.verified, false, 'approval must not grant verified badge');
   assert.equal(approve.body.data.seller.commission, 10);
   assert.equal(approve.body.data.seller.commissionRate, 10);
   assert.ok(approve.body.data.seller.approvedAt);

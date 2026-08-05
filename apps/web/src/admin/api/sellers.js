@@ -13,6 +13,11 @@ function normalizeSeller(raw) {
     commissionRate: raw.commissionRate ?? mapped.commissionRate ?? 15,
     approvedAt: raw.approvedAt || null,
     approvedBy: raw.approvedBy || null,
+    verified: raw.verified === true || mapped.verified === true,
+    deleted: raw.deleted === true || mapped.deleted === true,
+    verifiedAt: raw.verifiedAt || null,
+    verificationSource: raw.verificationSource || null,
+    verificationFeePaid: raw.verificationFeePaid ?? null,
   };
 }
 
@@ -59,15 +64,28 @@ export const updateSeller = async (id, payload = {}) => {
   return normalizeSeller(data?.seller || data);
 };
 
-export const deleteSeller = async () => {
-  throw new Error('Deleting sellers via admin API is not supported.');
-};
-
-export const deleteSellers = async () => {
-  throw new Error('Bulk delete is not supported.');
-};
-
-export const approveSeller = (id) => updateSeller(id, { status: 'approved', verified: true });
+/** Approval unlocks selling only — never grants the paid Verified badge. */
+export const approveSeller = (id) => updateSeller(id, { status: 'approved' });
 export const rejectSeller = (id) => updateSeller(id, { status: 'rejected' });
 export const suspendSeller = (id) => updateSeller(id, { status: 'suspended' });
-export const reinstateSeller = (id) => updateSeller(id, { status: 'approved', verified: true });
+export const reinstateSeller = (id) => updateSeller(id, { status: 'approved' });
+
+export async function verifySellerBadge(id) {
+  return updateSeller(id, { verified: true });
+}
+
+export async function unverifySellerBadge(id) {
+  return updateSeller(id, { verified: false });
+}
+
+export async function deleteSeller(id, { confirm } = {}) {
+  const { del } = await import('../../lib/apiClient');
+  const { data } = await del(`/admin/sellers/${id}`, {
+    data: confirm ? { confirm } : undefined,
+  });
+  return data;
+}
+
+export async function deleteSellers() {
+  throw new Error('Bulk delete is not supported.');
+}
