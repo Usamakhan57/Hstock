@@ -59,6 +59,23 @@ function actorId(actor) {
   return actor?.id || actor?._id || null;
 }
 
+function actorRoles(actor) {
+  return Array.isArray(actor?.roles) ? actor.roles : [];
+}
+
+export function isSuperAdminActor(actor) {
+  return actorRoles(actor).includes(USER_ROLES.SUPER_ADMIN);
+}
+
+function parseForceFlag(value) {
+  if (value === true || value === 1) return true;
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase();
+    return normalized === 'true' || normalized === '1' || normalized === 'yes';
+  }
+  return false;
+}
+
 function toBlocker(key, count) {
   return {
     blockedBy: SELLER_DELETE_BLOCKER_LABELS[key] || key,
@@ -171,10 +188,37 @@ export async function getSellerDeletionBlockers(sellerId) {
 }
 
 /**
- * Soft-delete a seller. Requires confirm === 'DELETE'.
+ * Soft-delete a seller.
+ * - Normal admin: requires confirm === 'DELETE' and no active marketplace blockers.
+ * - Super Admin force: { force: true, acknowledge: true } skips ALL blockers.
+ *   Financial history (orders, escrow, payments, ledger, disputes, withdrawals)
+ *   is always preserved — never cancelled, refunded, or released automatically.
  */
-export async function adminSoftDeleteSeller(sellerOrUserId, { confirm } = {}, actor) {
-  if (String(confirm || '').trim() !== 'DELETE') {
+export async function adminSoftDeleteSeller(
+  sellerOrUserId,
+  { confirm, force, acknowledge } = {},
+  actor,
+) {
+  const forceDelete = parseForceFlag(force);
+  const acknowledged = parseForceFlag(acknowledge)
+    || String(confirm || '').trim() === 'DELETE';
+
+  if (forceDelete) {
+    if (!isSuperAdminActor(actor)) {
+      throw new AppError(
+        'Only Super Admin can force-delete a seller with active marketplace operations.',
+        403,
+        { code: 'FORCE_DELETE_FORBIDDEN' },
+      );
+    }
+    if (!acknowledged) {
+      throw new AppError(
+        'Acknowledge force delete consequences to continue',
+        400,
+        { code: 'FORCE_DELETE_ACK_REQUIRED' },
+      );
+    }
+  } else if (String(confirm || '').trim() !== 'DELETE') {
     throw new AppError('Type DELETE to confirm seller deletion', 400, {
       code: 'DELETE_CONFIRMATION_REQUIRED',
     });
@@ -188,11 +232,12 @@ export async function adminSoftDeleteSeller(sellerOrUserId, { confirm } = {}, ac
     return {
       seller: serializeSeller(seller),
       alreadyDeleted: true,
+      forceDeleted: false,
     };
   }
 
   const blockers = await getSellerDeletionBlockers(seller._id);
-  if (blockers.blocked) {
+  if (blockers.blocked && !forceDelete) {
     const primary = blockers.blockers[0];
     const summary = blockers.blockers
       .map((b) => `${b.blockedBy} (${b.count})`)
@@ -219,6 +264,15 @@ export async function adminSoftDeleteSeller(sellerOrUserId, { confirm } = {}, ac
         },
       },
     );
+  }
+
+  if (forceDelete && blockers.blocked) {
+    logger.warn('Super Admin force-deleting seller with active marketplace operations', {
+      sellerId: String(seller._id),
+      by: String(actorId(actor)),
+      blockers: blockers.blockers,
+      counts: blockers.counts,
+    });
   }
 
   const adminId = actorId(actor);
@@ -305,18 +359,22 @@ export async function adminSoftDeleteSeller(sellerOrUserId, { confirm } = {}, ac
 
   await logActivity({
     userId: adminId,
-    action: 'sellers.delete',
+    action: forceDelete ? 'sellers.force_delete' : 'sellers.delete',
     resource: 'SellerProfile',
     resourceId: seller._id,
     meta: {
       previousStoreName,
       softDelete: true,
+      forceDelete,
+      skippedBlockers: forceDelete ? blockers.blockers : [],
+      blockerCounts: forceDelete ? blockers.counts : undefined,
     },
   });
 
-  logger.info('Seller soft-deleted', {
+  logger.info(forceDelete ? 'Seller force soft-deleted by Super Admin' : 'Seller soft-deleted', {
     sellerId: String(seller._id),
     by: String(adminId),
+    forceDelete,
   });
 
   await seller.populate([
@@ -327,12 +385,14 @@ export async function adminSoftDeleteSeller(sellerOrUserId, { confirm } = {}, ac
   return {
     seller: serializeSeller(seller),
     alreadyDeleted: false,
+    forceDeleted: forceDelete,
   };
 }
 
 export default {
   getSellerDeletionBlockers,
   adminSoftDeleteSeller,
+  isSuperAdminActor,
   DELETED_STORE_NAME,
   SELLER_DELETE_BLOCKER_LABELS,
 };

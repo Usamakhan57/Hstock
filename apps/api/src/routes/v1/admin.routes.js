@@ -29,7 +29,7 @@ router.get('/analytics', adminController.analytics);
 router.get('/ocr-queue', adminController.ocrQueue);
 router.get('/system-health', adminController.systemHealth);
 
-/** Soft-delete seller — admin / super_admin only. Preserves financial history. */
+/** Soft-delete seller — admin / super_admin. Super Admin may force=true to skip blockers. */
 router.delete(
   '/sellers/:id',
   requireRole(USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
@@ -37,6 +37,8 @@ router.delete(
     params: z.object({ id: objectIdSchema }),
     body: z.object({
       confirm: z.string().trim().optional(),
+      force: z.union([z.boolean(), z.string(), z.number()]).optional(),
+      acknowledge: z.union([z.boolean(), z.string(), z.number()]).optional(),
     }).optional(),
   }),
   sellerDeleteController.adminDeleteSeller,

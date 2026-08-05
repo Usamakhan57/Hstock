@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-  Pencil, Check, X, Ban, RotateCcw, Store, BadgeCheck, ShieldOff, Trash2,
+  Pencil, Check, X, Ban, RotateCcw, Store, BadgeCheck, ShieldOff, Trash2, AlertTriangle,
 } from 'lucide-react';
 import PageHeader from '../../components/PageHeader';
 import DataTable from '../../components/DataTable';
@@ -13,6 +13,8 @@ import {
 } from '../../api/sellers';
 import { useToast } from '../../../hooks/use-toast';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '../../../components/ui/dialog';
+import { useAdminAuth } from '../../AdminAuthContext';
+import { isSuperAdmin } from '../../../context/AuthRoles';
 
 const EMPTY = {
   storeName: '',
@@ -33,8 +35,19 @@ const STATUS_OPTIONS = [
 const fmtDate = (iso) => (iso ? new Date(iso).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : '—');
 const fmtMoney = (n) => `$${Number(n || 0).toFixed(2)}`;
 
+async function bustMarketplaceCaches() {
+  try {
+    const { invalidateSellerCatalog } = await import('../../../services/catalogCache');
+    await invalidateSellerCatalog();
+  } catch {
+    // storefront cache may be unavailable in admin context
+  }
+}
+
 const SellersList = () => {
   const { toast } = useToast();
+  const { admin } = useAdminAuth();
+  const canForceDelete = isSuperAdmin(admin);
   const [sellers, setSellers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -44,7 +57,14 @@ const SellersList = () => {
   const [loadingSeller, setLoadingSeller] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState('');
+  const [forceAck, setForceAck] = useState(false);
   const [deleting, setDeleting] = useState(false);
+
+  const resetDeleteModal = () => {
+    setDeleteTarget(null);
+    setDeleteConfirm('');
+    setForceAck(false);
+  };
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -150,6 +170,13 @@ const SellersList = () => {
     }
   };
 
+  const finishDeleteSuccess = async (title) => {
+    await bustMarketplaceCaches();
+    toast({ title, description: deleteTarget.storeName });
+    resetDeleteModal();
+    await load();
+  };
+
   const handleDelete = async () => {
     if (!deleteTarget || deleteConfirm !== 'DELETE' || deleting) return;
     setDeleting(true);
@@ -157,16 +184,7 @@ const SellersList = () => {
       await deleteSeller(deleteTarget.sellerProfileId || deleteTarget.id || deleteTarget.userId, {
         confirm: 'DELETE',
       });
-      try {
-        const { invalidateSellerCatalog } = await import('../../../services/catalogCache');
-        await invalidateSellerCatalog();
-      } catch {
-        // storefront cache may be unavailable in admin context
-      }
-      toast({ title: 'Seller deleted', description: deleteTarget.storeName });
-      setDeleteTarget(null);
-      setDeleteConfirm('');
-      await load();
+      await finishDeleteSuccess('Seller deleted');
     } catch (error) {
       const blockedBy = error?.errors?.blockedBy;
       const count = error?.errors?.count;
@@ -176,6 +194,26 @@ const SellersList = () => {
       toast({
         title: 'Delete failed',
         description: blockerHint || error?.message || 'Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const handleForceDelete = async () => {
+    if (!deleteTarget || !canForceDelete || !forceAck || deleting) return;
+    setDeleting(true);
+    try {
+      await deleteSeller(deleteTarget.sellerProfileId || deleteTarget.id || deleteTarget.userId, {
+        force: true,
+        acknowledge: true,
+      });
+      await finishDeleteSuccess('Seller force-deleted');
+    } catch (error) {
+      toast({
+        title: 'Force delete failed',
+        description: error?.message || 'Please try again.',
         variant: 'destructive',
       });
     } finally {
@@ -256,7 +294,11 @@ const SellersList = () => {
           {
             label: 'Delete Seller',
             icon: Trash2,
-            onClick: () => { setDeleteTarget(row); setDeleteConfirm(''); },
+            onClick: () => {
+              setDeleteTarget(row);
+              setDeleteConfirm('');
+              setForceAck(false);
+            },
           },
         ]}
         emptyState={{ icon: Store, title: 'No sellers yet' }}
@@ -357,13 +399,10 @@ const SellersList = () => {
         open={!!deleteTarget}
         onOpenChange={(open) => {
           if (deleting) return;
-          if (!open) {
-            setDeleteTarget(null);
-            setDeleteConfirm('');
-          }
+          if (!open) resetDeleteModal();
         }}
       >
-        <DialogContent className="max-w-[440px] rounded-[24px] border border-border bg-background p-0 overflow-hidden">
+        <DialogContent className="max-w-[480px] rounded-[24px] border border-border bg-background p-0 overflow-hidden max-h-[90vh] overflow-y-auto">
           <div className="px-6 py-6">
             <div className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-red-500/15 text-red-700">
               <Trash2 className="h-5 w-5" />
@@ -391,7 +430,7 @@ const SellersList = () => {
               <button
                 type="button"
                 disabled={deleting}
-                onClick={() => { setDeleteTarget(null); setDeleteConfirm(''); }}
+                onClick={resetDeleteModal}
                 className="rounded-full border border-border px-4 py-2.5 text-sm font-semibold hover:bg-secondary"
               >
                 Cancel
@@ -405,6 +444,40 @@ const SellersList = () => {
                 {deleting ? 'Deleting…' : 'Delete Seller'}
               </button>
             </div>
+
+            {canForceDelete ? (
+              <div className="mt-6 rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-4">
+                <div className="flex items-start gap-3">
+                  <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-700" />
+                  <div>
+                    <p className="text-sm font-bold text-amber-950">Force Delete Seller</p>
+                    <p className="mt-1.5 text-sm text-amber-950/80">
+                      This will permanently remove the seller from the marketplace even if active
+                      orders, escrow, disputes or withdrawals exist. Financial history will remain
+                      for auditing.
+                    </p>
+                    <label className="mt-4 flex items-start gap-2.5 text-sm text-amber-950 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        className="mt-1 h-4 w-4 rounded border-amber-600"
+                        checked={forceAck}
+                        disabled={deleting}
+                        onChange={(e) => setForceAck(e.target.checked)}
+                      />
+                      <span>I understand the consequences.</span>
+                    </label>
+                    <button
+                      type="button"
+                      disabled={deleting || !forceAck}
+                      onClick={handleForceDelete}
+                      className="mt-4 w-full rounded-full bg-amber-800 px-4 py-2.5 text-sm font-semibold text-white hover:bg-amber-900 disabled:opacity-50"
+                    >
+                      {deleting ? 'Force deleting…' : 'Force Delete Seller'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : null}
           </div>
         </DialogContent>
       </Dialog>
