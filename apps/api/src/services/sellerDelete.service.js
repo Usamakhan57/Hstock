@@ -45,10 +45,38 @@ import { logger } from '../config/logger.js';
 
 const DELETED_STORE_NAME = 'Deleted Seller';
 
+/** Human-readable labels for API / admin UI. */
+export const SELLER_DELETE_BLOCKER_LABELS = Object.freeze({
+  open_orders: 'Open Orders',
+  active_escrow: 'Active Escrow',
+  pending_withdraw: 'Pending Withdrawal',
+  active_dispute: 'Active Dispute',
+  pending_replacement: 'Pending Replacement',
+  store_promotion: 'Active Store Promotion',
+});
+
 function actorId(actor) {
   return actor?.id || actor?._id || null;
 }
 
+function toBlocker(key, count) {
+  return {
+    blockedBy: SELLER_DELETE_BLOCKER_LABELS[key] || key,
+    count,
+    key,
+  };
+}
+
+/**
+ * Counts only truly active marketplace operations.
+ *
+ * Escrow: locked | disputed only.
+ * Pending escrow rows on cancelled/expired/unpaid checkouts do NOT block —
+ * those are unpaid placeholders, not held funds.
+ *
+ * Terminal statuses (completed, cancelled, expired, released, refunded,
+ * closed, resolved) never block deletion.
+ */
 export async function getSellerDeletionBlockers(sellerId) {
   const sellerObjectId = new mongoose.Types.ObjectId(String(sellerId));
   const openOrderStatuses = [
@@ -59,8 +87,9 @@ export async function getSellerDeletionBlockers(sellerId) {
     ORDER_STATUS.DELIVERED,
     ORDER_STATUS.DISPUTED,
   ];
-  const openEscrowStatuses = [
-    ESCROW_STATUS.PENDING,
+  // Intentionally excludes ESCROW_STATUS.PENDING — stale pending escrows on
+  // cancelled/expired unpaid orders must not block seller deletion.
+  const activeEscrowStatuses = [
     ESCROW_STATUS.LOCKED,
     ESCROW_STATUS.DISPUTED,
   ];
@@ -81,14 +110,14 @@ export async function getSellerDeletionBlockers(sellerId) {
 
   const [
     openOrders,
-    openEscrow,
+    activeEscrows,
     pendingWithdraw,
     activeDisputes,
     pendingReplacements,
     activePromotions,
   ] = await Promise.all([
     Order.countDocuments({ seller: sellerObjectId, status: { $in: openOrderStatuses } }),
-    Escrow.countDocuments({ seller: sellerObjectId, status: { $in: openEscrowStatuses } }),
+    Escrow.countDocuments({ seller: sellerObjectId, status: { $in: activeEscrowStatuses } }),
     Withdrawal.countDocuments({
       seller: sellerObjectId,
       status: { $in: openWithdrawalStatuses },
@@ -113,17 +142,31 @@ export async function getSellerDeletionBlockers(sellerId) {
     }),
   ]);
 
+  const counts = {
+    openOrders,
+    activeEscrows,
+    pendingWithdraw,
+    activeDisputes,
+    pendingReplacements,
+    activePromotions,
+  };
+
   const blockers = [];
-  if (openOrders) blockers.push({ type: 'open_orders', count: openOrders });
-  if (openEscrow) blockers.push({ type: 'escrow', count: openEscrow });
-  if (pendingWithdraw) blockers.push({ type: 'pending_withdraw', count: pendingWithdraw });
-  if (activeDisputes) blockers.push({ type: 'active_dispute', count: activeDisputes });
-  if (pendingReplacements) blockers.push({ type: 'pending_replacement', count: pendingReplacements });
-  if (activePromotions) blockers.push({ type: 'store_promotion', count: activePromotions });
+  if (openOrders) blockers.push(toBlocker('open_orders', openOrders));
+  if (activeEscrows) blockers.push(toBlocker('active_escrow', activeEscrows));
+  if (pendingWithdraw) blockers.push(toBlocker('pending_withdraw', pendingWithdraw));
+  if (activeDisputes) blockers.push(toBlocker('active_dispute', activeDisputes));
+  if (pendingReplacements) blockers.push(toBlocker('pending_replacement', pendingReplacements));
+  if (activePromotions) blockers.push(toBlocker('store_promotion', activePromotions));
+
+  const primary = blockers[0] || null;
 
   return {
     blocked: blockers.length > 0,
+    blockedBy: primary?.blockedBy || null,
+    count: primary?.count || 0,
     blockers,
+    counts,
   };
 }
 
@@ -150,12 +193,30 @@ export async function adminSoftDeleteSeller(sellerOrUserId, { confirm } = {}, ac
 
   const blockers = await getSellerDeletionBlockers(seller._id);
   if (blockers.blocked) {
+    const primary = blockers.blockers[0];
+    const summary = blockers.blockers
+      .map((b) => `${b.blockedBy} (${b.count})`)
+      .join(', ');
+
+    logger.warn('Seller delete blocked by active marketplace operations', {
+      sellerId: String(seller._id),
+      blockedBy: primary.blockedBy,
+      count: primary.count,
+      blockers: blockers.blockers,
+      counts: blockers.counts,
+    });
+
     throw new AppError(
-      'Seller cannot be deleted while active marketplace operations exist.',
+      `Seller cannot be deleted: ${summary}.`,
       409,
       {
         code: 'SELLER_DELETE_BLOCKED',
-        details: blockers.blockers,
+        details: {
+          blockedBy: primary.blockedBy,
+          count: primary.count,
+          blockers: blockers.blockers,
+          counts: blockers.counts,
+        },
       },
     );
   }
@@ -273,4 +334,5 @@ export default {
   getSellerDeletionBlockers,
   adminSoftDeleteSeller,
   DELETED_STORE_NAME,
+  SELLER_DELETE_BLOCKER_LABELS,
 };
