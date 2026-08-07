@@ -172,6 +172,7 @@ const SellerRegisterPage = () => {
   const handleGoogleAuth = async () => {
     if (googleLoading) return;
     setGoogleLoading(true);
+    setError('');
     try {
       const { authApi } = await import('../services/authApi');
       const status = await authApi.googleStatus();
@@ -184,7 +185,13 @@ const SellerRegisterPage = () => {
         setGoogleLoading(false);
         return;
       }
-      window.location.assign(authApi.getGoogleAuthUrl({ intent: 'seller', returnTo: '/seller/dashboard' }));
+      // Optional form fields travel in OAuth state; backend auto-fills from Google profile when blank.
+      window.location.assign(authApi.getGoogleAuthUrl({
+        intent: 'seller',
+        returnTo: '/seller/dashboard',
+        storeName: storeName.trim(),
+        username: username.trim(),
+      }));
     } catch (err) {
       toast({
         title: 'Google sign-up failed',
