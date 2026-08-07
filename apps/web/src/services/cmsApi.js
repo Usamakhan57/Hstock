@@ -23,7 +23,7 @@ export const CMS_KEYS = Object.freeze({
 });
 
 const CMS_CHANNEL = 'apnastore-cms';
-const VERSION_POLL_MS = 8000;
+const VERSION_POLL_MS = 30000;
 
 function notifyLocal(key, version) {
   try {
@@ -75,7 +75,8 @@ function emitVersionChange(changedKeys) {
 async function pollVersionsOnce() {
   if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return;
   try {
-    const payload = await cmsApi.getVersions({ force: true });
+    // Soft poll — use short cache; do not force-bypass on every tick.
+    const payload = await cmsApi.getVersions({ force: false });
     const remote = payload?.versions || {};
     const changed = [];
     for (const [key, meta] of Object.entries(remote)) {
