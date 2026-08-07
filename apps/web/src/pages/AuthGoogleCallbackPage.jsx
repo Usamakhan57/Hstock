@@ -3,12 +3,15 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import { authApi } from '../services/authApi';
 import { useStore } from '../context/StoreContext';
-import { defaultHomeForUser } from '../context/AuthRoles';
+import { resolveGoogleCallbackDestination } from '../lib/googleOAuthRedirect';
 import Seo from '../components/Seo';
 
 /**
  * Handles redirect from API Google OAuth callback with tokens in query string.
  * Must work in desktop browsers, mobile Chrome, and installed Android PWAs.
+ *
+ * Seller Google registration: wait for /auth/me (roles + seller profile) before
+ * navigating so SellerAuthContext / StoreContext are synchronized.
  */
 const AuthGoogleCallbackPage = () => {
   const [params] = useSearchParams();
@@ -30,17 +33,18 @@ const AuthGoogleCallbackPage = () => {
       }
 
       try {
-        authApi.completeGoogleSession({ accessToken, refreshToken, user: null }, { remember: true });
-        const profile = await refreshProfile();
-        await refreshNotifications();
+        authApi.completeGoogleSession(
+          { accessToken, refreshToken, user: null },
+          { remember: true },
+        );
+
+        // Refresh auth user + buyer/seller/admin profiles before any route decision.
+        const me = await refreshProfile();
+        await refreshNotifications().catch(() => null);
         if (cancelled) return;
 
-        const safeRedirect = requestedRedirect
-          && requestedRedirect.startsWith('/')
-          && !requestedRedirect.startsWith('//')
-          ? requestedRedirect
-          : null;
-        const home = safeRedirect || defaultHomeForUser(profile?.user || profile || null);
+        const user = me?.user || null;
+        const home = resolveGoogleCallbackDestination(requestedRedirect, user);
         navigate(home, { replace: true });
       } catch (err) {
         if (!cancelled) setError(err.message || 'Unable to complete Google sign-in');

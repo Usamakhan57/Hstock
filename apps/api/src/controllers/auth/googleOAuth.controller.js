@@ -16,10 +16,12 @@ function safeReason(value, fallback = 'google_auth_failed') {
   return encodeURIComponent(raw.replace(/[^\w.\- ]+/g, '_'));
 }
 
-function encodeOAuthState({ intent = 'buyer', returnTo = '' } = {}) {
+function encodeOAuthState({ intent = 'buyer', returnTo = '', storeName = '', username = '' } = {}) {
   const payload = {
     intent: ['buyer', 'seller', 'admin'].includes(intent) ? intent : 'buyer',
     returnTo: String(returnTo || '').slice(0, 200),
+    storeName: String(storeName || '').slice(0, 160),
+    username: String(username || '').slice(0, 30),
     n: Date.now().toString(36),
   };
   return Buffer.from(JSON.stringify(payload), 'utf8').toString('base64url');
@@ -28,26 +30,59 @@ function encodeOAuthState({ intent = 'buyer', returnTo = '' } = {}) {
 export { encodeOAuthState };
 
 export function decodeOAuthState(raw) {
-  if (!raw) return { intent: 'buyer', returnTo: '' };
+  if (!raw) return { intent: 'buyer', returnTo: '', storeName: '', username: '' };
   try {
     const parsed = JSON.parse(Buffer.from(String(raw), 'base64url').toString('utf8'));
     return {
       intent: ['buyer', 'seller', 'admin'].includes(parsed?.intent) ? parsed.intent : 'buyer',
       returnTo: typeof parsed?.returnTo === 'string' ? parsed.returnTo.slice(0, 200) : '',
+      storeName: typeof parsed?.storeName === 'string' ? parsed.storeName.slice(0, 160) : '',
+      username: typeof parsed?.username === 'string' ? parsed.username.slice(0, 30) : '',
     };
   } catch {
-    return { intent: 'buyer', returnTo: '' };
+    return { intent: 'buyer', returnTo: '', storeName: '', username: '' };
   }
 }
 
-function homeForIntent(intent, roles = []) {
-  if (intent === 'admin' || roles.some((r) => ['admin', 'super_admin'].includes(r))) {
+function homeForRoles(roles = []) {
+  const list = Array.isArray(roles) ? roles : [];
+  if (list.some((r) => ['admin', 'super_admin'].includes(r))) {
     return '/admin';
   }
-  if (intent === 'seller' || roles.includes('seller')) {
+  if (list.includes('seller')) {
     return '/seller/dashboard';
   }
   return '/dashboard';
+}
+
+/**
+ * Resolve post-OAuth SPA path. Never send users to seller/admin portals
+ * unless their JWT roles actually allow it (prevents 403 Access Denied).
+ */
+export function resolveOAuthLandingPath({ intent = 'buyer', returnTo = '', roles = [] } = {}) {
+  const list = Array.isArray(roles) ? roles : [];
+  const home = homeForRoles(list);
+
+  const safeReturn = typeof returnTo === 'string'
+    && returnTo.startsWith('/')
+    && !returnTo.startsWith('//')
+    ? returnTo
+    : '';
+
+  if (!safeReturn) {
+    // Intent alone must not override missing roles.
+    if (intent === 'seller' && list.includes('seller')) return '/seller/dashboard';
+    if (intent === 'admin' && list.some((r) => ['admin', 'super_admin'].includes(r))) return '/admin';
+    return home;
+  }
+
+  if (safeReturn.startsWith('/seller') && !list.includes('seller')) {
+    return home;
+  }
+  if (safeReturn.startsWith('/admin') && !list.some((r) => ['admin', 'super_admin', 'editor', 'support'].includes(r))) {
+    return home;
+  }
+  return safeReturn;
 }
 
 function redirectToFrontend(res, pathWithQuery) {
@@ -71,7 +106,9 @@ export function startGoogleOAuth(req, res, next) {
 
   const intent = String(req.query.intent || 'buyer').toLowerCase();
   const returnTo = String(req.query.returnTo || '');
-  const state = encodeOAuthState({ intent, returnTo });
+  const storeName = String(req.query.storeName || '');
+  const username = String(req.query.username || '');
+  const state = encodeOAuthState({ intent, returnTo, storeName, username });
 
   return passport.authenticate('google', {
     scope: ['profile', 'email'],
@@ -123,14 +160,19 @@ export function handleGoogleOAuthCallback(req, res) {
         return res.redirect(`${frontend}/login?google=error&reason=${safeReason(reason, 'denied')}`);
       }
 
-      const result = await authService.loginOrRegisterWithGoogle(user, requestMeta(req));
+      const result = await authService.loginOrRegisterWithGoogle(user, requestMeta(req), {
+        intent: stateInfo.intent,
+        storeName: stateInfo.storeName || undefined,
+        username: stateInfo.username || undefined,
+      });
       authService.setRefreshCookie(res, result.refreshToken);
 
       const roles = result.user?.roles || [];
-      const home = homeForIntent(stateInfo.intent, roles);
-      const returnTo = stateInfo.returnTo && stateInfo.returnTo.startsWith('/')
-        ? stateInfo.returnTo
-        : home;
+      const returnTo = resolveOAuthLandingPath({
+        intent: stateInfo.intent,
+        returnTo: stateInfo.returnTo,
+        roles,
+      });
 
       const params = new URLSearchParams({
         google: 'success',
@@ -138,6 +180,8 @@ export function handleGoogleOAuthCallback(req, res) {
         refreshToken: result.refreshToken,
         created: result.created ? '1' : '0',
         linked: result.linked ? '1' : '0',
+        createdSeller: result.createdSeller ? '1' : '0',
+        intent: stateInfo.intent || 'buyer',
         redirect: returnTo,
       });
       const redirectUrl = `${frontend}/auth/google/callback?${params.toString()}`;
@@ -159,4 +203,5 @@ export default {
   handleGoogleOAuthCallback,
   encodeOAuthState,
   decodeOAuthState,
+  resolveOAuthLandingPath,
 };

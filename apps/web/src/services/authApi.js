@@ -13,10 +13,12 @@ function saveAuth(data, remember = getRememberMe()) {
 }
 
 export const authApi = {
-  getGoogleAuthUrl({ intent = 'buyer', returnTo = '' } = {}) {
+  getGoogleAuthUrl({ intent = 'buyer', returnTo = '', storeName = '', username = '' } = {}) {
     const params = new URLSearchParams();
     if (intent) params.set('intent', intent);
     if (returnTo) params.set('returnTo', returnTo);
+    if (storeName) params.set('storeName', storeName);
+    if (username) params.set('username', username);
     const query = params.toString();
     return `${API_BASE_URL}/auth/google${query ? `?${query}` : ''}`;
   },

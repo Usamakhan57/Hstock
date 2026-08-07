@@ -737,18 +737,159 @@ export function clearRefreshCookie(res) {
 }
 
 /**
+ * Build a unique username candidate from a Google display name / email local-part.
+ */
+export async function allocateUniqueUsername(seed, { excludeUserId = null } = {}) {
+  const cleaned = String(seed || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .slice(0, 30);
+  let base = cleaned.length >= 3 ? cleaned : `seller_${generateOpaqueToken(4)}`;
+  if (base.length < 3) base = `user_${generateOpaqueToken(4)}`;
+
+  for (let attempt = 0; attempt < 40; attempt += 1) {
+    const candidate = attempt === 0 ? base : `${base.slice(0, 24)}_${attempt}`;
+    const normalized = normalizeUsername(candidate);
+    if (!normalized.ok) continue;
+    const username = normalized.username;
+    // eslint-disable-next-line no-await-in-loop
+    const existingUser = await User.findOne({ username }).select('_id');
+    if (existingUser && String(existingUser._id) !== String(excludeUserId || '')) continue;
+    // eslint-disable-next-line no-await-in-loop
+    const existingBuyer = await BuyerProfile.findOne({ username }).select('_id user');
+    if (existingBuyer && String(existingBuyer.user) !== String(excludeUserId || '')) continue;
+    return username;
+  }
+  return `seller_${generateOpaqueToken(8).toLowerCase().slice(0, 16)}`;
+}
+
+async function allocateUniqueSellerSlug(baseSlug, session = null) {
+  let slug = baseSlug;
+  let attempt = 0;
+  while (true) {
+    const slugQuery = SellerProfile.findOne({ slug });
+    // eslint-disable-next-line no-await-in-loop
+    const clash = session ? await slugQuery.session(session) : await slugQuery;
+    if (!clash) return slug;
+    attempt += 1;
+    slug = `${baseSlug}-${attempt}`;
+  }
+}
+
+/**
+ * Ensure the Google user has seller role + SellerProfile when OAuth intent is seller.
+ * Idempotent for existing sellers. Does not touch buyer-only Google logins.
+ */
+export async function ensureSellerForGoogleUser(userDoc, {
+  storeName,
+  username: preferredUsername,
+  email,
+  meta = {},
+} = {}) {
+  const feeInfo = await getSellerRegistrationFee();
+  if (!feeInfo.isEnabled) {
+    throw new AppError('Seller registration is currently disabled', 403, {
+      code: 'SELLER_REGISTRATION_DISABLED',
+    });
+  }
+
+  const existingSeller = await SellerProfile.findOne({ user: userDoc._id });
+  if (existingSeller) {
+    if (!userDoc.roles?.includes(USER_ROLES.SELLER)) {
+      userDoc.roles = [...new Set([...(userDoc.roles || []), USER_ROLES.BUYER, USER_ROLES.SELLER])];
+      await userDoc.save();
+    }
+    return { user: userDoc, seller: existingSeller, createdSeller: false };
+  }
+
+  const displayStore = String(storeName || userDoc.name || email?.split('@')[0] || 'My Store')
+    .trim()
+    .slice(0, 160) || 'My Store';
+
+  let username = preferredUsername;
+  if (username) {
+    const normalized = normalizeUsername(username);
+    username = normalized.ok ? normalized.username : null;
+  }
+  if (!username) {
+    username = await allocateUniqueUsername(
+      preferredUsername || userDoc.username || userDoc.name || email?.split('@')[0],
+      { excludeUserId: userDoc._id },
+    );
+  } else {
+    const taken = await User.findOne({ username, _id: { $ne: userDoc._id } });
+    const buyerTaken = await BuyerProfile.findOne({
+      username,
+      user: { $ne: userDoc._id },
+    });
+    if (taken || buyerTaken) {
+      username = await allocateUniqueUsername(username, { excludeUserId: userDoc._id });
+    }
+  }
+
+  const { user, seller } = await withTransaction(async (session) => {
+    const roles = [...new Set([...(userDoc.roles || []), USER_ROLES.BUYER, USER_ROLES.SELLER])];
+    userDoc.roles = roles;
+    if (!userDoc.username) userDoc.username = username;
+    if (!userDoc.name) userDoc.name = displayStore;
+    await userDoc.save(session ? { session } : undefined);
+
+    const buyerQuery = BuyerProfile.findOne({ user: userDoc._id });
+    const buyer = session ? await buyerQuery.session(session) : await buyerQuery;
+    if (buyer && !buyer.username) {
+      buyer.username = username;
+      await buyer.save(session ? { session } : undefined);
+    }
+
+    const baseSlug = usernameToSlug(username) || toSlug(displayStore) || `store-${generateOpaqueToken(4)}`;
+    const slug = await allocateUniqueSellerSlug(baseSlug, session);
+
+    const sellerDoc = await createWithSession(
+      SellerProfile,
+      {
+        user: userDoc._id,
+        storeName: displayStore,
+        slug,
+        ownerName: userDoc.username || username,
+        email: email || userDoc.email,
+        bio: '',
+      },
+      session,
+    );
+
+    await logActivity({
+      userId: userDoc._id,
+      action: 'auth.google.seller.ensure',
+      resource: 'SellerProfile',
+      resourceId: sellerDoc._id,
+      ip: meta.ip,
+      userAgent: meta.userAgent,
+      meta: { username, storeName: displayStore },
+      session,
+    });
+
+    return { user: userDoc, seller: sellerDoc };
+  });
+
+  return { user, seller, createdSeller: true };
+}
+
+/**
  * Google OAuth login / register / link.
  * - Existing googleId → login
  * - Existing email without googleId → link googleId and login
  * - New email → create buyer account (emailVerified=true)
+ * - intent=seller → also ensure seller role + SellerProfile (never leave seller portal orphaned)
  */
-export async function loginOrRegisterWithGoogle(profile, meta = {}) {
+export async function loginOrRegisterWithGoogle(profile, meta = {}, options = {}) {
   if (!env.googleOAuthConfigured) {
     throw new AppError('Google sign-in is not configured', 503, {
       code: 'GOOGLE_OAUTH_NOT_CONFIGURED',
     });
   }
 
+  const intent = String(options.intent || 'buyer').toLowerCase();
   const googleId = profile.id || profile.googleId;
   const email = String(profile.email || profile.emails?.[0]?.value || '').toLowerCase().trim();
   const name = profile.displayName
@@ -764,6 +905,7 @@ export async function loginOrRegisterWithGoogle(profile, meta = {}) {
   let user = await User.findOne({ googleId }).select('+passwordHash');
   let linked = false;
   let created = false;
+  let createdSeller = false;
 
   if (!user) {
     user = await User.findOne({ email }).select('+passwordHash');
@@ -792,6 +934,9 @@ export async function loginOrRegisterWithGoogle(profile, meta = {}) {
   if (!user) {
     const randomPassword = generateOpaqueToken(32);
     const passwordHash = await hashPassword(randomPassword);
+    const initialRoles = intent === 'seller'
+      ? [USER_ROLES.BUYER, USER_ROLES.SELLER]
+      : [USER_ROLES.BUYER];
     user = await withTransaction(async (session) => {
       const createdUser = await createWithSession(
         User,
@@ -799,7 +944,7 @@ export async function loginOrRegisterWithGoogle(profile, meta = {}) {
           email,
           passwordHash,
           name: String(name).slice(0, 120),
-          roles: [USER_ROLES.BUYER],
+          roles: initialRoles,
           avatar,
           googleId,
           authProvider: 'google',
@@ -827,6 +972,7 @@ export async function loginOrRegisterWithGoogle(profile, meta = {}) {
         resourceId: createdUser._id,
         ip: meta.ip,
         userAgent: meta.userAgent,
+        meta: { intent },
         session,
       });
 
@@ -837,6 +983,23 @@ export async function loginOrRegisterWithGoogle(profile, meta = {}) {
 
   if (user.status && user.status !== UserStatusEnum.Active) {
     throw new AppError('Account is not active', 403, { code: 'ACCOUNT_INACTIVE' });
+  }
+
+  // Ensure buyer profile exists for Google accounts
+  const buyer = await BuyerProfile.findOne({ user: user._id });
+  if (!buyer) {
+    await BuyerProfile.create({ user: user._id, avatar: avatar || null });
+  }
+
+  if (intent === 'seller') {
+    const ensured = await ensureSellerForGoogleUser(user, {
+      storeName: options.storeName || String(name).slice(0, 160),
+      username: options.username || null,
+      email,
+      meta,
+    });
+    user = ensured.user;
+    createdSeller = ensured.createdSeller;
   }
 
   user.lastLoginAt = new Date();
@@ -851,21 +1014,19 @@ export async function loginOrRegisterWithGoogle(profile, meta = {}) {
       resourceId: user._id,
       ip: meta.ip,
       userAgent: meta.userAgent,
+      meta: { intent, createdSeller },
     });
   }
 
-  // Ensure buyer profile exists for Google accounts
-  const buyer = await BuyerProfile.findOne({ user: user._id });
-  if (!buyer) {
-    await BuyerProfile.create({ user: user._id, avatar: avatar || null });
-  }
-
-  const tokens = await issueTokenPair(user, meta);
+  // Re-load so JWT roles reflect seller upgrade.
+  const fresh = await User.findById(user._id);
+  const tokens = await issueTokenPair(fresh, meta);
   return {
-    user: publicUser(user),
+    user: publicUser(fresh),
     ...tokens,
     created,
     linked,
+    createdSeller,
   };
 }
 
@@ -884,6 +1045,8 @@ export default {
   verifyEmail,
   getMe,
   loginOrRegisterWithGoogle,
+  ensureSellerForGoogleUser,
+  allocateUniqueUsername,
   setRefreshCookie,
   clearRefreshCookie,
   REFRESH_COOKIE_NAME,
